@@ -11,7 +11,5 @@ build/
 dist/
 .cache/
 data-cache/
-results/*
-!results/README.md
 *.log
 .env

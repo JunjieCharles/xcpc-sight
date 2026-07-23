@@ -1,6 +1,6 @@
 # Rating 计算规则
 
-实现位于 `rating` 包：rating 专属模型在 `rating.models`，纯算法在 `rating.calculation`。算法依赖 `core` 的标准化竞赛与身份模型，不负责 HTTP 获取或文件输出。
+实现位于 `rating` 包：rating 专属模型在 `rating.models`，纯算法在 `rating.calculation`。算法依赖 `core` 的标准化竞赛与身份模型，不负责 HTTP 获取或文件输出。`rating.static_data` 位于计算之后，只把既有结果投影为静态站点 JSON 原生类型，不改变任何 rating 规则。
 
 ## 输入与身份
 
@@ -68,6 +68,8 @@ RankLand SRK 如果没有完整显式排名，则按正式队伍的 solved 降�
 
 - `calculate_contest_ratings`
 - `calculate_series_ratings`
+- `project_series_rating_data`
+- `project_static_data_index`
 - `RatingConfig` 可显式关闭两次修正，用于分析，不改变默认规则。
 
-测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、非正式/无活动过滤、重复身份、跨比赛状态传递与端到端赛季计算。
+JSON 字段、稳定身份 ID、稀疏参赛语义和生成流程见 [static-site-data.md](static-site-data.md)。测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、非正式/无活动过滤、重复身份、跨比赛状态传递、静态投影不变量与端到端赛季计算。

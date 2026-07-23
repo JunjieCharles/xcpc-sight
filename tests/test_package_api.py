@@ -8,3 +8,5 @@ def test_core_and_rating_export_their_public_apis() -> None:
     assert core.NowcoderError.__module__ == "core.errors"
     assert rating.RatingConfig.__module__ == "rating.models"
     assert rating.calculate_series_ratings.__module__ == "rating.calculation"
+    assert rating.project_series_rating_data.__module__ == "rating.static_data"
+    assert rating.project_static_data_index.__module__ == "rating.static_data"

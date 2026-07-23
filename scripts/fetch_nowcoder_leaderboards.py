@@ -22,8 +22,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("results"),
-        help="directory for generated CSV files (default: results)",
+        default=Path("data-cache/nowcoder"),
+        help="directory for generated CSV files (default: data-cache/nowcoder)",
     )
     return parser.parse_args()
 

@@ -5,6 +5,7 @@ from .models import (
     RatingConfig,
     SeriesRatingResult,
 )
+from .static_data import project_series_rating_data, project_static_data_index
 
 __all__ = [
     "CompetitorRatingChange",
@@ -13,4 +14,6 @@ __all__ = [
     "SeriesRatingResult",
     "calculate_contest_ratings",
     "calculate_series_ratings",
+    "project_series_rating_data",
+    "project_static_data_index",
 ]

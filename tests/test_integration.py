@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from core import Contest, TeamResult, select_season
-from rating import calculate_series_ratings
+from rating import calculate_series_ratings, project_series_rating_data
 
 
 def make_contest(contest_id: str, series: str, day: int, members: tuple[str, ...]) -> Contest:
@@ -37,3 +37,13 @@ def test_season_selection_and_series_rating_end_to_end() -> None:
         if change.display_member == "乙"
     )
     assert returning.old_rating != 1400
+    projected = project_series_rating_data(
+        result,
+        series_id="2025-2026",
+        title="2025–2026 ICPC + CCPC",
+    )
+    assert [contest["id"] for contest in projected["contests"]] == [
+        "ccpc-regional",
+        "icpc-regional",
+    ]
+    assert len(projected["competitors"]) == 3

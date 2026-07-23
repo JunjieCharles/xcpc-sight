@@ -48,8 +48,10 @@ python scripts/fetch_nowcoder_leaderboards.py
 
 默认获取比赛 `133876`、`133877`，写入：
 
-- `results/nowcoder-133876-leaderboard.csv`
-- `results/nowcoder-133877-leaderboard.csv`
+- `data-cache/nowcoder/nowcoder-133876-leaderboard.csv`
+- `data-cache/nowcoder/nowcoder-133877-leaderboard.csv`
+
+这些 CSV 是已忽略、可随时重新下载的上游缓存，不属于 `static/data/` 的静态站点发布数据。
 
 可传入比赛 ID，并使用 `--output-dir` 指定目录。CSV 使用 UTF-8 with BOM，通过临时文件完成后原子替换。基础列保存排名、UID、名称、学校、成员 UID JSON、题数、毫秒罚时和分数；随后按题目顺序保存每题全部状态字段。
 
