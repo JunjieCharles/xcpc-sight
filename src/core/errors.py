@@ -12,3 +12,7 @@ class IdentityConflictError(DataValidationError):
 
 class RankLandError(XcpcSightError):
     """A RankLand request failed or returned an unsuccessful response."""
+
+
+class NowcoderError(XcpcSightError):
+    """A Nowcoder request failed or returned an unsuccessful response."""

@@ -1,0 +1,60 @@
+# 牛客榜单数据适配
+
+实现位于 `core.nowcoder`；显式 CSV 获取脚本位于 `scripts/fetch_nowcoder_leaderboards.py`。网络客户端只返回不可变的牛客源数据模型，不隐式写缓存或结果文件。
+
+## 数据接口
+
+榜单页面通过以下动态接口读取：
+
+```text
+GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
+```
+
+每页必须显式发送：
+
+- `id`：比赛 ID；
+- `page`：从 1 开始的页码；
+- `limit`：牛客将其解释为“最多纳入榜单的总名次数”，而不是单页大小；
+- `onlyContestRank=true`：仅获取赛时榜单。
+
+客户端先以 `limit=50` 探测；若正好返回 50 名，会以足够大的 limit 重新获取第一页以取得真实 `rankCount`，再在后续页面保持该总量上限。不能固定使用 `limit=50`，否则接口会把榜单截断成 50 名并错误报告 `pageCount=1`。
+
+请求还发送比赛页面 Referer、稳定 User-Agent 和 `X-Requested-With`。响应业务 envelope 要求 `code=0` 且存在 `data`。
+
+## 分页与完整性
+
+`NowcoderClient.fetch_leaderboard` 首先读取第一页，再根据 `basicInfo.pageCount` 获取所有页面。合并时检查：
+
+- page size 为 50，页数与 `rankCount` 匹配；
+- contest ID、比赛起止时间、rank type、题目定义等元数据在各页一致；
+- `onlyContestRankApplied=true`；
+- 每页行数以及合并总行数正确；
+- UID 唯一，源 ranking 单调不降；
+- 每行 `scoreList` 与 `problemData` 的题目 ID 一一对应。
+
+上游 ranking 和所有时间值均原样保留；`penaltyTime`、`acceptedTime` 和比赛时间戳使用毫秒，不在适配器中重建排名或转换单位。
+
+## 模型与 Rating 边界
+
+公共模型包括 `NowcoderProblem`、`NowcoderProblemScore`、`NowcoderStanding` 与 `NowcoderLeaderboard`。牛客榜单提供队伍/用户显示名和 `teamMemberUids`，但不提供 rating 身份所需的成员姓名，因此当前不会将其强行转换为 `Contest`/`TeamResult`，也不会直接参与个人 rating。
+
+## CSV 输出
+
+运行：
+
+```bash
+python scripts/fetch_nowcoder_leaderboards.py
+```
+
+默认获取比赛 `133876`、`133877`，写入：
+
+- `results/nowcoder-133876-leaderboard.csv`
+- `results/nowcoder-133877-leaderboard.csv`
+
+可传入比赛 ID，并使用 `--output-dir` 指定目录。CSV 使用 UTF-8 with BOM，通过临时文件完成后原子替换。基础列保存排名、UID、名称、学校、成员 UID JSON、题数、毫秒罚时和分数；随后按题目顺序保存每题全部状态字段。
+
+## 错误、限制与测试
+
+HTTP 408、429、5xx 和网络错误有限重试；HTTP/业务失败抛出 `NowcoderError`，成功响应的结构错误抛出带比赛、页码和字段路径的 `DataValidationError`。
+
+牛客接口属于网页前端使用的外部契约，路径和字段可能变化；实时榜单也可能在分页期间变化。默认测试使用 `httpx.MockTransport`，覆盖请求契约、分页、完整性失败、重试和 CSV 投影，不访问公网。适配器调整后应手工获取真实榜单并重新检查行数与题目 ID。
