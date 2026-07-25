@@ -8,6 +8,7 @@ def test_normalizer_handles_nfkc_case_punctuation_and_traditional_chinese() -> N
     normalizer = DefaultNormalizer()
     assert normalizer.member(" Ａlice-ZHANG ") == "alicezhang"
     assert normalizer.school("香港中文大學（非獨立法人）") == "香港中文大学"
+    assert normalizer.school("香港中文大學（非獨立法人）") == normalizer.school("香港中文大學")
 
 
 def test_aliases_are_normalized_before_lookup() -> None:

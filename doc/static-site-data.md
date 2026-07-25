@@ -46,7 +46,7 @@ python scripts/generate_static_data.py
 
 - `id`：`c_` 加 SHA-256(`normalized_school + "\0" + normalized_member`) 的完整小写十六进制值；
 - `rank`：按最终 rating 的 competition ranking，同分同名次且后续名次跳号；
-- `school`、`member`：最后一次实际参赛记录中的上游显示值；
+- `school`、`member`：最后一次实际参赛记录中的上游显示值；其中 `school` 已应用来源适配器定义的展示清理（例如 RankLand 的 `非独立法人` 注记）；
 - `finalRating`、`contestsParticipated`；
 - `participations[]`：严格按 `contestIndex` 递增的实际参赛记录。
 

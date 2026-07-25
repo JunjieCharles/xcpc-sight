@@ -63,6 +63,15 @@ def test_srk_normalization_excludes_unofficial_from_rank_and_preserves_ties() ->
     assert contest.teams[3].has_activity is True
 
 
+def test_srk_normalization_cleans_school_display_qualifier() -> None:
+    payload = srk()
+    payload["rows"][1]["user"]["organization"] = "北京师范大学珠海校区（非独立法人）"
+    payload["rows"][2]["user"]["organization"] = " 香港中文大學 ( 非獨立法人 ) "
+    contest = normalize_srk_contest(payload, contest_uk="regional", series="icpc2025")
+    assert contest.teams[1].school_name == "北京师范大学珠海校区"
+    assert contest.teams[2].school_name == "香港中文大學"
+
+
 def test_rankland_client_walks_collection_detail_file_and_cdn() -> None:
     calls: list[str] = []
 

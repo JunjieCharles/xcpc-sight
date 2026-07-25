@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 from collections.abc import Iterable, Mapping
 from datetime import datetime
@@ -146,6 +147,11 @@ def _leaf_contest_ids(node: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(result))
 
 
+def _display_school(value: Any) -> str:
+    school = _text(value)
+    return re.sub(r"\s*[（(]\s*非[独獨]立法人\s*[）)]\s*", "", school).strip()
+
+
 def _member_names(user: Mapping[str, Any], path: str) -> tuple[str, ...]:
     members = user.get("teamMembers", [])
     if members is None:
@@ -190,7 +196,7 @@ def _team_drafts(payload: Any, contest_uk: str) -> tuple[str, datetime, list[dic
                 "source_index": index,
                 "team_id": _text(user.get("id"), str(index)),
                 "team_name": _text(user.get("name"), f"Team {index + 1}"),
-                "school_name": _text(user.get("organization")),
+                "school_name": _display_school(user.get("organization")),
                 "members": _member_names(user, f"{path}.user"),
                 "explicit_rank": _integer(row.get("rank"), 0),
                 "solved": solved,

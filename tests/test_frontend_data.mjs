@@ -128,12 +128,14 @@ test("round trips URL state without dropping unrelated parameters", () => {
 test("caches in-flight JSON requests and evicts failures", async () => {
   clearJsonCache();
   let calls = 0;
-  const fetchImpl = async () => { calls += 1; return { ok: true, json: async () => ({ value: 1 }) }; };
+  const requests = [];
+  const fetchImpl = async (url, options) => { calls += 1; requests.push({ url, options }); return { ok: true, json: async () => ({ value: 1 }) }; };
   const one = fetchJson("https://example.test/data.json", fetchImpl);
   const two = fetchJson("https://example.test/data.json", fetchImpl);
   assert.equal(one, two);
   assert.deepEqual(await one, { value: 1 });
   assert.equal(calls, 1);
+  assert.deepEqual(requests, [{ url: "https://example.test/data.json", options: { cache: "no-cache" } }]);
 
   clearJsonCache();
   const failing = async () => { calls += 1; return { ok: false, status: 500 }; };

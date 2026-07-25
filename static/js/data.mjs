@@ -34,7 +34,7 @@ export function resolveDataUrl(path, baseUrl) {
 export function fetchJson(url, fetchImpl = globalThis.fetch) {
   const absolute = new URL(url, globalThis.location?.href || "http://localhost/").href;
   if (!jsonPromises.has(absolute)) {
-    jsonPromises.set(absolute, Promise.resolve(fetchImpl(absolute)).then((response) => {
+    jsonPromises.set(absolute, Promise.resolve(fetchImpl(absolute, { cache: "no-cache" })).then((response) => {
       if (!response.ok) throw new Error(`Unable to load ${absolute} (${response.status})`);
       return response.json();
     }).catch((error) => {

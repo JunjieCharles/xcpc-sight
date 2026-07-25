@@ -25,6 +25,8 @@ API envelope 必须为 `success=true`、`code=0` 且存在 `data`。HTTP 408、4
 
 本地化文本优先级为 `zh-CN`、`texts.zh-CN`、`fallback`、`texts.en`、`en`。时间支持 ms、s、min 和 h。结构类型错误包含 JSON path 和 contest UK。
 
+学校展示名在 RankLand 适配边界移除全角或半角括号中的 `非独立法人` / `非獨立法人` 注记；其余上游文字保持不变。身份标准化原本也会移除该注记，因此显示清理不会改变参赛者稳定 ID。
+
 ## 排名
 
 参考项目的旧适配器用 `rowIndex + 1`，会让非正式队伍占位且无法表达并列，本项目不使用该行为。
