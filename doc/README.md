@@ -3,7 +3,7 @@
 | 功能 | 文档 |
 | --- | --- |
 | 个人 rating 规则与系列计算 | [rating-rules.md](rating-rules.md) |
-| 静态站点 JSON 数据契约与生成 | [static-site-data.md](static-site-data.md) |
+| 静态站点 JSON 数据契约、生成与零构建前端 | [static-site-data.md](static-site-data.md) |
 | RankLand 数据获取与 SRK 转换 | [rankland-data.md](rankland-data.md) |
 | 牛客榜单数据获取与 CSV 导出 | [nowcoder-data.md](nowcoder-data.md) |
 | 2025–2026 赛季范围与排序 | [season-2025-2026.md](season-2025-2026.md) |

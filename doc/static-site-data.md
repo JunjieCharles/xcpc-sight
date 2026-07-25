@@ -1,6 +1,6 @@
 # 静态站点数据
 
-第一版仅发布 `2025-2026` ICPC + CCPC 综合 rating 系列。生成器不包含前端、后端或数据库，也不生成统计数据、分块、独立单场文件以及独立 ICPC/CCPC 系列。
+第一版仅发布 `2025-2026` ICPC + CCPC 综合 rating 系列。生成器不包含后端或数据库，也不生成统计数据、分块、独立单场文件以及独立 ICPC/CCPC 系列。`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -72,3 +72,34 @@ python scripts/generate_static_data.py
 3. **选手完整曲线**：按所有比赛顺序扫描，参赛点更新为 `after`，缺席点延续；首次参赛前不构造 rating。
 
 系列文件不输出 seed、performance、修正项等计算诊断，不生成缺席记录、稠密 rating 数组或重复的单场 JSON。
+
+## 静态前端
+
+前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs` 和 `static/js/app.mjs`。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
+
+本地必须通过 HTTP 访问，而不是直接打开 `file://`：
+
+```bash
+python -m http.server 8000 --directory static
+```
+
+页面包含：
+
+- 系列选择和按姓名/学校的多词搜索；
+- 按最终排名排列的虚拟滚动宽表；比赛列头可打开只含实际参赛者的虚拟滚动表；
+- 选手详情、可键盘访问且带悬停/聚焦提示的单系列 SVG rating 曲线，以及提供同一数据的参赛记录表；
+- `series`、`q`、`contest`、`competitor` 查询参数状态及浏览器前进/后退支持。
+
+数据层以 URL 为键缓存正在进行和已完成的 JSON Promise；失败会从缓存移除以允许重试。索引和系列对象分别只验证一次，系列验证后只建立一次选手 ID 与单场参赛者索引。验证包括 schema 版本、必需字段与类型、唯一 ID、比赛引用范围、参赛顺序、rating 算术与连续性，以及最终 rating/参赛次数一致性。未知 schema 版本或不合法文档会显示错误面板，不静默渲染部分数据。
+
+宽表和单场表仅在 DOM 中保留视口附近的行；筛选仍在已加载数据上执行。系列 JSON 当前仍一次性加载和解析，因此内存规模取决于整个系列文件；本版不引入服务端搜索、分块或单场文件。
+
+## 前端测试
+
+`tests/test_frontend_data.mjs` 使用 Node 内置测试运行器，不需要 `package.json`：
+
+```bash
+node --test tests/test_frontend_data.mjs
+```
+
+覆盖 schema 校验失败、一次性索引、稀疏记录的 carried rating、搜索、signed delta、查询参数、子路径 URL 解析、Promise 缓存失败重试，以及通过索引加载系列。DOM 虚拟滚动和浏览器交互当前需要人工浏览器检查。
