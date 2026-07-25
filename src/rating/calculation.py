@@ -70,16 +70,36 @@ def _expand_competitors(
                 f"contest {contest.contest_id}, team {team.team_id}: rank must be positive"
             )
         team_competitors: set[CompetitorId] = set()
-        for member in team.members:
-            if not member.strip() or is_coach_name(member):
-                continue
-            competitor = normalizer.competitor(team.school_name, member)
+        if team.rating_competitor is not None:
+            display_school = team.rating_display_school
+            display_member = team.rating_display_member
+            if display_school is None:
+                raise DataValidationError(
+                    f"contest {contest.contest_id}, team {team.team_id}: "
+                    "rating display school must be provided"
+                )
+            if not display_member or not display_member.strip():
+                raise DataValidationError(
+                    f"contest {contest.contest_id}, team {team.team_id}: "
+                    "rating display member must not be empty"
+                )
+            competitors = (
+                (team.rating_competitor, display_school, display_member),
+            )
+        else:
+            competitors = tuple(
+                (normalizer.competitor(team.school_name, member), team.school_name, member)
+                for member in team.members
+                if member.strip() and not is_coach_name(member)
+            )
+        for competitor, display_school, display_member in competitors:
             if competitor in team_competitors:
                 message = (
                     f"contest {contest.contest_id}, team {team.team_id}: "
-                    f"duplicate member {member!r}"
+                    f"duplicate competitor {competitor}"
                 )
                 raise IdentityConflictError(message)
+            team_competitors.add(competitor)
             if competitor in ranks:
                 if config.duplicate_competitor == "error":
                     message = (
@@ -89,11 +109,10 @@ def _expand_competitors(
                     raise IdentityConflictError(message)
                 if team.rank < ranks[competitor]:
                     ranks[competitor] = team.rank
-                    display[competitor] = (team.school_name, member)
+                    display[competitor] = (display_school, display_member)
                 continue
-            team_competitors.add(competitor)
             ranks[competitor] = team.rank
-            display[competitor] = (team.school_name, member)
+            display[competitor] = (display_school, display_member)
     return ranks, display
 
 

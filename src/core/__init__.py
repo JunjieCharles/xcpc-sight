@@ -15,6 +15,7 @@ from .models import (
 )
 from .normalization import DefaultNormalizer
 from .nowcoder import (
+    NOWCODER_SUMMER_2026_SERIES,
     NowcoderClient,
     NowcoderLeaderboard,
     NowcoderLeaderboardPage,
@@ -24,6 +25,7 @@ from .nowcoder import (
     normalize_nowcoder_page,
     nowcoder_csv_fieldnames,
     nowcoder_csv_rows,
+    nowcoder_leaderboard_to_contest,
 )
 from .rankland import RankLandClient, normalize_srk_contest
 from .seasons import (
@@ -42,6 +44,7 @@ __all__ = [
     "DataValidationError",
     "DefaultNormalizer",
     "IdentityConflictError",
+    "NOWCODER_SUMMER_2026_SERIES",
     "NowcoderClient",
     "NowcoderError",
     "NowcoderLeaderboard",
@@ -62,5 +65,6 @@ __all__ = [
     "normalize_srk_contest",
     "nowcoder_csv_fieldnames",
     "nowcoder_csv_rows",
+    "nowcoder_leaderboard_to_contest",
     "select_season",
 ]

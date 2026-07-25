@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="XCPC 个人 rating 系列、比赛变化与参赛记录。">
+  <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -16,28 +16,34 @@
     </div>
   </header>
 
-  <main id="main" tabindex="-1">
-    <section class="controls" aria-label="系列和搜索">
-      <label>系列<select id="series-select"></select></label>
-      <label class="search-label">搜索选手或学校<input id="search-input" type="search" autocomplete="off" placeholder="输入姓名或学校"></label>
-      <p id="result-count" class="result-count" aria-live="polite"></p>
-    </section>
+  <main id="main" tabindex="-1" class="app-layout">
+    <aside class="series-sidebar" aria-labelledby="series-navigation-title">
+      <p id="series-navigation-title" class="eyebrow">SERIES</p>
+      <nav id="series-list" class="series-list" aria-label="Rating 系列"></nav>
+    </aside>
 
-    <div id="status" class="status" role="status">正在加载数据…</div>
-    <section id="series-view" hidden aria-labelledby="series-title">
-      <div class="section-heading">
-        <div><p class="eyebrow">SERIES</p><h2 id="series-title"></h2></div>
-        <p id="series-summary" class="section-note"></p>
-      </div>
-      <div class="table-shell" id="series-scroll" tabindex="0" aria-label="选手 rating 宽表，可水平和垂直滚动">
-        <table class="data-table wide-table">
-          <thead id="series-head"></thead>
-          <tbody id="series-body"></tbody>
-        </table>
-      </div>
-    </section>
+    <div class="app-content">
+      <section class="controls" aria-label="搜索">
+        <label class="search-label">搜索参赛者或学校<input id="search-input" type="search" autocomplete="off" placeholder="输入参赛者名称或学校"></label>
+        <p id="result-count" class="result-count" aria-live="polite"></p>
+      </section>
 
-    <section id="detail-view" hidden aria-labelledby="detail-title"></section>
+      <div id="status" class="status" role="status">正在加载数据…</div>
+      <section id="series-view" hidden aria-labelledby="series-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">SERIES</p><h2 id="series-title"></h2></div>
+          <p id="series-summary" class="section-note"></p>
+        </div>
+        <div class="table-shell" id="series-scroll" tabindex="0" aria-label="参赛者 rating 宽表，可水平和垂直滚动">
+          <table class="data-table wide-table">
+            <thead id="series-head"></thead>
+            <tbody id="series-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="detail-view" hidden aria-labelledby="detail-title"></section>
+    </div>
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>

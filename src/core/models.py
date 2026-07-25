@@ -21,6 +21,9 @@ class TeamResult:
     penalty: int
     official: bool = True
     has_activity: bool = True
+    rating_competitor: CompetitorId | None = None
+    rating_display_school: str | None = None
+    rating_display_member: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

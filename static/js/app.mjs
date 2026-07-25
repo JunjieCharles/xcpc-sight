@@ -14,7 +14,7 @@ const OVERSCAN = 8;
 const INDEX_URL = new URL("../data/index.json", import.meta.url).href;
 const store = createDataStore(INDEX_URL);
 const elements = {
-  seriesSelect: document.querySelector("#series-select"),
+  seriesList: document.querySelector("#series-list"),
   searchInput: document.querySelector("#search-input"),
   resultCount: document.querySelector("#result-count"),
   status: document.querySelector("#status"),
@@ -120,10 +120,9 @@ function scheduleSeriesRows() {
 }
 
 function personButton(competitor) {
-  const button = node("button", { className: "link-button person", type: "button" }, [
-    node("span", { text: competitor.member }),
-    node("small", { text: competitor.school }),
-  ]);
+  const children = [node("span", { text: competitor.member })];
+  if (competitor.school) children.push(node("small", { text: competitor.school }));
+  const button = node("button", { className: "link-button person", type: "button" }, children);
   button.addEventListener("click", () => openCompetitor(competitor.id));
   return button;
 }
@@ -164,7 +163,7 @@ function renderSeriesRows() {
 function renderSeriesHeader() {
   const row = node("tr");
   row.append(node("th", { scope: "col", text: "排名" }));
-  row.append(node("th", { scope: "col", text: "选手 / 学校" }));
+  row.append(node("th", { scope: "col", text: "参赛者 / 学校" }));
   row.append(node("th", { scope: "col", text: "最终 Rating" }));
   row.append(node("th", { scope: "col", text: "参赛" }));
   state.series.contests.forEach((contest) => {
@@ -182,7 +181,7 @@ function renderSeriesHeader() {
 function applySearch({ resetScroll = true } = {}) {
   state.query = elements.searchInput.value;
   state.filtered = searchCompetitors(state.series.competitors, state.query);
-  elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位选手`;
+  elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
   if (resetScroll) elements.seriesScroll.scrollTop = 0;
   scheduleSeriesRows();
   setUrl();
@@ -194,7 +193,7 @@ function showSeries() {
   elements.detailView.hidden = true;
   elements.seriesView.hidden = false;
   elements.seriesTitle.textContent = state.series.title;
-  elements.seriesSummary.textContent = `${state.series.contests.length} 场比赛 · ${state.series.competitors.length.toLocaleString("zh-CN")} 位选手`;
+  elements.seriesSummary.textContent = `${state.series.contests.length} 场比赛 · ${state.series.competitors.length.toLocaleString("zh-CN")} 位参赛者`;
   renderSeriesHeader();
   applySearch({ resetScroll: false });
 }
@@ -235,7 +234,7 @@ function openContest(contestId, updateUrl = true) {
   ]);
   const shell = node("div", { className: "table-shell contest-table-shell", tabIndex: 0, "aria-label": "本场参赛者表" });
   const headRow = node("tr");
-  ["比赛排名", "选手 / 学校", "赛前", "赛后", "变化"].forEach((label) => headRow.append(node("th", { scope: "col", text: label })));
+  ["比赛排名", "参赛者 / 学校", "赛前", "赛后", "变化"].forEach((label) => headRow.append(node("th", { scope: "col", text: label })));
   const body = node("tbody");
   const table = node("table", { className: "data-table fixed-table contest-table" }, [
     columnGroup([96, 250, 90, 90, 90]),
@@ -384,10 +383,11 @@ function openCompetitor(competitorId, updateUrl = true) {
   elements.detailView.hidden = false;
   const heading = node("div", { className: "detail-header" }, [
     node("div", {}, [
-      node("p", { className: "eyebrow", text: "COMPETITOR" }),
+      node("p", { className: "eyebrow", text: "PARTICIPANT" }),
       node("h2", { id: "detail-title", text: competitor.member, tabIndex: -1 }),
       node("p", { className: "detail-meta" }, [
-        node("span", { text: competitor.school }), node("span", { text: `系列排名 #${competitor.rank}` }),
+        ...(competitor.school ? [node("span", { text: competitor.school })] : []),
+        node("span", { text: `系列排名 #${competitor.rank}` }),
         node("span", {}, [document.createTextNode("最终 "), ratingNode(competitor.finalRating)]),
         node("span", { text: `${competitor.contestsParticipated} 次参赛` }),
       ]),
@@ -399,6 +399,15 @@ function openCompetitor(competitorId, updateUrl = true) {
   heading.querySelector("h2").focus();
 }
 
+function updateSeriesNavigation() {
+  for (const button of elements.seriesList.querySelectorAll(".series-link")) {
+    const active = button.dataset.seriesId === state.seriesId;
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+    button.disabled = active;
+  }
+}
+
 async function loadSeries(seriesId, queryState = {}) {
   elements.status.hidden = false;
   elements.status.textContent = "正在加载数据…";
@@ -408,7 +417,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.seriesId = loaded.series.id;
   state.series = loaded.series;
   state.index = loaded.index;
-  elements.seriesSelect.value = state.seriesId;
+  updateSeriesNavigation();
   state.query = queryState.query ?? state.query;
   elements.searchInput.value = state.query;
   elements.status.hidden = true;
@@ -421,12 +430,22 @@ async function loadSeries(seriesId, queryState = {}) {
 async function initialize() {
   const index = await store.getIndex();
   const query = readQueryState(location.href);
-  for (const entry of index.series) elements.seriesSelect.append(node("option", { value: entry.id, text: entry.title }));
+  for (const entry of index.series) {
+    const button = node("button", {
+      type: "button",
+      className: "series-link",
+      text: entry.title,
+    });
+    button.dataset.seriesId = entry.id;
+    button.addEventListener("click", () => {
+      if (entry.id !== state.seriesId) loadSeries(entry.id).catch(showError);
+    });
+    elements.seriesList.append(button);
+  }
   const seriesId = index.series.some((entry) => entry.id === query.series) ? query.series : index.defaultSeriesId;
   await loadSeries(seriesId, query);
 }
 
-elements.seriesSelect.addEventListener("change", () => loadSeries(elements.seriesSelect.value).catch(showError));
 elements.searchInput.addEventListener("input", () => applySearch());
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
 window.addEventListener("resize", scheduleSeriesRows);

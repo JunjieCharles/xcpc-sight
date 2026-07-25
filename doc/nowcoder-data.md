@@ -36,7 +36,17 @@ GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
 
 ## 模型与 Rating 边界
 
-公共模型包括 `NowcoderProblem`、`NowcoderProblemScore`、`NowcoderStanding` 与 `NowcoderLeaderboard`。牛客榜单提供队伍/用户显示名和 `teamMemberUids`，但不提供 rating 身份所需的成员姓名，因此当前不会将其强行转换为 `Contest`/`TeamResult`，也不会直接参与个人 rating。
+公共模型包括 `NowcoderProblem`、`NowcoderProblemScore`、`NowcoderStanding` 与 `NowcoderLeaderboard`。`nowcoder_leaderboard_to_contest` 将已结束榜单纯转换为 `Contest`：
+
+- 每行按牛客报名实体计算，不把队伍名伪造成个人姓名；
+- 稳定身份为 `CompetitorId("nowcoder", "standing:<uid>")`；相同 standing UID 跨场延续 rating，不同 UID 即使名称相同也保持独立；
+- `member` 展示 `userName`（通常是队伍名），`school` 展示榜单学校，缺失时留空；展示字段不参与身份计算；
+- 使用源 `ranking`、`acceptedCount`，毫秒罚时转换为整分钟；
+- 有通过或任一题存在提交才视为实际参赛；
+- 比赛开始毫秒时间戳转换为 `Asia/Shanghai` 带偏移时间；
+- 未结束榜单和空显示名会被拒绝。
+
+`teamMemberUids` 可为 0–3 个，但其稳定性和人员含义不足以支持个人 rating，因此不会用于自动拆分或跨 UID 合并。未来如需合并报名实体，只接受显式 alias 配置。
 
 ## CSV 输出
 
@@ -46,10 +56,11 @@ GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
 python scripts/fetch_nowcoder_leaderboards.py
 ```
 
-默认获取比赛 `133876`、`133877`，写入：
+默认获取比赛 `133876`、`133877`、`133878`，写入：
 
 - `data-cache/nowcoder/nowcoder-133876-leaderboard.csv`
 - `data-cache/nowcoder/nowcoder-133877-leaderboard.csv`
+- `data-cache/nowcoder/nowcoder-133878-leaderboard.csv`
 
 这些 CSV 是已忽略、可随时重新下载的上游缓存，不属于 `static/data/` 的静态站点发布数据。
 

@@ -3,9 +3,10 @@
 用于 ICPC/CCPC 竞赛前瞻与数据分析的轻量 Python 项目。当前版本提供：
 
 - 从 RankLand public v2 获取并解析 SRK 榜单；
-- 获取并完整导出牛客赛时榜单；
+- 获取并完整导出牛客赛时榜单，并将完赛榜单按报名实体接入 rating；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
-- 从空初始状态按比赛顺序计算个人 rating；
+- 发布 `2026牛客暑期多校训练营` 第一至第三场；
+- 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
 - 提供零依赖、无需构建的静态 rating 浏览前端；
 - 可复用的纯 Python API。
@@ -47,7 +48,7 @@ print(len(document["contests"]), len(document["competitors"]))
 python scripts/generate_static_data.py
 ```
 
-默认写入 `static/data/index.json` 和 `static/data/series/2025-2026.json`；可用 `--output-dir` 覆盖。系列 JSON 的稀疏参赛记录可派生系列宽表、单场变化表和选手完整 rating 曲线。生成过程访问实时 RankLand，不属于默认离线测试。
+默认写入 `static/data/index.json`、`static/data/series/2025-2026.json` 和 `static/data/series/nowcoder-summer-2026.json`；可用 `--output-dir` 覆盖。系列按各自最新比赛时间倒序排列，最新系列成为默认系列。系列 JSON 的稀疏参赛记录可派生系列宽表、单场变化表和参赛者完整 rating 曲线。生成过程访问实时 RankLand 和牛客，不属于默认离线测试。
 
 本地浏览静态站点（不能直接用 `file://`，因为浏览器需要通过 HTTP 加载 ES module 和 JSON）：
 
@@ -55,19 +56,19 @@ python scripts/generate_static_data.py
 python -m http.server 8000 --directory static
 ```
 
-然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供系列选择、搜索与虚拟滚动宽表、单场参赛者表、选手 rating 曲线和参赛记录；当前视图会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
+然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动宽表、单场参赛者表、参赛者 rating 曲线和参赛记录；当前视图会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
 
 ```bash
 node --test tests/test_frontend_data.mjs
 ```
 
-获取牛客比赛 `133876`、`133877` 的完整赛时榜单：
+获取牛客比赛 `133876`、`133877`、`133878` 的完整赛时榜单：
 
 ```bash
 python scripts/fetch_nowcoder_leaderboards.py
 ```
 
-结果写入已忽略的 `data-cache/nowcoder/nowcoder-<contest-id>-leaderboard.csv`，属于可丢弃上游下载缓存，不是静态站点发布数据。脚本接受自定义比赛 ID 和 `--output-dir`；可复用代码可通过 `NowcoderClient.fetch_leaderboard` 获取不可变模型。牛客榜单仅提供成员 UID 而非成员姓名，因此当前不强行接入个人 rating 身份模型。
+结果写入已忽略的 `data-cache/nowcoder/nowcoder-<contest-id>-leaderboard.csv`，属于可丢弃上游下载缓存，不是静态站点发布数据。脚本接受自定义比赛 ID 和 `--output-dir`；可复用代码可通过 `NowcoderClient.fetch_leaderboard` 获取不可变模型。静态系列不伪造成个人身份，而以命名空间化的榜单 standing UID 作为报名实体身份，显示名称通常为队伍名。
 
 ## 目录结构
 

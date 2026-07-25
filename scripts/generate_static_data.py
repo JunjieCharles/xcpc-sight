@@ -3,19 +3,42 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from core import RankLandClient, load_2025_2026_season
+from core import (
+    NowcoderClient,
+    RankLandClient,
+    load_2025_2026_season,
+    nowcoder_leaderboard_to_contest,
+)
+from core.models import Contest
 from rating import (
     calculate_series_ratings,
     project_series_rating_data,
     project_static_data_index,
 )
 
-SERIES_ID = "2025-2026"
-SERIES_TITLE = "2025–2026 ICPC + CCPC"
-SERIES_PATH = f"series/{SERIES_ID}.json"
+
+@dataclass(frozen=True, slots=True)
+class SeriesSpec:
+    series_id: str
+    title: str
+    path: str
+    load: Callable[[], tuple[Contest, ...]]
+
+
+XCPC_SERIES_ID = "2025-2026"
+XCPC_SERIES_TITLE = "2025–2026 ICPC + CCPC"
+NOWCODER_SERIES_ID = "nowcoder-summer-2026"
+NOWCODER_SERIES_TITLE = "2026牛客暑期多校训练营"
+NOWCODER_CONTESTS = (
+    (133876, "2026牛客暑期多校训练营（第一场）"),
+    (133877, "2026牛客暑期多校训练营（第二场）"),
+    (133878, "2026牛客暑期多校训练营（第三场）"),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,22 +68,54 @@ def write_json_atomic(output_path: Path, document: Any) -> None:
         temporary_path.unlink(missing_ok=True)
 
 
-def generate_static_data(output_dir: Path) -> None:
+def load_xcpc_series() -> tuple[Contest, ...]:
     with RankLandClient() as client:
-        season = load_2025_2026_season(client)
-    result = calculate_series_ratings(season.contests)
-    series = project_series_rating_data(
-        result,
-        series_id=SERIES_ID,
-        title=SERIES_TITLE,
-    )
-    index = project_static_data_index(
-        series_id=SERIES_ID,
-        title=SERIES_TITLE,
-        path=SERIES_PATH,
+        return load_2025_2026_season(client).contests
+
+
+def load_nowcoder_series() -> tuple[Contest, ...]:
+    with NowcoderClient() as client:
+        contests = tuple(
+            nowcoder_leaderboard_to_contest(
+                client.fetch_leaderboard(contest_id), title=title
+            )
+            for contest_id, title in NOWCODER_CONTESTS
+        )
+    return tuple(sorted(contests, key=lambda contest: contest.start_at))
+
+
+def series_specs() -> tuple[SeriesSpec, ...]:
+    return (
+        SeriesSpec(
+            XCPC_SERIES_ID,
+            XCPC_SERIES_TITLE,
+            f"series/{XCPC_SERIES_ID}.json",
+            load_xcpc_series,
+        ),
+        SeriesSpec(
+            NOWCODER_SERIES_ID,
+            NOWCODER_SERIES_TITLE,
+            f"series/{NOWCODER_SERIES_ID}.json",
+            load_nowcoder_series,
+        ),
     )
 
-    write_json_atomic(output_dir / SERIES_PATH, series)
+
+def generate_static_data(output_dir: Path) -> None:
+    publications: list[tuple[dict[str, object], str]] = []
+    for spec in series_specs():
+        contests = spec.load()
+        result = calculate_series_ratings(contests)
+        document = project_series_rating_data(
+            result,
+            series_id=spec.series_id,
+            title=spec.title,
+        )
+        publications.append((document, spec.path))
+
+    index = project_static_data_index(publications)
+    for document, path in publications:
+        write_json_atomic(output_dir / path, document)
     write_json_atomic(output_dir / "index.json", index)
 
 

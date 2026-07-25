@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -36,6 +36,8 @@ def project_series_rating_data(
     initial_rating: int = 1400,
 ) -> dict[str, object]:
     """Project a series rating result into the static-site JSON document."""
+    if not result.contests:
+        raise DataValidationError("published rating series must contain at least one contest")
     contests = [
         {
             "id": contest_result.contest.contest_id,
@@ -150,14 +152,81 @@ def project_series_rating_data(
 
 
 def project_static_data_index(
+    publications: Sequence[tuple[Mapping[str, object], str]] | None = None,
     *,
-    series_id: str,
-    title: str,
-    path: str,
+    series_id: str | None = None,
+    title: str | None = None,
+    path: str | None = None,
 ) -> Mapping[str, object]:
-    """Build the static-site index for a single published rating series."""
+    """Build a newest-first index for published rating series documents."""
+    if publications is None:
+        if not series_id or not title or not path:
+            raise DataValidationError(
+                "provide publications or the legacy series_id, title, and path"
+            )
+        return {
+            "schemaVersion": _SCHEMA_VERSION,
+            "defaultSeriesId": series_id,
+            "series": [{"id": series_id, "title": title, "path": path}],
+        }
+    if any(value is not None for value in (series_id, title, path)):
+        raise DataValidationError(
+            "publications cannot be combined with series_id, title, or path"
+        )
+    if not publications:
+        raise DataValidationError("static data index must contain at least one series")
+    seen_ids: set[str] = set()
+    seen_paths: set[str] = set()
+    entries: list[tuple[datetime, dict[str, str]]] = []
+    for document, path in publications:
+        series_id = document.get("id")
+        title = document.get("title")
+        contests = document.get("contests")
+        if not isinstance(series_id, str) or not series_id:
+            raise DataValidationError("series document id must be a non-empty string")
+        if not isinstance(title, str) or not title:
+            raise DataValidationError(f"series {series_id}: title must be a non-empty string")
+        if not isinstance(path, str) or not path:
+            raise DataValidationError(f"series {series_id}: path must be a non-empty string")
+        if series_id in seen_ids:
+            raise DataValidationError(f"duplicate series id {series_id!r}")
+        if path in seen_paths:
+            raise DataValidationError(f"duplicate series path {path!r}")
+        if not isinstance(contests, list) or not contests:
+            raise DataValidationError(
+                f"series {series_id}: published series must contain at least one contest"
+            )
+        latest: datetime | None = None
+        for contest_index, contest in enumerate(contests):
+            if not isinstance(contest, Mapping):
+                raise DataValidationError(
+                    f"series {series_id}.contests[{contest_index}] must be an object"
+                )
+            start_at = contest.get("startAt")
+            if not isinstance(start_at, str):
+                raise DataValidationError(
+                    f"series {series_id}.contests[{contest_index}].startAt must be a string"
+                )
+            try:
+                parsed = datetime.fromisoformat(start_at.replace("Z", "+00:00"))
+            except ValueError as error:
+                raise DataValidationError(
+                    f"series {series_id}.contests[{contest_index}].startAt is invalid"
+                ) from error
+            if parsed.tzinfo is None:
+                raise DataValidationError(
+                    f"series {series_id}.contests[{contest_index}].startAt must have an offset"
+                )
+            latest = parsed if latest is None or parsed > latest else latest
+        seen_ids.add(series_id)
+        seen_paths.add(path)
+        entries.append((latest, {"id": series_id, "title": title, "path": path}))
+
+    entries.sort(key=lambda item: item[1]["id"])
+    entries.sort(key=lambda item: item[0], reverse=True)
+    series = [entry for _, entry in entries]
     return {
         "schemaVersion": _SCHEMA_VERSION,
-        "defaultSeriesId": series_id,
-        "series": [{"id": series_id, "title": title, "path": path}],
+        "defaultSeriesId": series[0]["id"],
+        "series": series,
     }

@@ -5,6 +5,7 @@ def test_core_and_rating_export_their_public_apis() -> None:
     assert core.Contest.__module__ == "core.models"
     assert core.RankLandClient.__module__ == "core.rankland"
     assert core.NowcoderClient.__module__ == "core.nowcoder"
+    assert core.nowcoder_leaderboard_to_contest.__module__ == "core.nowcoder"
     assert core.NowcoderError.__module__ == "core.errors"
     assert rating.RatingConfig.__module__ == "rating.models"
     assert rating.calculate_series_ratings.__module__ == "rating.calculation"

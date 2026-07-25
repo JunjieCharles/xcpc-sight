@@ -106,6 +106,49 @@ def test_duplicate_identity_in_two_teams_can_be_rejected() -> None:
         )
 
 
+def test_explicit_rating_entity_uses_stable_identity_and_display_values() -> None:
+    competitor = CompetitorId("nowcoder", "standing:42")
+    explicit = TeamResult(
+        "42",
+        "旧队名",
+        "旧学校",
+        (),
+        1,
+        1,
+        10,
+        rating_competitor=competitor,
+        rating_display_school="展示学校",
+        rating_display_member="展示队名",
+    )
+    result = calculate_contest_ratings(contest(explicit))
+    assert result.changes[0].competitor == competitor
+    assert result.changes[0].display_school == "展示学校"
+    assert result.changes[0].display_member == "展示队名"
+
+
+def test_explicit_rating_entity_preserves_duplicate_validation() -> None:
+    competitor = CompetitorId("nowcoder", "standing:42")
+    teams = tuple(
+        TeamResult(
+            str(index),
+            str(index),
+            "学校",
+            (),
+            index,
+            1,
+            10,
+            rating_competitor=competitor,
+            rating_display_school="学校",
+            rating_display_member=f"队伍{index}",
+        )
+        for index in (1, 2)
+    )
+    with pytest.raises(IdentityConflictError, match="multiple teams"):
+        calculate_contest_ratings(
+            contest(*teams), config=RatingConfig(duplicate_competitor="error")
+        )
+
+
 def test_series_uses_previous_contest_rating() -> None:
     first = contest(team("one", 1, ("甲",)), contest_id="first")
     second = contest(

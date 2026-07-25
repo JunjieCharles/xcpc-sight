@@ -14,6 +14,7 @@ from core import (
     normalize_nowcoder_page,
     nowcoder_csv_fieldnames,
     nowcoder_csv_rows,
+    nowcoder_leaderboard_to_contest,
 )
 
 
@@ -173,6 +174,53 @@ def test_client_rejects_incomplete_page() -> None:
     http = httpx.Client(transport=httpx.MockTransport(handler))
     with pytest.raises(DataValidationError, match="has 1 rows, expected 2"):
         NowcoderClient(client=http, attempts=1).fetch_leaderboard(133876)
+
+
+def test_leaderboard_adapts_to_registration_level_rating_entity() -> None:
+    team_row = standing(42, 1)
+    team_row["userName"] = "  测试队  "
+    team_row["school"] = "None"
+    team_row["teamMemberUids"] = [1, 2, 3]
+    http = httpx.Client(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200, json=payload(rows=[team_row], rank_count=1)
+            )
+        )
+    )
+    leaderboard = NowcoderClient(client=http, attempts=1).fetch_leaderboard(133876)
+    contest = nowcoder_leaderboard_to_contest(leaderboard, title="第一场")
+    team = contest.teams[0]
+
+    assert contest.contest_id == "nowcoder:133876"
+    assert contest.start_at.isoformat() == "1970-01-01T08:00:01+08:00"
+    assert team.members == ()
+    assert team.rating_competitor.school == "nowcoder"
+    assert team.rating_competitor.member == "standing:42"
+    assert team.rating_display_member == "测试队"
+    assert team.rating_display_school == ""
+    assert team.solved == 1
+    assert team.penalty == 1
+
+
+def test_adapter_rejects_unfinished_or_empty_display_name() -> None:
+    unfinished = payload(rows=[standing(1, 1)], rank_count=1)
+    unfinished["data"]["isContestFinished"] = False
+    page = normalize_nowcoder_page(unfinished, contest_id=133876, requested_page=1)
+    from core.nowcoder import _assemble
+
+    with pytest.raises(DataValidationError, match="not finished"):
+        nowcoder_leaderboard_to_contest(_assemble((page,)), title="第一场")
+
+    empty_name = standing(1, 1)
+    empty_name["userName"] = "   "
+    page = normalize_nowcoder_page(
+        payload(rows=[empty_name], rank_count=1),
+        contest_id=133876,
+        requested_page=1,
+    )
+    with pytest.raises(DataValidationError, match="userName"):
+        nowcoder_leaderboard_to_contest(_assemble((page,)), title="第一场")
 
 
 def test_csv_projection_is_ordered_and_unicode_safe() -> None:

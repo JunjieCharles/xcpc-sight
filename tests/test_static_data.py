@@ -96,9 +96,7 @@ def test_projects_exact_index_and_series_structure() -> None:
     )
 
     assert project_static_data_index(
-        series_id="2025-2026",
-        title="2025–2026 ICPC + CCPC",
-        path="series/2025-2026.json",
+        ((document, "series/2025-2026.json"),)
     ) == {
         "schemaVersion": 1,
         "defaultSeriesId": "2025-2026",
@@ -142,6 +140,55 @@ def test_projects_exact_index_and_series_structure() -> None:
             "after": 1400,
         }
     ]
+
+
+def test_index_sorts_by_latest_contest_then_series_id() -> None:
+    older = project_fixture()
+    older["id"] = "z-series"
+    older["title"] = "Older"
+    newer = project_fixture()
+    newer["id"] = "b-series"
+    newer["title"] = "Newer"
+    newer["contests"][0]["startAt"] = "2026-07-24T12:00:00+08:00"
+    tie = project_fixture()
+    tie["id"] = "a-series"
+    tie["title"] = "Tie"
+    tie["contests"][1]["startAt"] = "2026-07-24T12:00:00+08:00"
+
+    index = project_static_data_index(
+        (
+            (older, "series/z.json"),
+            (newer, "series/b.json"),
+            (tie, "series/a.json"),
+        )
+    )
+
+    assert [item["id"] for item in index["series"]] == [
+        "a-series",
+        "b-series",
+        "z-series",
+    ]
+    assert index["defaultSeriesId"] == "a-series"
+
+
+def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
+    empty_result = SeriesRatingResult((), MappingProxyType({}))
+    with pytest.raises(DataValidationError, match="at least one contest"):
+        project_series_rating_data(empty_result, series_id="empty", title="Empty")
+    with pytest.raises(DataValidationError, match="at least one series"):
+        project_static_data_index(())
+
+    document = project_fixture()
+    duplicate = dict(document)
+    with pytest.raises(DataValidationError, match="duplicate series id"):
+        project_static_data_index(
+            ((document, "series/a.json"), (duplicate, "series/b.json"))
+        )
+    duplicate["id"] = "other"
+    with pytest.raises(DataValidationError, match="duplicate series path"):
+        project_static_data_index(
+            ((document, "series/a.json"), (duplicate, "series/a.json"))
+        )
 
 
 def test_competition_ranking_skips_positions_after_ties() -> None:
@@ -234,34 +281,37 @@ def test_atomic_json_write_is_compact_unicode_and_deterministic(tmp_path) -> Non
     assert not (path.parent / ".data.json.tmp").exists()
 
 
-def test_generator_publishes_series_before_index(monkeypatch, tmp_path) -> None:
+def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> None:
     result, _, _ = result_fixture()
     writes = []
+    loads = []
 
-    class Client:
-        def __enter__(self):
-            return self
+    def load_named(name):
+        def load():
+            loads.append(name)
+            return result.contests
 
-        def __exit__(self, *args):
-            return None
+        return load
 
-    monkeypatch.setattr(generate_static_data, "RankLandClient", Client)
     monkeypatch.setattr(
         generate_static_data,
-        "load_2025_2026_season",
-        lambda client: type("Season", (), {"contests": ()})(),
+        "series_specs",
+        lambda: (
+            generate_static_data.SeriesSpec("old", "Old", "series/old.json", load_named("old")),
+            generate_static_data.SeriesSpec("new", "New", "series/new.json", load_named("new")),
+        ),
     )
     monkeypatch.setattr(generate_static_data, "calculate_series_ratings", lambda contests: result)
     original_write = generate_static_data.write_json_atomic
 
     def recording_write(path, document):
+        assert loads == ["old", "new"]
         writes.append(path.relative_to(tmp_path).as_posix())
         original_write(path, document)
 
     monkeypatch.setattr(generate_static_data, "write_json_atomic", recording_write)
     generate_static_data.generate_static_data(tmp_path)
 
-    assert writes == ["series/2025-2026.json", "index.json"]
-    assert json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))[
-        "defaultSeriesId"
-    ] == "2025-2026"
+    assert writes == ["series/old.json", "series/new.json", "index.json"]
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert index["defaultSeriesId"] == "new"

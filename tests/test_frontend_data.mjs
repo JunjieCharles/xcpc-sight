@@ -51,6 +51,12 @@ test("validates and indexes a series once", () => {
   assert.equal(first.participantsByContest[2][0].participation.after, 1430);
 });
 
+test("accepts an empty display school", () => {
+  const document = fixture();
+  document.competitors[0].school = "";
+  assert.equal(validateSeries(document).competitors[0].school, "");
+});
+
 test("rejects broken rating continuity", () => {
   const series = fixture();
   series.competitors[0].participations[1].before = 1410;
@@ -144,16 +150,27 @@ test("caches in-flight JSON requests and evicts failures", async () => {
   assert.equal(calls, 3);
 });
 
-test("data store loads series through index-relative URL", async () => {
+test("data store preserves index order and loads either series by ID", async () => {
   clearJsonCache();
-  const index = { schemaVersion: 1, defaultSeriesId: "season", series: [{ id: "season", title: "Season", path: "series/season.json" }] };
+  const nowcoder = { ...fixture(), id: "nowcoder-summer-2026", title: "2026牛客暑期多校训练营" };
+  const index = {
+    schemaVersion: 1,
+    defaultSeriesId: "nowcoder-summer-2026",
+    series: [
+      { id: "nowcoder-summer-2026", title: nowcoder.title, path: "series/nowcoder-summer-2026.json" },
+      { id: "season", title: "Season", path: "series/season.json" },
+    ],
+  };
   const responses = new Map([
     ["https://example.test/sub/data/index.json", index],
+    ["https://example.test/sub/data/series/nowcoder-summer-2026.json", nowcoder],
     ["https://example.test/sub/data/series/season.json", fixture()],
   ]);
   const fetchImpl = async (url) => ({ ok: responses.has(url), status: responses.has(url) ? 200 : 404, json: async () => responses.get(url) });
   const store = createDataStore("https://example.test/sub/data/index.json", fetchImpl);
-  const loaded = await store.getSeries("season");
-  assert.equal(loaded.series.id, "season");
+  const loadedIndex = await store.getIndex();
+  assert.deepEqual(loadedIndex.series.map(({ id }) => id), ["nowcoder-summer-2026", "season"]);
+  const loaded = await store.getSeries("nowcoder-summer-2026");
+  assert.equal(loaded.series.id, "nowcoder-summer-2026");
   assert.equal(loaded.index.competitorById.size, 1);
 });

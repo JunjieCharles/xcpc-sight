@@ -4,11 +4,14 @@ import json
 import math
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from .errors import DataValidationError, NowcoderError
+from .models import CompetitorId, Contest, TeamResult
 
 JsonObject = dict[str, Any]
 
@@ -16,6 +19,8 @@ DEFAULT_BASE_URL = "https://ac.nowcoder.com"
 INITIAL_RESULT_LIMIT = 50
 MAX_RESULT_LIMIT = 1_000_000
 USER_AGENT = "Mozilla/5.0 (compatible; xcpc-sight/0.1; +https://ac.nowcoder.com/)"
+NOWCODER_SUMMER_2026_SERIES = "nowcoder-summer-2026"
+_SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +367,83 @@ def _assemble(pages: tuple[NowcoderLeaderboardPage, ...]) -> NowcoderLeaderboard
         rank_count=first.rank_count,
         problems=first.problems,
         standings=tuple(standings),
+    )
+
+
+def nowcoder_leaderboard_to_contest(
+    leaderboard: NowcoderLeaderboard,
+    *,
+    title: str,
+    series: str = NOWCODER_SUMMER_2026_SERIES,
+) -> Contest:
+    """Adapt a finished Nowcoder leaderboard to registration-level rating input."""
+    if not leaderboard.is_contest_finished:
+        raise DataValidationError(
+            f"Nowcoder contest {leaderboard.contest_id}: leaderboard is not finished"
+        )
+    if leaderboard.contest_begin_time_ms < 0 or leaderboard.contest_end_time_ms < 0:
+        raise DataValidationError(
+            f"Nowcoder contest {leaderboard.contest_id}: timestamps must be non-negative"
+        )
+    if leaderboard.contest_end_time_ms < leaderboard.contest_begin_time_ms:
+        raise DataValidationError(
+            f"Nowcoder contest {leaderboard.contest_id}: contest ends before it begins"
+        )
+    contest_title = title.strip()
+    if not contest_title:
+        raise DataValidationError("Nowcoder contest title must not be empty")
+    teams: list[TeamResult] = []
+    for standing in leaderboard.standings:
+        if standing.ranking <= 0:
+            raise DataValidationError(
+                f"Nowcoder contest {leaderboard.contest_id}, standing {standing.uid}: "
+                "ranking must be positive"
+            )
+        if standing.accepted_count < 0 or standing.penalty_time_ms < 0:
+            raise DataValidationError(
+                f"Nowcoder contest {leaderboard.contest_id}, standing {standing.uid}: "
+                "accepted count and penalty must be non-negative"
+            )
+        display_member = standing.user_name.strip()
+        if not display_member:
+            raise DataValidationError(
+                f"Nowcoder contest {leaderboard.contest_id}, standing {standing.uid}: "
+                "userName must not be empty"
+            )
+        raw_school = standing.school.strip()
+        display_school = (
+            "" if not raw_school or raw_school.casefold() in {"none", "null"} else raw_school
+        )
+        has_activity = standing.accepted_count > 0 or any(
+            score.submit for score in standing.scores
+        )
+        teams.append(
+            TeamResult(
+                team_id=f"standing:{standing.uid}",
+                team_name=display_member,
+                school_name=display_school,
+                members=(),
+                rank=standing.ranking,
+                solved=standing.accepted_count,
+                penalty=standing.penalty_time_ms // 60_000,
+                official=True,
+                has_activity=has_activity,
+                rating_competitor=CompetitorId(
+                    "nowcoder", f"standing:{standing.uid}"
+                ),
+                rating_display_school=display_school,
+                rating_display_member=display_member,
+            )
+        )
+    start_at = datetime.fromtimestamp(
+        leaderboard.contest_begin_time_ms / 1000, tz=UTC
+    ).astimezone(_SHANGHAI)
+    return Contest(
+        contest_id=f"nowcoder:{leaderboard.contest_id}",
+        title=contest_title,
+        series=series,
+        start_at=start_at,
+        teams=tuple(teams),
     )
 
 

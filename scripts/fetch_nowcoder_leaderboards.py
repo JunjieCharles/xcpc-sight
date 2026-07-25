@@ -7,7 +7,7 @@ from pathlib import Path
 
 from core import NowcoderClient, nowcoder_csv_fieldnames, nowcoder_csv_rows
 
-DEFAULT_CONTEST_IDS = (133876, 133877)
+DEFAULT_CONTEST_IDS = (133876, 133877, 133878)
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         type=int,
         default=DEFAULT_CONTEST_IDS,
-        help="Nowcoder contest IDs (defaults to 133876 and 133877)",
+        help="Nowcoder contest IDs (defaults to 133876, 133877, and 133878)",
     )
     parser.add_argument(
         "--output-dir",

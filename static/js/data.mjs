@@ -17,6 +17,10 @@ function string(value, path) {
   if (typeof value !== "string" || !value) fail(path, "expected non-empty string");
 }
 
+function text(value, path) {
+  if (typeof value !== "string") fail(path, "expected string");
+}
+
 function integer(value, path, minimum = Number.MIN_SAFE_INTEGER) {
   if (!Number.isSafeInteger(value) || value < minimum) fail(path, `expected integer >= ${minimum}`);
 }
@@ -100,7 +104,7 @@ export function validateSeries(document) {
     const path = `series.competitors[${i}]`;
     object(competitor, path);
     string(competitor.id, `${path}.id`);
-    string(competitor.school, `${path}.school`);
+    text(competitor.school, `${path}.school`);
     string(competitor.member, `${path}.member`);
     integer(competitor.rank, `${path}.rank`, 1);
     integer(competitor.finalRating, `${path}.finalRating`);
