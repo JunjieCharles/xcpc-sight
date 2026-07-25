@@ -86,7 +86,7 @@ doc/               各功能设计文档
 
 ## 赛季口径
 
-2025–2026 赛季来自 RankLand official collection 中的 `icpc2025` 和 `ccpc2025`。邀请赛排除，区域赛包含；其余非邀请赛默认保留。比赛按上海本地日期排序，同日 CCPC 在 ICPC 前。
+2025–2026 赛季来自 RankLand official collection 中的 `icpc2025` 和 `ccpc2025`。邀请赛排除，区域赛包含；其余非邀请赛默认保留，但通过显式 ID 例外排除 `ccpc2025ladies` 女生专场。比赛按上海本地日期排序，同日 CCPC 在 ICPC 前。
 
 详细规则见：
 

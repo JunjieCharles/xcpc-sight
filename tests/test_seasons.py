@@ -1,7 +1,12 @@
 from datetime import datetime
 
 from core import Contest
-from core.seasons import SeasonSpec, contest_sort_key, select_season
+from core.seasons import (
+    SEASON_2025_2026,
+    SeasonSpec,
+    contest_sort_key,
+    select_season,
+)
 
 
 def make_contest(contest_id: str, title: str, series: str, start: datetime) -> Contest:
@@ -18,6 +23,18 @@ def test_invitationals_are_excluded_and_regionals_are_kept() -> None:
     season = select_season((regional, invitational))
     assert season.contests == (regional,)
     assert season.decisions[1].reason == "invitational excluded"
+
+
+def test_default_season_explicitly_excludes_ladies_contest() -> None:
+    ladies = make_contest(
+        "ccpc2025ladies",
+        "第十一届中国大学生程序设计竞赛（女生专场）",
+        "ccpc2025",
+        datetime(2025, 8, 1, 9),
+    )
+    season = select_season((ladies,), SEASON_2025_2026)
+    assert season.contests == ()
+    assert season.decisions[0].reason == "explicitly excluded"
 
 
 def test_same_day_ccpc_precedes_icpc_even_when_icpc_starts_earlier() -> None:

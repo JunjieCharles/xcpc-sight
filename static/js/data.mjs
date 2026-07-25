@@ -152,10 +152,10 @@ export function indexSeries(document) {
   return result;
 }
 
-export function ratingTimeline(competitor, contests) {
+export function ratingTimeline(competitor, contests, initialRating) {
   const points = [];
   let cursor = 0;
-  let rating = null;
+  let rating = initialRating;
   for (let contestIndex = 0; contestIndex < contests.length; contestIndex += 1) {
     const participation = competitor.participations[cursor]?.contestIndex === contestIndex
       ? competitor.participations[cursor++]
@@ -172,9 +172,20 @@ export function ratingTimeline(competitor, contests) {
   return points;
 }
 
-export function carriedRatings(competitor, contestCount) {
+export function carriedRatings(competitor, contestCount, initialRating) {
   const contests = Array.from({ length: contestCount }, (_, contestIndex) => ({ contestIndex }));
-  return ratingTimeline(competitor, contests).map((point) => point.rating);
+  return ratingTimeline(competitor, contests, initialRating).map((point) => point.rating);
+}
+
+export function ratingTier(rating) {
+  if (rating >= 3000) return { className: "rating-legendary", color: "#000000", legendary: true };
+  if (rating >= 2400) return { className: "rating-red", color: "#ff0000", legendary: false };
+  if (rating >= 2100) return { className: "rating-orange", color: "#ffc000", legendary: false };
+  if (rating >= 1900) return { className: "rating-purple", color: "#aa00aa", legendary: false };
+  if (rating >= 1600) return { className: "rating-blue", color: "#0000ff", legendary: false };
+  if (rating >= 1400) return { className: "rating-cyan", color: "#03a89e", legendary: false };
+  if (rating >= 1200) return { className: "rating-green", color: "#008000", legendary: false };
+  return { className: "rating-gray", color: "#808080", legendary: false };
 }
 
 export function searchCompetitors(competitors, query) {

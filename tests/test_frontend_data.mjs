@@ -8,6 +8,7 @@ import {
   fetchJson,
   formatDelta,
   indexSeries,
+  ratingTier,
   ratingTimeline,
   readQueryState,
   resolveDataUrl,
@@ -64,10 +65,10 @@ test("validates index references and resolves paths relative to it", () => {
   assert.throws(() => validateIndex({ ...index, defaultSeriesId: "missing" }), /does not reference/);
 });
 
-test("derives carried ratings, absence, and participation state", () => {
+test("derives initial and carried ratings with participation state", () => {
   const series = fixture();
-  assert.deepEqual(carriedRatings(series.competitors[0], 3), [1420, 1420, 1430]);
-  const timeline = ratingTimeline(series.competitors[0], series.contests);
+  assert.deepEqual(carriedRatings(series.competitors[0], 3, series.initialRating), [1420, 1420, 1430]);
+  const timeline = ratingTimeline(series.competitors[0], series.contests, series.initialRating);
   assert.deepEqual(timeline.map(({ rating, participated }) => ({ rating, participated })), [
     { rating: 1420, participated: true },
     { rating: 1420, participated: false },
@@ -78,7 +79,7 @@ test("derives carried ratings, absence, and participation state", () => {
   assert.equal(formatDelta(-8), "-8");
 });
 
-test("keeps pre-debut blank and zero-delta participation explicit", () => {
+test("shows initial rating before debut and zero-delta participation explicitly", () => {
   const series = fixture();
   const competitor = {
     ...series.competitors[0],
@@ -86,14 +87,29 @@ test("keeps pre-debut blank and zero-delta participation explicit", () => {
     contestsParticipated: 1,
     participations: [{ contestIndex: 1, contestRank: 3, before: 1400, delta: 0, after: 1400 }],
   };
-  const timeline = ratingTimeline(competitor, series.contests);
-  assert.equal(timeline[0].rating, null);
+  const timeline = ratingTimeline(competitor, series.contests, series.initialRating);
+  assert.equal(timeline[0].rating, 1400);
   assert.equal(timeline[0].participated, false);
   assert.equal(timeline[1].rating, 1400);
   assert.equal(timeline[1].participated, true);
   assert.equal(timeline[1].participation.delta, 0);
   assert.equal(timeline[2].rating, 1400);
   assert.equal(timeline[2].participated, false);
+});
+
+test("classifies Codeforces-style rating boundaries", () => {
+  const expected = [
+    [1199, "rating-gray", "#808080", false], [1200, "rating-green", "#008000", false],
+    [1399, "rating-green", "#008000", false], [1400, "rating-cyan", "#03a89e", false],
+    [1599, "rating-cyan", "#03a89e", false], [1600, "rating-blue", "#0000ff", false],
+    [1899, "rating-blue", "#0000ff", false], [1900, "rating-purple", "#aa00aa", false],
+    [2099, "rating-purple", "#aa00aa", false], [2100, "rating-orange", "#ffc000", false],
+    [2399, "rating-orange", "#ffc000", false], [2400, "rating-red", "#ff0000", false],
+    [2999, "rating-red", "#ff0000", false], [3000, "rating-legendary", "#000000", true],
+  ];
+  for (const [rating, className, color, legendary] of expected) {
+    assert.deepEqual(ratingTier(rating), { className, color, legendary });
+  }
 });
 
 test("searches all terms across member and school", () => {

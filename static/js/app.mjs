@@ -2,6 +2,7 @@ import {
   carriedRatings,
   createDataStore,
   formatDelta,
+  ratingTier,
   ratingTimeline,
   readQueryState,
   searchCompetitors,
@@ -39,6 +40,38 @@ function node(tag, properties = {}, children = []) {
   }
   for (const child of children) element.append(child);
   return element;
+}
+
+function ratingNode(rating, className = "") {
+  const tier = ratingTier(rating);
+  const value = String(rating);
+  const ratingElement = node("span", { className: ["rating-value", tier.className, className].filter(Boolean).join(" ") });
+  if (tier.legendary) {
+    ratingElement.append(
+      node("span", { className: "rating-legendary-first", text: value[0] }),
+      document.createTextNode(value.slice(1)),
+    );
+  } else {
+    ratingElement.textContent = value;
+  }
+  return ratingElement;
+}
+
+function deltaNode(delta) {
+  return node("span", {
+    className: delta > 0 ? "positive" : delta < 0 ? "negative" : "delta-zero",
+    text: `(${formatDelta(delta)})`,
+  });
+}
+
+function columnGroup(widths) {
+  const group = node("colgroup");
+  widths.forEach((width) => {
+    const column = node("col");
+    column.style.width = `${width}px`;
+    group.append(column);
+  });
+  return group;
 }
 
 function setUrl(mode = "replace") {
@@ -109,19 +142,19 @@ function renderSeriesRows() {
       row.setAttribute("aria-rowindex", String(index + 2));
       row.append(node("td", { text: String(competitor.rank) }));
       row.append(node("td", {}, [personButton(competitor)]));
+      row.append(node("td", {}, [ratingNode(competitor.finalRating)]));
+      row.append(node("td", { text: String(competitor.contestsParticipated) }));
       const participationByContest = new Map(competitor.participations.map((item) => [item.contestIndex, item]));
-      const ratings = carriedRatings(competitor, state.series.contests.length);
+      const ratings = carriedRatings(competitor, state.series.contests.length, state.series.initialRating);
       ratings.forEach((rating, contestIndex) => {
         const participation = participationByContest.get(contestIndex);
-        const properties = rating === null
-          ? { className: "rating-before-debut", text: "", "aria-label": "尚未参赛" }
-          : participation
-            ? { className: "rating-participated", text: String(rating), title: `已参赛，变化 ${formatDelta(participation.delta)}` }
-            : { className: "rating-absent", text: String(rating), title: "本场未参加，Rating 沿用" };
-        row.append(node("td", properties));
+        const cell = node("td", {
+          className: participation ? "rating-participated" : "rating-absent",
+          title: participation ? `已参赛，变化 ${formatDelta(participation.delta)}` : "本场未参加，Rating 沿用",
+        }, [ratingNode(rating)]);
+        if (participation) cell.append(" ", deltaNode(participation.delta));
+        row.append(cell);
       });
-      row.append(node("td", { text: String(competitor.finalRating) }));
-      row.append(node("td", { text: String(competitor.contestsParticipated) }));
       return row;
     },
   });
@@ -132,14 +165,18 @@ function renderSeriesHeader() {
   const row = node("tr");
   row.append(node("th", { scope: "col", text: "排名" }));
   row.append(node("th", { scope: "col", text: "选手 / 学校" }));
+  row.append(node("th", { scope: "col", text: "最终 Rating" }));
+  row.append(node("th", { scope: "col", text: "参赛" }));
   state.series.contests.forEach((contest) => {
     const button = node("button", { type: "button", className: "contest-button", text: contest.title, title: contest.title });
     button.addEventListener("click", () => openContest(contest.id));
     row.append(node("th", { scope: "col" }, [button]));
   });
-  row.append(node("th", { scope: "col", text: "最终" }));
-  row.append(node("th", { scope: "col", text: "参赛" }));
   elements.seriesHead.replaceChildren(row);
+  const table = elements.seriesHead.closest("table");
+  table.querySelector("colgroup")?.remove();
+  table.prepend(columnGroup([62, 220, 104, 76, ...state.series.contests.map(() => 136)]));
+  table.style.width = `${462 + state.series.contests.length * 136}px`;
 }
 
 function applySearch({ resetScroll = true } = {}) {
@@ -196,11 +233,17 @@ function openContest(contestId, updateUrl = true) {
     ]),
     backButton(),
   ]);
-  const shell = node("div", { className: "table-shell", tabIndex: 0, "aria-label": "本场参赛者表" });
+  const shell = node("div", { className: "table-shell contest-table-shell", tabIndex: 0, "aria-label": "本场参赛者表" });
   const headRow = node("tr");
-  ["比赛排名", "选手 / 学校", "赛前", "变化", "赛后"].forEach((label) => headRow.append(node("th", { scope: "col", text: label })));
+  ["比赛排名", "选手 / 学校", "赛前", "赛后", "变化"].forEach((label) => headRow.append(node("th", { scope: "col", text: label })));
   const body = node("tbody");
-  shell.append(node("table", { className: "data-table" }, [node("thead", {}, [headRow]), body]));
+  const table = node("table", { className: "data-table fixed-table contest-table" }, [
+    columnGroup([96, 250, 90, 90, 90]),
+    node("thead", {}, [headRow]),
+    body,
+  ]);
+  table.style.minWidth = "616px";
+  shell.append(table);
   const draw = () => renderVirtualRows({
     container: shell, body, items: participants, columns: 5,
     createRow({ competitor, participation }, index) {
@@ -208,14 +251,13 @@ function openContest(contestId, updateUrl = true) {
       row.setAttribute("aria-rowindex", String(index + 2));
       row.append(node("td", { text: String(participation.contestRank) }));
       row.append(node("td", {}, [personButton(competitor)]));
-      row.append(node("td", { text: String(participation.before) }));
+      row.append(node("td", {}, [ratingNode(participation.before)]));
+      row.append(node("td", {}, [ratingNode(participation.after)]));
       row.append(node("td", { className: participation.delta > 0 ? "positive" : participation.delta < 0 ? "negative" : "", text: formatDelta(participation.delta) }));
-      row.append(node("td", { text: String(participation.after) }));
       return row;
     },
   });
   shell.addEventListener("scroll", () => requestAnimationFrame(draw), { passive: true });
-  const table = shell.querySelector("table");
   table.setAttribute("aria-rowcount", String(participants.length + 1));
   elements.detailView.append(heading, shell);
   draw();
@@ -229,9 +271,7 @@ function svgNode(tag, attributes = {}) {
 }
 
 function ratingChart(competitor) {
-  const timeline = ratingTimeline(competitor, state.series.contests);
-  const firstRatedIndex = timeline.findIndex((point) => point.rating !== null);
-  const points = timeline.slice(firstRatedIndex);
+  const points = ratingTimeline(competitor, state.series.contests, state.series.initialRating);
   const width = 760, height = 330, left = 54, right = 22, top = 24, bottom = 56;
   const ratings = points.map((point) => point.rating);
   const rawMin = Math.min(...ratings), rawMax = Math.max(...ratings);
@@ -244,7 +284,7 @@ function ratingChart(competitor) {
   const wrap = node("div", { className: "chart-wrap" });
   const svg = svgNode("svg", { class: "rating-chart", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-labelledby": "chart-title chart-desc" });
   const title = svgNode("title", { id: "chart-title" }); title.textContent = `${competitor.member} 的系列 Rating 曲线`;
-  const desc = svgNode("desc", { id: "chart-desc" }); desc.textContent = `从首次参赛开始覆盖 ${points.length} 场比赛，实际参赛显示标记，缺席时延续最近 Rating。`;
+  const desc = svgNode("desc", { id: "chart-desc" }); desc.textContent = `覆盖系列全部 ${points.length} 场比赛，实际参赛显示标记，未参赛时延续当时 Rating。`;
   svg.append(title, desc);
   for (let i = 0; i <= 4; i += 1) {
     const value = Math.round((min + (max - min) * i / 4) / 10) * 10;
@@ -252,17 +292,27 @@ function ratingChart(competitor) {
     svg.append(svgNode("line", { class: "chart-grid", x1: left, x2: width - right, y1: gridY, y2: gridY }));
     const label = svgNode("text", { class: "chart-axis", x: left - 9, y: gridY + 4, "text-anchor": "end" }); label.textContent = String(value); svg.append(label);
   }
-  const linePoints = points.map((point, index) => `${x(index)},${y(point.rating)}`).join(" ");
-  svg.append(svgNode("polyline", { class: "chart-line", points: linePoints }));
+  for (let index = 1; index < points.length; index += 1) {
+    const tier = ratingTier(points[index].rating);
+    svg.append(svgNode("line", {
+      class: "chart-line",
+      x1: x(index - 1), y1: y(points[index - 1].rating),
+      x2: x(index), y2: y(points[index].rating),
+      stroke: tier.color,
+    }));
+  }
   const focus = svgNode("line", { class: "chart-focus", x1: 0, x2: 0, y1: top, y2: height - bottom, visibility: "hidden" });
   svg.append(focus);
   const tooltip = node("div", { className: "chart-tooltip", hidden: true, role: "status" });
   points.forEach((point, index) => {
     const participation = point.participation;
-    if (point.participated) svg.append(svgNode("circle", { class: "chart-dot", cx: x(index), cy: y(point.rating), r: 4 }));
+    if (point.participated) {
+      const tier = ratingTier(point.rating);
+      svg.append(svgNode("circle", { class: "chart-dot", cx: x(index), cy: y(point.rating), r: 4, stroke: tier.color }));
+    }
     const detail = participation
-      ? `已参赛，排名 ${participation.contestRank}，赛前 ${participation.before}，变化 ${formatDelta(participation.delta)}，赛后 ${participation.after}`
-      : `未参赛，Rating 沿用 ${point.rating}`;
+      ? `#${participation.contestRank}，${participation.before} → ${participation.after} (${formatDelta(participation.delta)})`
+      : "未参赛";
     const hit = svgNode("rect", {
       class: "chart-hit",
       x: index === 0 ? left : (x(index - 1) + x(index)) / 2,
@@ -276,7 +326,18 @@ function ratingChart(competitor) {
     const show = () => {
       focus.setAttribute("x1", x(index)); focus.setAttribute("x2", x(index)); focus.setAttribute("visibility", "visible");
       tooltip.hidden = false;
-      tooltip.textContent = `${point.contest.title} · ${detail}`;
+      if (participation) {
+        tooltip.replaceChildren(
+          node("span", { text: `${point.contest.title} #${participation.contestRank}，` }),
+          ratingNode(participation.before),
+          document.createTextNode(" → "),
+          ratingNode(participation.after),
+          document.createTextNode(" "),
+          deltaNode(participation.delta),
+        );
+      } else {
+        tooltip.textContent = `${point.contest.title} · 未参赛`;
+      }
       tooltip.style.left = `${Math.min(78, Math.max(4, x(index) / width * 100))}%`;
       tooltip.style.top = `${Math.max(4, y(point.rating) / height * 100 - 12)}%`;
     };
@@ -290,13 +351,13 @@ function ratingChart(competitor) {
     }
   });
   wrap.append(svg, tooltip);
-  figure.append(wrap, node("figcaption", { className: "chart-note", text: "横轴为系列比赛序号；实际参赛显示圆点，缺席区间延续最近 Rating。悬停或聚焦查看详情。" }));
+  figure.append(wrap, node("figcaption", { className: "chart-note", text: "横轴为系列比赛序号；实际参赛显示圆点，未参赛区间延续当时 Rating。悬停或聚焦查看详情。" }));
   return figure;
 }
 
 function participationTable(competitor) {
   const head = node("tr");
-  ["比赛", "比赛排名", "赛前", "变化", "赛后"].forEach((label) => head.append(node("th", { scope: "col", text: label })));
+  ["比赛", "比赛排名", "赛前", "赛后", "变化"].forEach((label) => head.append(node("th", { scope: "col", text: label })));
   const body = node("tbody");
   competitor.participations.forEach((participation) => {
     const contest = state.series.contests[participation.contestIndex];
@@ -305,9 +366,9 @@ function participationTable(competitor) {
     const row = node("tr");
     row.append(node("td", {}, [contestButton]));
     row.append(node("td", { text: String(participation.contestRank) }));
-    row.append(node("td", { text: String(participation.before) }));
+    row.append(node("td", {}, [ratingNode(participation.before)]));
+    row.append(node("td", {}, [ratingNode(participation.after)]));
     row.append(node("td", { className: participation.delta > 0 ? "positive" : participation.delta < 0 ? "negative" : "", text: formatDelta(participation.delta) }));
-    row.append(node("td", { text: String(participation.after) }));
     body.append(row);
   });
   return node("div", { className: "compact-table-wrap", tabIndex: 0 }, [node("table", { className: "data-table compact-table" }, [node("thead", {}, [head]), body])]);
@@ -327,7 +388,8 @@ function openCompetitor(competitorId, updateUrl = true) {
       node("h2", { id: "detail-title", text: competitor.member, tabIndex: -1 }),
       node("p", { className: "detail-meta" }, [
         node("span", { text: competitor.school }), node("span", { text: `系列排名 #${competitor.rank}` }),
-        node("span", { text: `最终 ${competitor.finalRating}` }), node("span", { text: `${competitor.contestsParticipated} 次参赛` }),
+        node("span", {}, [document.createTextNode("最终 "), ratingNode(competitor.finalRating)]),
+        node("span", { text: `${competitor.contestsParticipated} 次参赛` }),
       ]),
     ]), backButton(),
   ]);

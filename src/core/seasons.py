@@ -24,6 +24,7 @@ class SeasonSpec:
 SEASON_2025_2026 = SeasonSpec(
     name="2025-2026",
     collection_ids=("icpc2025", "ccpc2025"),
+    exclude_ids=frozenset({"ccpc2025ladies"}),
 )
 
 
