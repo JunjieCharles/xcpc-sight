@@ -5,6 +5,7 @@ import math
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from html import unescape
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -404,13 +405,13 @@ def nowcoder_leaderboard_to_contest(
                 f"Nowcoder contest {leaderboard.contest_id}, standing {standing.uid}: "
                 "accepted count and penalty must be non-negative"
             )
-        display_member = standing.user_name.strip()
+        display_member = unescape(standing.user_name.strip())
         if not display_member:
             raise DataValidationError(
                 f"Nowcoder contest {leaderboard.contest_id}, standing {standing.uid}: "
                 "userName must not be empty"
             )
-        raw_school = standing.school.strip()
+        raw_school = unescape(standing.school.strip())
         display_school = (
             "" if not raw_school or raw_school.casefold() in {"none", "null"} else raw_school
         )

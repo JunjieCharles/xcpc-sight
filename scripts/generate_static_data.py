@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from core import (
+    HduClient,
     NowcoderClient,
     RankLandClient,
     load_2025_2026_season,
@@ -39,6 +40,9 @@ NOWCODER_CONTESTS = (
     (133877, "2026牛客暑期多校训练营（第二场）"),
     (133878, "2026牛客暑期多校训练营（第三场）"),
 )
+HDU_SERIES_ID = "hdu-summer-2026"
+HDU_SERIES_TITLE = '2026“钉耙编程”中国大学生算法设计暑期联赛'
+HDU_CONTEST_IDS = (1229, 1230)
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,6 +88,12 @@ def load_nowcoder_series() -> tuple[Contest, ...]:
     return tuple(sorted(contests, key=lambda contest: contest.start_at))
 
 
+def load_hdu_series() -> tuple[Contest, ...]:
+    with HduClient() as client:
+        contests = tuple(client.fetch_contest(contest_id) for contest_id in HDU_CONTEST_IDS)
+    return tuple(sorted(contests, key=lambda contest: contest.start_at))
+
+
 def series_specs() -> tuple[SeriesSpec, ...]:
     return (
         SeriesSpec(
@@ -97,6 +107,12 @@ def series_specs() -> tuple[SeriesSpec, ...]:
             NOWCODER_SERIES_TITLE,
             f"series/{NOWCODER_SERIES_ID}.json",
             load_nowcoder_series,
+        ),
+        SeriesSpec(
+            HDU_SERIES_ID,
+            HDU_SERIES_TITLE,
+            f"series/{HDU_SERIES_ID}.json",
+            load_hdu_series,
         ),
     )
 

@@ -6,6 +6,7 @@
 | 多系列静态站点 JSON 数据契约、生成与零构建前端 | [static-site-data.md](static-site-data.md) |
 | RankLand 数据获取与 SRK 转换 | [rankland-data.md](rankland-data.md) |
 | 牛客榜单数据获取、报名实体 Rating 与 CSV 导出 | [nowcoder-data.md](nowcoder-data.md) |
+| HDU 认证榜单、CSV 契约与 team token Rating | [hdu-data.md](hdu-data.md) |
 | 2025–2026 赛季范围与排序 | [season-2025-2026.md](season-2025-2026.md) |
 
 开发已有功能前应先阅读对应文档；实现完成后必须回到文档同步行为、API、假设、限制与测试。

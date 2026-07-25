@@ -150,27 +150,34 @@ test("caches in-flight JSON requests and evicts failures", async () => {
   assert.equal(calls, 3);
 });
 
-test("data store preserves index order and loads either series by ID", async () => {
+test("data store preserves index order and loads any series by ID", async () => {
   clearJsonCache();
   const nowcoder = { ...fixture(), id: "nowcoder-summer-2026", title: "2026牛客暑期多校训练营" };
+  const hdu = {
+    ...fixture(),
+    id: "hdu-summer-2026",
+    title: "2026“钉耙编程”中国大学生算法设计暑期联赛",
+  };
   const index = {
     schemaVersion: 1,
     defaultSeriesId: "nowcoder-summer-2026",
     series: [
       { id: "nowcoder-summer-2026", title: nowcoder.title, path: "series/nowcoder-summer-2026.json" },
+      { id: "hdu-summer-2026", title: hdu.title, path: "series/hdu-summer-2026.json" },
       { id: "season", title: "Season", path: "series/season.json" },
     ],
   };
   const responses = new Map([
     ["https://example.test/sub/data/index.json", index],
     ["https://example.test/sub/data/series/nowcoder-summer-2026.json", nowcoder],
+    ["https://example.test/sub/data/series/hdu-summer-2026.json", hdu],
     ["https://example.test/sub/data/series/season.json", fixture()],
   ]);
   const fetchImpl = async (url) => ({ ok: responses.has(url), status: responses.has(url) ? 200 : 404, json: async () => responses.get(url) });
   const store = createDataStore("https://example.test/sub/data/index.json", fetchImpl);
   const loadedIndex = await store.getIndex();
-  assert.deepEqual(loadedIndex.series.map(({ id }) => id), ["nowcoder-summer-2026", "season"]);
-  const loaded = await store.getSeries("nowcoder-summer-2026");
-  assert.equal(loaded.series.id, "nowcoder-summer-2026");
+  assert.deepEqual(loadedIndex.series.map(({ id }) => id), ["nowcoder-summer-2026", "hdu-summer-2026", "season"]);
+  const loaded = await store.getSeries("hdu-summer-2026");
+  assert.equal(loaded.series.id, "hdu-summer-2026");
   assert.equal(loaded.index.competitorById.size, 1);
 });

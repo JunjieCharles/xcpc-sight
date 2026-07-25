@@ -56,7 +56,13 @@ GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
 python scripts/fetch_nowcoder_leaderboards.py
 ```
 
-默认获取比赛 `133876`、`133877`、`133878`，写入：
+默认获取以下比赛：
+
+- `133876`：<https://ac.nowcoder.com/acm/contest/133876>
+- `133877`：<https://ac.nowcoder.com/acm/contest/133877>
+- `133878`：<https://ac.nowcoder.com/acm/contest/133878>
+
+并写入：
 
 - `data-cache/nowcoder/nowcoder-133876-leaderboard.csv`
 - `data-cache/nowcoder/nowcoder-133877-leaderboard.csv`

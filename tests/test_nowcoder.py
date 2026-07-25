@@ -178,7 +178,7 @@ def test_client_rejects_incomplete_page() -> None:
 
 def test_leaderboard_adapts_to_registration_level_rating_entity() -> None:
     team_row = standing(42, 1)
-    team_row["userName"] = "  测试队  "
+    team_row["userName"] = "  惡&middot;即&middot;斬  "
     team_row["school"] = "None"
     team_row["teamMemberUids"] = [1, 2, 3]
     http = httpx.Client(
@@ -197,7 +197,7 @@ def test_leaderboard_adapts_to_registration_level_rating_entity() -> None:
     assert team.members == ()
     assert team.rating_competitor.school == "nowcoder"
     assert team.rating_competitor.member == "standing:42"
-    assert team.rating_display_member == "测试队"
+    assert team.rating_display_member == "惡·即·斬"
     assert team.rating_display_school == ""
     assert team.solved == 1
     assert team.penalty == 1

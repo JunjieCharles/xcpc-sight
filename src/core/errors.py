@@ -16,3 +16,7 @@ class RankLandError(XcpcSightError):
 
 class NowcoderError(XcpcSightError):
     """A Nowcoder request failed or returned an unsuccessful response."""
+
+
+class HduError(XcpcSightError):
+    """An HDU request failed or returned an unsuccessful response."""

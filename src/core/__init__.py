@@ -1,9 +1,20 @@
 from .errors import (
     DataValidationError,
+    HduError,
     IdentityConflictError,
     NowcoderError,
     RankLandError,
     XcpcSightError,
+)
+from .hdu import (
+    HDU_SUMMER_2026_SERIES,
+    HduClient,
+    HduContestMetadata,
+    HduLeaderboard,
+    HduStanding,
+    hdu_leaderboard_to_contest,
+    parse_hdu_csv,
+    parse_hdu_metadata,
 )
 from .models import (
     CompetitorId,
@@ -43,6 +54,12 @@ __all__ = [
     "ContestProvenance",
     "DataValidationError",
     "DefaultNormalizer",
+    "HDU_SUMMER_2026_SERIES",
+    "HduClient",
+    "HduContestMetadata",
+    "HduError",
+    "HduLeaderboard",
+    "HduStanding",
     "IdentityConflictError",
     "NOWCODER_SUMMER_2026_SERIES",
     "NowcoderClient",
@@ -61,10 +78,13 @@ __all__ = [
     "XcpcSightError",
     "load_2025_2026_season",
     "load_season",
+    "hdu_leaderboard_to_contest",
     "normalize_nowcoder_page",
     "normalize_srk_contest",
     "nowcoder_csv_fieldnames",
     "nowcoder_csv_rows",
     "nowcoder_leaderboard_to_contest",
+    "parse_hdu_csv",
+    "parse_hdu_metadata",
     "select_season",
 ]

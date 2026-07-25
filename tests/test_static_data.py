@@ -281,6 +281,38 @@ def test_atomic_json_write_is_compact_unicode_and_deterministic(tmp_path) -> Non
     assert not (path.parent / ".data.json.tmp").exists()
 
 
+def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
+    requested: list[int] = []
+
+    class FakeHduClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def fetch_contest(self, contest_id):
+            requested.append(contest_id)
+            return Contest(
+                f"hdu:{contest_id}",
+                f"HDU {contest_id}",
+                "hdu-summer-2026",
+                datetime(2026, 7, contest_id - 1200, tzinfo=UTC),
+                (),
+            )
+
+    monkeypatch.setattr(generate_static_data, "HduClient", FakeHduClient)
+
+    contests = generate_static_data.load_hdu_series()
+
+    assert requested == [1229, 1230]
+    assert [contest.contest_id for contest in contests] == ["hdu:1229", "hdu:1230"]
+    hdu_spec = next(
+        spec for spec in generate_static_data.series_specs() if spec.series_id == "hdu-summer-2026"
+    )
+    assert hdu_spec.path == "series/hdu-summer-2026.json"
+
+
 def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> None:
     result, _, _ = result_fixture()
     writes = []
@@ -298,6 +330,9 @@ def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> N
         "series_specs",
         lambda: (
             generate_static_data.SeriesSpec("old", "Old", "series/old.json", load_named("old")),
+            generate_static_data.SeriesSpec(
+                "middle", "Middle", "series/middle.json", load_named("middle")
+            ),
             generate_static_data.SeriesSpec("new", "New", "series/new.json", load_named("new")),
         ),
     )
@@ -305,13 +340,18 @@ def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> N
     original_write = generate_static_data.write_json_atomic
 
     def recording_write(path, document):
-        assert loads == ["old", "new"]
+        assert loads == ["old", "middle", "new"]
         writes.append(path.relative_to(tmp_path).as_posix())
         original_write(path, document)
 
     monkeypatch.setattr(generate_static_data, "write_json_atomic", recording_write)
     generate_static_data.generate_static_data(tmp_path)
 
-    assert writes == ["series/old.json", "series/new.json", "index.json"]
+    assert writes == [
+        "series/old.json",
+        "series/middle.json",
+        "series/new.json",
+        "index.json",
+    ]
     index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
-    assert index["defaultSeriesId"] == "new"
+    assert index["defaultSeriesId"] == "middle"
