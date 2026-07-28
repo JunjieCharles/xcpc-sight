@@ -305,8 +305,8 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_hdu_series()
 
-    assert requested == [1229, 1230]
-    assert [contest.contest_id for contest in contests] == ["hdu:1229", "hdu:1230"]
+    assert requested == [1229, 1230, 1231]
+    assert [contest.contest_id for contest in contests] == ["hdu:1229", "hdu:1230", "hdu:1231"]
     hdu_spec = next(
         spec for spec in generate_static_data.series_specs() if spec.series_id == "hdu-summer-2026"
     )
