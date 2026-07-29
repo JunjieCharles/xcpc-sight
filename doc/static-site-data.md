@@ -15,7 +15,7 @@ python scripts/generate_static_data.py
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 
-XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876、133877、133878 榜单；HDU 系列通过认证会话完整获取固定 CID 1229、1230、1231。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
+XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876、133877、133878、133879 榜单；HDU 系列通过认证会话完整获取固定 CID 1229、1230、1231。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
 
 JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不包含生成时间；固定输入产生固定字节。生成命令访问实时 RankLand、牛客和 HDU，默认离线测试不会执行它。
 
@@ -75,7 +75,7 @@ RankLand 系列中 `member` 为个人姓名。牛客系列以报名实体计算�
 
 因此可以派生：
 
-1. **系列宽表**：按比赛顺序扫描；未参加时从系列初始 Rating `1400` 开始沿用，实际参赛时更新为 `after`。前四列依次为排名、参赛者/学校、最终 Rating、参赛次数并冻结，其后为比赛列；实际参赛单元格显示 `Rating (delta)`，未参赛单元格只显示沿用 Rating。
+1. **系列宽表**：按比赛顺序扫描；未参加时从系列初始 Rating `1400` 开始沿用，实际参赛时更新为 `after`。前四列依次为排名、参赛者/学校、最终 Rating、参赛次数并冻结；每场比赛在数据结构中为独立的 rating 与 delta 两列，确保两类数值分别全列右对齐。页面视觉上将它们合并在同一比赛标题下，不显示子列名或内部边框。实际参赛时显示 rating 与 delta，未参赛时只显示沿用 rating。
 2. **单场参赛者表**：筛选 `contestIndex`，按比赛排名、参赛者/学校、`before`、`after`、`delta` 的顺序展示。
 3. **参赛者完整曲线**：覆盖系列所有比赛；从初始 Rating 开始，参赛点更新为 `after`，未参赛点水平延续，只有实际参赛点显示 marker。
 
@@ -85,7 +85,7 @@ Rating 文本采用 Codeforces 风格等级色：`<1200` 灰、`1200` 绿、`140
 
 ## 静态前端
 
-前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs` 和 `static/js/app.mjs`。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
+前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs` 和 `static/js/app.mjs`。入口为 CSS、`app.mjs` 及其 `data.mjs` 依赖使用同一查询版本标识；发布前端改动时必须一并更新该标识，使浏览器和 CDN 请求新的资源 URL，而数据 JSON 则继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
 
 本地必须通过 HTTP 访问，而不是直接打开 `file://`：
 

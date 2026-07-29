@@ -313,6 +313,43 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
     assert hdu_spec.path == "series/hdu-summer-2026.json"
 
 
+def test_generator_registers_four_nowcoder_contests(monkeypatch) -> None:
+    requested: list[int] = []
+
+    class FakeNowcoderClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def fetch_leaderboard(self, contest_id):
+            requested.append(contest_id)
+            return contest_id
+
+    def to_contest(contest_id, *, title):
+        return Contest(
+            f"nowcoder:{contest_id}",
+            title,
+            "nowcoder-summer-2026",
+            datetime(2026, 7, contest_id - 133870, tzinfo=UTC),
+            (),
+        )
+
+    monkeypatch.setattr(generate_static_data, "NowcoderClient", FakeNowcoderClient)
+    monkeypatch.setattr(generate_static_data, "nowcoder_leaderboard_to_contest", to_contest)
+
+    contests = generate_static_data.load_nowcoder_series()
+
+    assert requested == [133876, 133877, 133878, 133879]
+    assert [contest.contest_id for contest in contests] == [
+        "nowcoder:133876",
+        "nowcoder:133877",
+        "nowcoder:133878",
+        "nowcoder:133879",
+    ]
+
+
 def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> None:
     result, _, _ = result_fixture()
     writes = []

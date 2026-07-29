@@ -7,7 +7,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs";
+} from "./data.mjs?v=20260729-1";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -129,7 +129,7 @@ function personButton(competitor) {
 
 function renderSeriesRows() {
   if (!state.series) return;
-  const columns = state.series.contests.length + 4;
+  const columns = state.series.contests.length * 2 + 4;
   renderVirtualRows({
     container: elements.seriesScroll,
     body: elements.seriesBody,
@@ -147,12 +147,15 @@ function renderSeriesRows() {
       const ratings = carriedRatings(competitor, state.series.contests.length, state.series.initialRating);
       ratings.forEach((rating, contestIndex) => {
         const participation = participationByContest.get(contestIndex);
-        const cell = node("td", {
+        const ratingCell = node("td", {
           className: participation ? "rating-participated" : "rating-absent",
           title: participation ? `已参赛，变化 ${formatDelta(participation.delta)}` : "本场未参加，Rating 沿用",
         }, [ratingNode(rating)]);
-        if (participation) cell.append(" ", deltaNode(participation.delta));
-        row.append(cell);
+        const deltaCell = node("td", {
+          className: participation ? "rating-participated rating-delta" : "rating-absent rating-delta",
+          title: participation ? `已参赛，变化 ${formatDelta(participation.delta)}` : "本场未参加",
+        }, participation ? [deltaNode(participation.delta)] : []);
+        row.append(ratingCell, deltaCell);
       });
       return row;
     },
@@ -161,21 +164,18 @@ function renderSeriesRows() {
 }
 
 function renderSeriesHeader() {
-  const row = node("tr");
-  row.append(node("th", { scope: "col", text: "排名" }));
-  row.append(node("th", { scope: "col", text: "参赛者 / 学校" }));
-  row.append(node("th", { scope: "col", text: "最终 Rating" }));
-  row.append(node("th", { scope: "col", text: "参赛" }));
+  const contestRow = node("tr");
+  ["排名", "参赛者 / 学校", "最终 Rating", "参赛"].forEach((label) => contestRow.append(node("th", { scope: "col", text: label })));
   state.series.contests.forEach((contest) => {
     const button = node("button", { type: "button", className: "contest-button", text: contest.title, title: contest.title });
     button.addEventListener("click", () => openContest(contest.id));
-    row.append(node("th", { scope: "col" }, [button]));
+    contestRow.append(node("th", { className: "contest-heading", scope: "colgroup", colSpan: 2 }, [button]));
   });
-  elements.seriesHead.replaceChildren(row);
+  elements.seriesHead.replaceChildren(contestRow);
   const table = elements.seriesHead.closest("table");
   table.querySelector("colgroup")?.remove();
-  table.prepend(columnGroup([62, 220, 104, 76, ...state.series.contests.map(() => 136)]));
-  table.style.width = `${462 + state.series.contests.length * 136}px`;
+  table.prepend(columnGroup([62, 220, 104, 76, ...state.series.contests.flatMap(() => [72, 80])]));
+  table.style.width = `${462 + state.series.contests.length * 152}px`;
 }
 
 function applySearch({ resetScroll = true } = {}) {

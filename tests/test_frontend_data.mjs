@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -17,6 +18,19 @@ import {
   validateSeries,
   writeQueryState,
 } from "../static/js/data.mjs";
+
+test("versions cache-sensitive frontend assets consistently", async () => {
+  const [indexHtml, appModule] = await Promise.all([
+    readFile(new URL("../static/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+  ]);
+  const stylesheetRevision = indexHtml.match(/styles\.css\?v=([\w-]+)/)?.[1];
+  const applicationRevision = indexHtml.match(/app\.mjs\?v=([\w-]+)/)?.[1];
+
+  assert.ok(stylesheetRevision);
+  assert.equal(applicationRevision, stylesheetRevision);
+  assert.match(appModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
+});
 
 function fixture() {
   return {

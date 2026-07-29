@@ -53,15 +53,17 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .data-table thead th { position: sticky; z-index: 3; top: 0; height: 58px; color: #3d4852; background: #eef2f4; font-size: .78rem; }
 .data-table tbody tr:hover td, .data-table tbody tr:focus-within td { background-color: #f3f9fa; }
 .wide-table { min-width: max-content; }
+.wide-table .contest-heading { overflow: visible; white-space: normal; }
 .wide-table th:nth-child(1), .wide-table td:nth-child(1) { position: sticky; z-index: 2; left: 0; text-align: center; background: var(--paper); }
 .wide-table th:nth-child(2), .wide-table td:nth-child(2) { position: sticky; z-index: 2; left: 62px; text-align: left; background: var(--paper); }
 .wide-table th:nth-child(3), .wide-table td:nth-child(3) { position: sticky; z-index: 2; left: 282px; background: var(--paper); }
 .wide-table th:nth-child(4), .wide-table td:nth-child(4) { position: sticky; z-index: 2; left: 386px; background: var(--paper); box-shadow: 1px 0 0 var(--line); }
 .wide-table thead th:nth-child(-n+4) { z-index: 5; background: #eef2f4; }
 .wide-table tbody tr:hover td:nth-child(-n+4), .wide-table tbody tr:focus-within td:nth-child(-n+4) { background: #f3f9fa; }
+.wide-table tbody td:nth-child(odd):nth-child(n+5) { border-right: 0; }
 .contest-table th:nth-child(2), .contest-table td:nth-child(2) { text-align: left; }
 .contest-button, .link-button { padding: 0; border: 0; background: none; text-decoration: underline; text-decoration-color: rgb(23 107 135 / 35%); text-underline-offset: 3px; cursor: pointer; }
-.contest-button { display: inline-block; max-width: 128px; overflow: hidden; text-overflow: ellipsis; font-weight: 650; }
+.contest-button { display: inline-block; max-width: none; font-weight: 650; line-height: 1.3; white-space: normal; }
 .person { display: grid; width: 100%; min-width: 0; overflow: hidden; line-height: 1.25; text-align: left; }
 .person small { margin-top: .2rem; overflow: hidden; color: var(--muted); font-weight: 400; text-overflow: ellipsis; }
 .virtual-spacer td { height: var(--spacer-height); padding: 0; border: 0; }
@@ -77,6 +79,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .rating-participated { box-shadow: inset 0 -2px var(--accent); }
 .rating-absent { background: #fafbfc; }
 .rating-absent .rating-value { opacity: .48; }
+.rating-delta { text-align: right; }
 .delta-zero { color: var(--muted); }
 .positive { color: var(--positive); font-weight: 650; }
 .negative { color: var(--negative); font-weight: 650; }
