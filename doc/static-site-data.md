@@ -15,14 +15,14 @@ python scripts/generate_static_data.py
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 
-XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876、133877、133878、133879 榜单；HDU 系列通过认证会话完整获取固定 CID 1229、1230、1231。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
+XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876、133877、133878、133879 榜单；HDU 系列通过认证会话完整获取固定 CID 1229、1230、1231、1232。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
 
 JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不包含生成时间；固定输入产生固定字节。生成命令访问实时 RankLand、牛客和 HDU，默认离线测试不会执行它。
 
 ## 索引契约
 
 ```json
-{"schemaVersion":1,"defaultSeriesId":"nowcoder-summer-2026","series":[{"id":"nowcoder-summer-2026","title":"2026牛客暑期多校训练营","path":"series/nowcoder-summer-2026.json"},{"id":"2025-2026","title":"2025–2026 ICPC + CCPC","path":"series/2025-2026.json"}]}
+{"schemaVersion":1,"defaultSeriesId":"hdu-summer-2026","series":[{"id":"hdu-summer-2026","title":"2026“钉耙编程”中国大学生算法设计暑期联赛","path":"series/hdu-summer-2026.json"},{"id":"nowcoder-summer-2026","title":"2026牛客暑期多校训练营","path":"series/nowcoder-summer-2026.json"},{"id":"2025-2026","title":"2025–2026 ICPC + CCPC","path":"series/2025-2026.json"}]}
 ```
 
 字段含义：
