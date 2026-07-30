@@ -131,7 +131,13 @@ def project_series_rating_data(
             }
         )
 
-    projected.sort(key=lambda item: (-int(item["finalRating"]), str(item["id"])))
+    projected.sort(
+        key=lambda item: (
+            -int(item["finalRating"]),
+            str(item["school"]),
+            str(item["id"]),
+        )
+    )
     previous_rating: int | None = None
     current_rank = 0
     for position, competitor in enumerate(projected, start=1):

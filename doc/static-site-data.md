@@ -64,7 +64,7 @@ RankLand 系列中 `member` 为个人姓名。牛客系列以报名实体计算�
 {"contestIndex":0,"contestRank":1,"before":1400,"delta":25,"after":1425}
 ```
 
-参赛者按 `finalRating` 降序，再按稳定 `id` 升序排列。投影验证稳定 ID 唯一、比赛引用范围、同场身份唯一、`before + delta == after`、跨参赛场次 rating 连续、最终 rating 和参赛次数一致。
+参赛者按 `finalRating` 降序；同 rating 按最后一次实际参赛记录中的展示学校名升序；学校相同再按稳定 `id` 升序排列。投影验证稳定 ID 唯一、比赛引用范围、同场身份唯一、`before + delta == after`、跨参赛场次 rating 连续、最终 rating 和参赛次数一致。
 
 ## 从稀疏记录派生页面数据
 

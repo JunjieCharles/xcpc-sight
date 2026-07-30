@@ -124,7 +124,9 @@ def test_projects_exact_index_and_series_structure() -> None:
     ]
     competitors = document["competitors"]
     assert isinstance(competitors, list)
-    assert [item["id"] for item in competitors] == sorted([stable_id(alice), stable_id(bob)])
+    assert [item["school"] for item in competitors] == sorted(
+        item["school"] for item in competitors
+    )
     assert [item["rank"] for item in competitors] == [1, 1]
     alice_document = next(item for item in competitors if item["id"] == stable_id(alice))
     bob_document = next(item for item in competitors if item["id"] == stable_id(bob))
@@ -213,6 +215,30 @@ def test_competition_ranking_skips_positions_after_ties() -> None:
     assert [item["id"] for item in document["competitors"][:2]] == sorted(
         stable_id(competitor) for competitor in competitors[:2]
     )
+
+
+def test_projection_sorts_equal_ratings_by_school_before_stable_id() -> None:
+    zeta = CompetitorId("zeta", "member")
+    alpha = CompetitorId("alpha", "member")
+    contest = Contest("only", "Only", "series", datetime(2025, 10, 1, 9), ())
+    changes = (
+        change(zeta, "Zeta University", "Zeta", 1400, 100, 1),
+        change(alpha, "Alpha University", "Alpha", 1400, 100, 1),
+    )
+    ratings = MappingProxyType(
+        {
+            competitor: item.new_rating
+            for competitor, item in zip((zeta, alpha), changes, strict=True)
+        }
+    )
+    result = SeriesRatingResult((ContestRatingResult(contest, changes, ratings),), ratings)
+
+    document = project_series_rating_data(result, series_id="s", title="S")
+
+    assert [item["school"] for item in document["competitors"]] == [
+        "Alpha University",
+        "Zeta University",
+    ]
 
 
 def test_sparse_participations_support_all_static_views() -> None:
