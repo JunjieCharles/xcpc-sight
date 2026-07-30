@@ -17,6 +17,7 @@ import httpx
 
 from .errors import DataValidationError, HduError
 from .models import CompetitorId, Contest, TeamResult
+from .ranking import rebuild_competition_ranks
 
 DEFAULT_BASE_URL = "https://acm.hdu.edu.cn"
 DEFAULT_USERNAME = "guest"
@@ -298,22 +299,25 @@ def hdu_leaderboard_to_contest(
     metadata = leaderboard.metadata
     if not metadata.is_finished:
         raise DataValidationError(f"HDU contest {metadata.contest_id}: contest is not finished")
-    teams = tuple(
-        TeamResult(
-            team_id=standing.team_token,
-            team_name=standing.team_name,
-            school_name=standing.school_name,
-            members=(),
-            rank=standing.rank,
-            solved=standing.solved,
-            penalty=standing.penalty_seconds // 60,
-            official=True,
-            has_activity=standing.has_activity,
-            rating_competitor=CompetitorId("hdu", standing.team_token),
-            rating_display_school=standing.school_name,
-            rating_display_member=standing.team_name,
-        )
-        for standing in leaderboard.standings
+    teams = rebuild_competition_ranks(
+        tuple(
+            TeamResult(
+                team_id=standing.team_token,
+                team_name=standing.team_name,
+                school_name=standing.school_name,
+                members=(),
+                rank=standing.rank,
+                solved=standing.solved,
+                penalty=standing.penalty_seconds * 1_000,
+                official=True,
+                has_activity=standing.has_activity,
+                rating_competitor=CompetitorId("hdu", standing.team_token),
+                rating_display_school=standing.school_name,
+                rating_display_member=standing.team_name,
+            )
+            for standing in leaderboard.standings
+        ),
+        contest_id=f"hdu:{metadata.contest_id}",
     )
     return Contest(
         contest_id=f"hdu:{metadata.contest_id}",

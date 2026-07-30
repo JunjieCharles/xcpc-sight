@@ -18,7 +18,7 @@ class TeamResult:
     members: tuple[str, ...]
     rank: int
     solved: int
-    penalty: int
+    penalty: int  # Normalized milliseconds; lower is better.
     official: bool = True
     has_activity: bool = True
     rating_competitor: CompetitorId | None = None

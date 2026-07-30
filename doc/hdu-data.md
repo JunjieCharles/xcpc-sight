@@ -38,10 +38,10 @@ CSV 必须是严格 UTF-8，允许开头 UTF-8 BOM。前四列严格为 `Rank,Au
 
 公共模型为 `HduContestMetadata`、`HduStanding`、`HduLeaderboard`，公开入口包括 `HduClient.fetch_leaderboard`、`HduClient.fetch_contest`、`parse_hdu_metadata`、`parse_hdu_csv` 和 `hdu_leaderboard_to_contest`。
 
-Rating 身份为 `CompetitorId("hdu", team_token)`；队名与学校分别映射到展示 member/school，team token 是跨场身份依据，展示字段变化不会改变身份。源排名和 solved 原样保留，罚时总秒数向下转换为整分钟。比赛 ID 为 `hdu:<cid>`，系列 ID 为 `hdu-summer-2026`。
+Rating 身份为 `CompetitorId("hdu", team_token)`；队名与学校分别映射到展示 member/school，team token 是跨场身份依据，展示字段变化不会改变身份。CSV 的源排名保留在 `HduStanding` 中用于校验，但转换为标准 `Contest` 时不采用它：先排除无提交活动的队伍，再按 solved 降序、精确罚时升序重建 `1, 2, 2, 4` 式排名，同题同罚时即并列。罚时总秒数无损转换为 `TeamResult` 使用的毫秒；无提交队伍保留供审计但 rank 为 0。比赛 ID 为 `hdu:<cid>`，系列 ID 为 `hdu-summer-2026`。
 
 ## 静态生成与测试
 
 `scripts/generate_static_data.py` 注册 CID `1229`、`1230`、`1231`、`1232`，按比赛开始时间排序后生成 `static/data/series/hdu-summer-2026.json`。完整静态生成会访问公网，本次集成不运行线上全量生成。
 
-默认测试全部离线，使用 `httpx.MockTransport` 覆盖登录 URL/redirect/form、默认与注入凭据、重试、错误 Content-Type、严格元数据、UTF-8/CSV/header/行校验、team token 身份、题目活动语义和完赛边界。真实站点 HTML 或 CSV 契约变化时，应先更新本设计文档和固定测试，再运行人工线上抽样；不得静默放宽解析。
+默认测试全部离线，使用 `httpx.MockTransport` 覆盖登录 URL/redirect/form、默认与注入凭据、重试、错误 Content-Type、严格元数据、UTF-8/CSV/header/行校验、team token 身份、题目活动语义、成绩并列重排名、无提交过滤和完赛边界。真实站点 HTML 或 CSV 契约变化时，应先更新本设计文档和固定测试，再运行人工线上抽样；不得静默放宽解析。

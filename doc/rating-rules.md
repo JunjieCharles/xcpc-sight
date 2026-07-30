@@ -8,7 +8,7 @@ Rating 默认以个人为单位：没有显式 rating 实体的正式队伍展�
 
 来源适配器也可在 `TeamResult` 上提供显式 `CompetitorId` 和独立展示学校/名称，此时该行作为单个报名实体进入计算，不按成员展开。牛客系列采用命名空间化的 standing UID，HDU 系列采用认证榜单中的 `teamNNNN` token；显示队名和学校均不参与身份计算。
 
-非正式队伍不参与。完全没有提交活动的队伍不参与；0 题但有失败提交的队伍仍参与。同场同一规范身份出现在多支队伍时，默认保留最好排名，使真实 RankLand 数据可计算；`RatingConfig(duplicate_competitor="error")` 可启用严格报错。单支队伍内重复成员始终报错。
+非正式队伍不参与。完全没有提交活动的队伍不参与且不占排名位置；0 题但有失败提交的队伍仍参与。`TeamResult.penalty` 是非负毫秒。Rating 在展开个人或报名实体前统一忽略上游 `rank`，只对正式且有提交活动的队伍按 `solved` 降序、`penalty` 升序重建排名。同场同一规范身份出现在多支队伍时，默认保留重建后的最好排名，使真实 RankLand 数据可计算；`RatingConfig(duplicate_competitor="error")` 可启用严格报错。单支队伍内重复成员始终报错。
 
 ## 初始状态
 
@@ -55,7 +55,9 @@ new_rating_i = R_i + raw_delta_i + global + top
 
 ## 并列与排名
 
-RankLand SRK 如果没有完整显式排名，则按正式队伍的 solved 降序、penalty 升序重建。solved 和 penalty 相同者并列，下一名跳号，例如 `1, 2, 2, 4`。非正式队伍不占排名位置。
+所有来源和调用方自行构造的 `Contest` 都执行相同的重建规则：先排除非正式或无提交活动的队伍，再按 solved 降序、penalty 升序排列。solved 和 penalty 同时相同者并列，下一名跳号，例如 `1, 2, 2, 4`。上游排名只保留在来源模型中供完整性校验或 CSV 导出，不进入 Rating 计算。
+
+`core.rebuild_competition_ranks` 提供相同的纯领域转换；RankLand、牛客和 HDU 适配器在生成 `Contest` 时均调用它，Rating 边界再次调用以防手工构造的数据绕过规则。负题数或负罚时会被拒绝。
 
 ## 与旧脚本的有意差异
 
@@ -64,7 +66,7 @@ RankLand SRK 如果没有完整显式排名，则按正式队伍的 solved 降�
 1. 旧脚本声称模拟 Java 除法却使用 `//`；本实现对负数也向零截断。
 2. 旧脚本算出第二次 top correction，但应用语句被注释；本实现实际应用。
 3. 旧脚本同场重复身份最后一行覆盖；本实现默认保留最好排名，并可启用严格拒绝模式。
-4. 旧 CSV 使用上游 `Rank`；RankLand 无可靠排名时按正式 solved/penalty 重建并列排名。
+4. 旧 CSV 使用上游 `Rank`；本实现对所有来源一律过滤无提交队伍后按正式 solved/penalty 重建并列排名。
 
 ## API 与测试
 
@@ -72,6 +74,7 @@ RankLand SRK 如果没有完整显式排名，则按正式队伍的 solved 降�
 - `calculate_series_ratings`
 - `project_series_rating_data`
 - `project_static_data_index`
+- `core.rebuild_competition_ranks`
 - `RatingConfig` 可显式关闭两次修正，用于分析，不改变默认规则。
 
-JSON 字段、稳定身份 ID、稀疏参赛语义和生成流程见 [static-site-data.md](static-site-data.md)。测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、非正式/无活动过滤、重复身份、跨比赛状态传递、静态投影不变量与端到端赛季计算。
+JSON 字段、稳定身份 ID、稀疏参赛语义和生成流程见 [static-site-data.md](static-site-data.md)。测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、来源排名忽略、成绩并列、非正式/无活动过滤、非法成绩、重复身份、跨比赛状态传递、静态投影不变量与端到端赛季计算。

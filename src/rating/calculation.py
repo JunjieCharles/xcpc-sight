@@ -8,6 +8,7 @@ from types import MappingProxyType
 from core.errors import DataValidationError, IdentityConflictError
 from core.models import CompetitorId, Contest
 from core.normalization import DefaultNormalizer, is_coach_name
+from core.ranking import rebuild_competition_ranks
 
 from .models import (
     CompetitorRatingChange,
@@ -62,13 +63,9 @@ def _expand_competitors(
 ) -> tuple[dict[CompetitorId, int], dict[CompetitorId, tuple[str, str]]]:
     ranks: dict[CompetitorId, int] = {}
     display: dict[CompetitorId, tuple[str, str]] = {}
-    for team in contest.teams:
+    for team in rebuild_competition_ranks(contest.teams, contest_id=contest.contest_id):
         if not team.official or not team.has_activity:
             continue
-        if team.rank <= 0:
-            raise DataValidationError(
-                f"contest {contest.contest_id}, team {team.team_id}: rank must be positive"
-            )
         team_competitors: set[CompetitorId] = set()
         if team.rating_competitor is not None:
             display_school = team.rating_display_school

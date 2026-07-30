@@ -200,7 +200,31 @@ def test_leaderboard_adapts_to_registration_level_rating_entity() -> None:
     assert team.rating_display_member == "惡·即·斬"
     assert team.rating_display_school == ""
     assert team.solved == 1
-    assert team.penalty == 1
+    assert team.penalty == 60_000
+
+
+def test_adapter_rebuilds_ranks_instead_of_using_source_ranking() -> None:
+    rows = [standing(1, 10), standing(2, 20), standing(3, 30)]
+    rows[2]["acceptedCount"] = 0
+    rows[2]["penaltyTime"] = 0
+    rows[2]["scoreList"] = [
+        {
+            **score(101, accepted=False),
+            "submit": False,
+            "failedCount": 0,
+        }
+    ]
+    http = httpx.Client(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200, json=payload(rows=rows, rank_count=3)
+            )
+        )
+    )
+    leaderboard = NowcoderClient(client=http, attempts=1).fetch_leaderboard(133876)
+    contest = nowcoder_leaderboard_to_contest(leaderboard, title="第一场")
+
+    assert [team.rank for team in contest.teams] == [1, 1, 0]
 
 
 def test_adapter_rejects_unfinished_or_empty_display_name() -> None:

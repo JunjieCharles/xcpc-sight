@@ -29,15 +29,16 @@ API envelope 必须为 `success=true`、`code=0` 且存在 `data`。HTTP 408、4
 
 ## 排名
 
-参考项目的旧适配器用 `rowIndex + 1`，会让非正式队伍占位且无法表达并列，本项目不使用该行为。
+参考项目的旧适配器用 `rowIndex + 1`，会让非正式或无提交队伍占位且无法可靠表达并列，本项目不使用该行为。SRK 的显式 rank 只作为源字段读取，不决定标准化排名。
 
-- 若所有正式队伍都有正的显式 rank，则保留上游排名。
-- 否则只对正式队伍按 solved 降序、penalty 升序重建 `1, 2, 2, 4` 式排名。
-- 非正式队伍保留在 `Contest.teams` 中供审计，但 rank 为 0 且不参与 rating。
-- 提交活动由 status 的 result/tries 或 solved 值判断；0 题但有失败提交仍为活跃。
+- 只对正式且有提交活动的队伍按 solved 降序、penalty 升序重建 `1, 2, 2, 4` 式排名；
+- solved 与 penalty 同时相同即并列；
+- 非正式或无提交队伍保留在 `Contest.teams` 中供审计，但 rank 为 0 且不参与 rating；
+- 提交活动由 status 的 result/tries 或 solved 值判断；0 题但有失败提交仍为活跃；
+- `TeamResult.penalty` 统一为毫秒；SRK 的 ms、s、min、h 时间单位无损换算后再比较。
 
 ## Provenance 与限制
 
 `ContestProvenance` 保存 contest UK、file ID、CDN URL 和上游 SHA-256。首版不隐式写磁盘缓存；纯算法只依赖标准化 `Contest`，因此未来可以增加内容寻址快照而无需修改 rating 核心。
 
-已知限制：RankLand/SRK 是外部契约，字段可能变化；默认测试通过 `httpx.MockTransport` 固定协议，不访问网络。更新适配器时应先更新本文档和 fixture，并手工执行一次线上 smoke test。
+已知限制：RankLand/SRK 是外部契约，字段可能变化；默认测试通过 `httpx.MockTransport` 固定协议，不访问网络。测试固定了“即使存在互不相同的显式 rank，也按成绩重建并列”的行为。更新适配器时应先更新本文档和 fixture，并手工执行一次线上 smoke test。

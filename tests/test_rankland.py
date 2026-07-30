@@ -9,6 +9,7 @@ def srk(title: str = "Regional") -> dict:
         "problems": [{"alias": "A"}, {"alias": "B"}],
         "rows": [
             {
+                "rank": 1,
                 "user": {
                     "id": "observer",
                     "name": "Observer",
@@ -20,6 +21,7 @@ def srk(title: str = "Regional") -> dict:
                 "statuses": [{"result": "AC", "tries": 1}],
             },
             {
+                "rank": 2,
                 "user": {
                     "id": "first",
                     "name": {"zh-CN": "第一队"},
@@ -31,6 +33,7 @@ def srk(title: str = "Regional") -> dict:
                 "statuses": [{"result": "AC", "tries": 1}],
             },
             {
+                "rank": 3,
                 "user": {
                     "id": "tie",
                     "name": "Tie",
@@ -42,6 +45,7 @@ def srk(title: str = "Regional") -> dict:
                 "statuses": [{"result": "WA", "tries": 2}],
             },
             {
+                "rank": 4,
                 "user": {
                     "id": "last",
                     "name": "Last",

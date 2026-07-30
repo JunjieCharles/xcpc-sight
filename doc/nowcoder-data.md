@@ -32,7 +32,7 @@ GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
 - UID 唯一，源 ranking 单调不降；
 - 每行 `scoreList` 与 `problemData` 的题目 ID 一一对应。
 
-上游 ranking 和所有时间值均原样保留；`penaltyTime`、`acceptedTime` 和比赛时间戳使用毫秒，不在适配器中重建排名或转换单位。
+上游 ranking 和所有时间值均原样保留在牛客来源模型与 CSV 导出中；`penaltyTime`、`acceptedTime` 和比赛时间戳使用毫秒。转换为标准 `Contest` 时不采用上游 ranking，而统一按有效参赛队伍的成绩重建排名。
 
 ## 模型与 Rating 边界
 
@@ -41,7 +41,8 @@ GET https://ac.nowcoder.com/acm-heavy/acm/contest/real-time-rank-data
 - 每行按牛客报名实体计算，不把队伍名伪造成个人姓名；
 - 稳定身份为 `CompetitorId("nowcoder", "standing:<uid>")`；相同 standing UID 跨场延续 rating，不同 UID 即使名称相同也保持独立；
 - `member` 展示 `userName`（通常是队伍名），`school` 展示榜单学校，缺失时留空；展示字段不参与身份计算；
-- 使用源 `ranking`、`acceptedCount`，毫秒罚时转换为整分钟；
+- 使用 `acceptedCount` 和原始毫秒罚时，对正式且有提交活动的队伍按题数降序、罚时升序重建 `1, 2, 2, 4` 式排名；
+- 同题数、同毫秒罚时视为并列；源 `ranking` 不进入标准 `Contest` 的排名；
 - 有通过或任一题存在提交才视为实际参赛；
 - 比赛开始毫秒时间戳转换为 `Asia/Shanghai` 带偏移时间；
 - 未结束榜单和空显示名会被拒绝。
@@ -76,6 +77,6 @@ python scripts/fetch_nowcoder_leaderboards.py
 
 ## 错误、限制与测试
 
-HTTP 408、429、5xx 和网络错误有限重试；HTTP/业务失败抛出 `NowcoderError`，成功响应的结构错误抛出带比赛、页码和字段路径的 `DataValidationError`。
+HTTP 408、429、5xx 和网络错误有限重试；HTTP/业务失败抛出 `NowcoderError`，成功响应的结构错误抛出带比赛、页码和字段路径的 `DataValidationError`。离线测试覆盖源 ranking 单调性，以及转换后忽略不同源 ranking、按相同成绩并列并过滤无提交队伍。
 
 牛客接口属于网页前端使用的外部契约，路径和字段可能变化；实时榜单也可能在分页期间变化。默认测试使用 `httpx.MockTransport`，覆盖请求契约、分页、完整性失败、重试和 CSV 投影，不访问公网。适配器调整后应手工获取真实榜单并重新检查行数与题目 ID。

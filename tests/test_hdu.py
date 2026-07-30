@@ -160,9 +160,22 @@ def test_adapter_uses_casefolded_team_token_identity_and_problem_activity() -> N
     assert contest.teams[0].rating_competitor.member == "team0001"
     assert contest.teams[0].rating_display_member == "惡·即·斬"
     assert contest.teams[0].rating_display_school == "测试大学"
-    assert contest.teams[0].penalty == 62
+    assert contest.teams[0].penalty == 3_723_000
     assert contest.teams[1].has_activity
     assert not contest.teams[2].has_activity
+
+
+def test_adapter_rebuilds_active_ranks_and_preserves_score_ties() -> None:
+    data = (
+        "Rank,Author,Solved,Penalty,1001\r\n"
+        "1,team0001 第一队 第一大学,1,00:10:00,+\r\n"
+        "2,team0002 第二队 第二大学,1,00:10:00,+\r\n"
+        "3,team0003 未提交队 第三大学,0,00:00:00,\r\n"
+    ).encode()
+    metadata = parse_hdu_metadata(metadata_html(), contest_id=1229)
+    contest = hdu_leaderboard_to_contest(parse_hdu_csv(data, metadata=metadata))
+
+    assert [team.rank for team in contest.teams] == [1, 1, 0]
 
 
 def test_unfinished_contest_is_rejected_at_rating_boundary() -> None:

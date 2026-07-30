@@ -12,6 +12,7 @@ import httpx
 
 from .errors import DataValidationError, RankLandError
 from .models import Contest, ContestProvenance, TeamResult
+from .ranking import rebuild_competition_ranks
 
 JsonObject = dict[str, Any]
 
@@ -73,18 +74,18 @@ def _boolean(value: Any, fallback: bool = False) -> bool:
     return fallback
 
 
-def _minutes(value: Any) -> int:
+def _milliseconds(value: Any) -> int:
     if not isinstance(value, list) or not value:
         return 0
     amount = max(0, _integer(value[0]))
     unit = _text(value[1] if len(value) > 1 else "min", "min").casefold()
     if unit in {"ms", "millisecond", "milliseconds"}:
-        return amount // 60_000
+        return amount
     if unit in {"s", "sec", "second", "seconds"}:
-        return amount // 60
+        return amount * 1_000
     if unit in {"h", "hour", "hours"}:
-        return amount * 60
-    return amount
+        return amount * 3_600_000
+    return amount * 60_000
 
 
 def _parse_datetime(value: Any, path: str) -> datetime:
@@ -200,7 +201,7 @@ def _team_drafts(payload: Any, contest_uk: str) -> tuple[str, datetime, list[dic
                 "members": _member_names(user, f"{path}.user"),
                 "explicit_rank": _integer(row.get("rank"), 0),
                 "solved": solved,
-                "penalty": _minutes(score.get("time")),
+                "penalty": _milliseconds(score.get("time")),
                 "official": _boolean(user.get("official"), False),
                 "has_activity": has_activity or solved > 0,
             }
@@ -218,36 +219,22 @@ def normalize_srk_contest(
     metadata_title: str | None = None,
 ) -> Contest:
     title, start_at, drafts = _team_drafts(payload, contest_uk)
-    official = [draft for draft in drafts if draft["official"]]
-    explicit_ranks = [draft["explicit_rank"] for draft in official]
-    use_explicit = bool(official) and all(rank > 0 for rank in explicit_ranks)
-    if not use_explicit:
-        ordered = sorted(
-            official,
-            key=lambda item: (-item["solved"], item["penalty"], item["source_index"]),
-        )
-        previous_score: tuple[int, int] | None = None
-        current_rank = 0
-        for position, draft in enumerate(ordered, start=1):
-            score = (draft["solved"], draft["penalty"])
-            if score != previous_score:
-                current_rank = position
-                previous_score = score
-            draft["explicit_rank"] = current_rank
-
-    teams = tuple(
-        TeamResult(
-            team_id=draft["team_id"],
-            team_name=draft["team_name"],
-            school_name=draft["school_name"],
-            members=draft["members"],
-            rank=draft["explicit_rank"] if draft["official"] else 0,
-            solved=draft["solved"],
-            penalty=draft["penalty"],
-            official=draft["official"],
-            has_activity=draft["has_activity"],
-        )
-        for draft in drafts
+    teams = rebuild_competition_ranks(
+        tuple(
+            TeamResult(
+                team_id=draft["team_id"],
+                team_name=draft["team_name"],
+                school_name=draft["school_name"],
+                members=draft["members"],
+                rank=draft["explicit_rank"],
+                solved=draft["solved"],
+                penalty=draft["penalty"],
+                official=draft["official"],
+                has_activity=draft["has_activity"],
+            )
+            for draft in drafts
+        ),
+        contest_id=contest_uk,
     )
     return Contest(
         contest_id=contest_uk,

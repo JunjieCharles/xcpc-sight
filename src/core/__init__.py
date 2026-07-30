@@ -38,6 +38,7 @@ from .nowcoder import (
     nowcoder_csv_rows,
     nowcoder_leaderboard_to_contest,
 )
+from .ranking import rebuild_competition_ranks
 from .rankland import RankLandClient, normalize_srk_contest
 from .seasons import (
     SEASON_2025_2026,
@@ -86,5 +87,6 @@ __all__ = [
     "nowcoder_leaderboard_to_contest",
     "parse_hdu_csv",
     "parse_hdu_metadata",
+    "rebuild_competition_ranks",
     "select_season",
 ]

@@ -13,6 +13,7 @@ import httpx
 
 from .errors import DataValidationError, NowcoderError
 from .models import CompetitorId, Contest, TeamResult
+from .ranking import rebuild_competition_ranks
 
 JsonObject = dict[str, Any]
 
@@ -426,7 +427,7 @@ def nowcoder_leaderboard_to_contest(
                 members=(),
                 rank=standing.ranking,
                 solved=standing.accepted_count,
-                penalty=standing.penalty_time_ms // 60_000,
+                penalty=standing.penalty_time_ms,
                 official=True,
                 has_activity=has_activity,
                 rating_competitor=CompetitorId(
@@ -444,7 +445,10 @@ def nowcoder_leaderboard_to_contest(
         title=contest_title,
         series=series,
         start_at=start_at,
-        teams=tuple(teams),
+        teams=rebuild_competition_ranks(
+            teams,
+            contest_id=f"nowcoder:{leaderboard.contest_id}",
+        ),
     )
 
 

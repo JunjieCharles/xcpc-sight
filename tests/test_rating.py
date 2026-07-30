@@ -2,7 +2,13 @@ from datetime import datetime
 
 import pytest
 
-from core import CompetitorId, Contest, IdentityConflictError, TeamResult
+from core import (
+    CompetitorId,
+    Contest,
+    DataValidationError,
+    IdentityConflictError,
+    TeamResult,
+)
 from rating import (
     RatingConfig,
     calculate_contest_ratings,
@@ -22,8 +28,20 @@ def team(
     school: str = "大学",
     official: bool = True,
     activity: bool = True,
+    solved: int = 1,
+    penalty: int | None = None,
 ) -> TeamResult:
-    return TeamResult(team_id, team_id, school, members, rank, 1, 10, official, activity)
+    return TeamResult(
+        team_id,
+        team_id,
+        school,
+        members,
+        rank,
+        solved,
+        rank * 1_000 if penalty is None else penalty,
+        official,
+        activity,
+    )
 
 
 def test_empty_contest_preserves_input_without_mutating_it() -> None:
@@ -88,6 +106,30 @@ def test_unofficial_and_no_activity_teams_are_not_rated() -> None:
         )
     )
     assert [change.display_member for change in result.changes] == ["甲"]
+
+
+def test_ranks_are_rebuilt_from_active_official_scores_with_ties() -> None:
+    result = calculate_contest_ratings(
+        contest(
+            team("winner", 91, ("甲",), solved=2, penalty=10_000),
+            team("inactive", 1, ("乙",), activity=False, solved=2, penalty=20_000),
+            team("tie-a", 92, ("丙",), solved=1, penalty=30_000),
+            team("tie-b", 93, ("丁",), solved=1, penalty=30_000),
+            team("last", 94, ("戊",), solved=0, penalty=40_000),
+        )
+    )
+    ranks = {change.display_member: change.rank for change in result.changes}
+    assert ranks == {"甲": 1, "丙": 2, "丁": 2, "戊": 4}
+
+
+@pytest.mark.parametrize(("field", "value"), [("solved", -1), ("penalty", -1)])
+def test_rank_rebuild_rejects_invalid_scores(field: str, value: int) -> None:
+    values = {"solved": 1, "penalty": 1_000}
+    values[field] = value
+    with pytest.raises(DataValidationError, match=field):
+        calculate_contest_ratings(
+            contest(team("invalid", 1, ("甲",), **values))
+        )
 
 
 def test_duplicate_identity_defaults_to_best_rank() -> None:

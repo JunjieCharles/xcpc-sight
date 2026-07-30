@@ -10,6 +10,7 @@ def test_core_and_rating_export_their_public_apis() -> None:
     assert core.HduClient.__module__ == "core.hdu"
     assert core.HduError.__module__ == "core.errors"
     assert core.hdu_leaderboard_to_contest.__module__ == "core.hdu"
+    assert core.rebuild_competition_ranks.__module__ == "core.ranking"
     assert rating.RatingConfig.__module__ == "rating.models"
     assert rating.calculate_series_ratings.__module__ == "rating.calculation"
     assert rating.project_series_rating_data.__module__ == "rating.static_data"

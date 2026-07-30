@@ -5,6 +5,7 @@
 - 从 RankLand public v2 获取并解析 SRK 榜单；
 - 获取并完整导出牛客赛时榜单，并将完赛榜单按报名实体接入 rating；
 - 通过登录会话获取 HDU 榜单元数据与 UTF-8 CSV，并按稳定 team token 接入 rating；
+- 对所有来源统一过滤无提交队伍，并按题数、罚时重建含并列的比赛排名；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
 - 发布 `2026牛客暑期多校训练营` 第一至第四场；
 - 发布固定 CID `1229`、`1230`、`1231`、`1232` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
@@ -42,7 +43,7 @@ document = project_series_rating_data(
 print(len(document["contests"]), len(document["competitors"]))
 ```
 
-也可自行构造 `Contest`/`TeamResult` 后调用 `calculate_contest_ratings` 或 `calculate_series_ratings`，从而完全脱离网络运行。传入 `initial_ratings` 可从指定状态开始；默认新选手为 1400。
+也可自行构造 `Contest`/`TeamResult` 后调用 `calculate_contest_ratings` 或 `calculate_series_ratings`，从而完全脱离网络运行。`TeamResult.penalty` 使用非负毫秒；Rating 会忽略调用方提供的 `rank`，过滤非正式或无提交活动的队伍，并按 `solved` 降序、`penalty` 升序重建名次。需要单独标准化比赛时可调用 `rebuild_competition_ranks`。传入 `initial_ratings` 可从指定状态开始；默认新选手为 1400。
 
 生成静态站点数据：
 
