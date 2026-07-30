@@ -2,12 +2,13 @@ import {
   carriedRatings,
   createDataStore,
   formatDelta,
+  listSchools,
   ratingTier,
   ratingTimeline,
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260729-1";
+} from "./data.mjs?v=20260730-2";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -16,6 +17,13 @@ const store = createDataStore(INDEX_URL);
 const elements = {
   seriesList: document.querySelector("#series-list"),
   searchInput: document.querySelector("#search-input"),
+  clearSearchButton: document.querySelector("#clear-search-button"),
+  schoolTags: document.querySelector("#school-tags"),
+  schoolFilter: document.querySelector(".school-filter"),
+  schoolFilterButton: document.querySelector("#school-filter-button"),
+  schoolFilterMenu: document.querySelector("#school-filter-menu"),
+  schoolFilterSearch: document.querySelector("#school-filter-search"),
+  schoolOptions: document.querySelector("#school-options"),
   resultCount: document.querySelector("#result-count"),
   status: document.querySelector("#status"),
   seriesView: document.querySelector("#series-view"),
@@ -28,7 +36,18 @@ const elements = {
   errorTemplate: document.querySelector("#error-template"),
 };
 
-const state = { seriesId: "", query: "", contestId: "", competitorId: "", series: null, index: null, filtered: [], renderFrame: 0 };
+const state = {
+  seriesId: "",
+  query: "",
+  schools: [],
+  availableSchools: [],
+  contestId: "",
+  competitorId: "",
+  series: null,
+  index: null,
+  filtered: [],
+  renderFrame: 0,
+};
 
 function node(tag, properties = {}, children = []) {
   const element = document.createElement(tag);
@@ -59,9 +78,13 @@ function ratingNode(rating, className = "") {
 
 function deltaNode(delta) {
   return node("span", {
-    className: delta > 0 ? "positive" : delta < 0 ? "negative" : "delta-zero",
+    className: deltaClass(delta),
     text: `(${formatDelta(delta)})`,
   });
+}
+
+function deltaClass(delta) {
+  return delta > 0 ? "positive" : delta < 0 ? "negative" : "delta-zero";
 }
 
 function columnGroup(widths) {
@@ -78,6 +101,7 @@ function setUrl(mode = "replace") {
   const url = writeQueryState(location.href, {
     series: state.seriesId,
     query: state.query,
+    schools: state.schools,
     contest: state.contestId,
     competitor: state.competitorId,
   });
@@ -178,10 +202,85 @@ function renderSeriesHeader() {
   table.style.width = `${462 + state.series.contests.length * 152}px`;
 }
 
+function renderSchoolTags() {
+  const fragment = document.createDocumentFragment();
+  for (const school of state.schools) {
+    const remove = node("button", {
+      className: "school-tag-remove",
+      type: "button",
+      text: "×",
+      title: `移除 ${school}`,
+      "aria-label": `移除学校筛选：${school}`,
+    });
+    remove.addEventListener("click", () => {
+      state.schools = state.schools.filter((item) => item !== school);
+      renderSchoolControls();
+      applySearch();
+      elements.searchInput.focus();
+    });
+    fragment.append(node("span", { className: "school-tag" }, [
+      node("span", { text: school }),
+      remove,
+    ]));
+  }
+  elements.schoolTags.replaceChildren(fragment);
+}
+
+function renderSchoolOptions() {
+  const query = elements.schoolFilterSearch.value.trim().toLocaleLowerCase();
+  const schools = state.availableSchools.filter((school) => school.toLocaleLowerCase().includes(query));
+  const fragment = document.createDocumentFragment();
+  for (const school of schools) {
+    const selected = state.schools.includes(school);
+    const option = node("button", {
+      className: "school-option",
+      type: "button",
+      role: "option",
+      "aria-selected": String(selected),
+    }, [
+      node("span", { text: school }),
+      node("span", { className: "school-option-mark", text: selected ? "✓" : "" }),
+    ]);
+    option.dataset.school = school;
+    option.addEventListener("click", () => {
+      state.schools = selected
+        ? state.schools.filter((item) => item !== school)
+        : [...state.schools, school];
+      renderSchoolControls();
+      applySearch();
+      [...elements.schoolOptions.querySelectorAll(".school-option")]
+        .find((item) => item.dataset.school === school)?.focus();
+    });
+    fragment.append(option);
+  }
+  if (!schools.length) fragment.append(node("p", { className: "school-options-empty", text: "没有匹配的学校" }));
+  elements.schoolOptions.replaceChildren(fragment);
+}
+
+function renderSchoolControls() {
+  renderSchoolTags();
+  renderSchoolOptions();
+  elements.schoolFilterButton.textContent = state.schools.length
+    ? `已选 ${state.schools.length} 所学校`
+    : "选择学校";
+  elements.clearSearchButton.disabled = !elements.searchInput.value && !state.schools.length;
+}
+
+function setSchoolMenu(open) {
+  elements.schoolFilterMenu.hidden = !open;
+  elements.schoolFilterButton.setAttribute("aria-expanded", String(open));
+  if (open) {
+    elements.schoolFilterSearch.value = "";
+    renderSchoolOptions();
+    elements.schoolFilterSearch.focus();
+  }
+}
+
 function applySearch({ resetScroll = true } = {}) {
   state.query = elements.searchInput.value;
-  state.filtered = searchCompetitors(state.series.competitors, state.query);
+  state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
   elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
+  elements.clearSearchButton.disabled = !state.query && !state.schools.length;
   if (resetScroll) elements.seriesScroll.scrollTop = 0;
   scheduleSeriesRows();
   setUrl();
@@ -200,13 +299,16 @@ function showSeries() {
 
 function backButton() {
   const button = node("button", { className: "back-button", type: "button", text: "返回系列" });
-  button.addEventListener("click", () => {
-    state.contestId = "";
-    state.competitorId = "";
-    setUrl("push");
-    showSeries();
-  });
+  button.addEventListener("click", openSeriesHome);
   return button;
+}
+
+function openSeriesHome() {
+  if (!state.contestId && !state.competitorId && !elements.seriesView.hidden) return;
+  state.contestId = "";
+  state.competitorId = "";
+  setUrl("push");
+  showSeries();
 }
 
 function openContest(contestId, updateUrl = true) {
@@ -252,7 +354,7 @@ function openContest(contestId, updateUrl = true) {
       row.append(node("td", {}, [personButton(competitor)]));
       row.append(node("td", {}, [ratingNode(participation.before)]));
       row.append(node("td", {}, [ratingNode(participation.after)]));
-      row.append(node("td", { className: participation.delta > 0 ? "positive" : participation.delta < 0 ? "negative" : "", text: formatDelta(participation.delta) }));
+      row.append(node("td", { className: deltaClass(participation.delta), text: formatDelta(participation.delta) }));
       return row;
     },
   });
@@ -367,7 +469,7 @@ function participationTable(competitor) {
     row.append(node("td", { text: String(participation.contestRank) }));
     row.append(node("td", {}, [ratingNode(participation.before)]));
     row.append(node("td", {}, [ratingNode(participation.after)]));
-    row.append(node("td", { className: participation.delta > 0 ? "positive" : participation.delta < 0 ? "negative" : "", text: formatDelta(participation.delta) }));
+    row.append(node("td", { className: deltaClass(participation.delta), text: formatDelta(participation.delta) }));
     body.append(row);
   });
   return node("div", { className: "compact-table-wrap", tabIndex: 0 }, [node("table", { className: "data-table compact-table" }, [node("thead", {}, [head]), body])]);
@@ -404,7 +506,6 @@ function updateSeriesNavigation() {
     const active = button.dataset.seriesId === state.seriesId;
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
-    button.disabled = active;
   }
 }
 
@@ -417,9 +518,14 @@ async function loadSeries(seriesId, queryState = {}) {
   state.seriesId = loaded.series.id;
   state.series = loaded.series;
   state.index = loaded.index;
+  state.availableSchools = listSchools(state.series.competitors);
   updateSeriesNavigation();
   state.query = queryState.query ?? state.query;
+  const requestedSchools = queryState.schools ?? state.schools;
+  const available = new Set(state.availableSchools);
+  state.schools = requestedSchools.filter((school) => available.has(school));
   elements.searchInput.value = state.query;
+  renderSchoolControls();
   elements.status.hidden = true;
   if (queryState.competitor && state.index.competitorById.has(queryState.competitor)) openCompetitor(queryState.competitor, false);
   else if (queryState.contest && state.series.contests.some((contest) => contest.id === queryState.contest)) openContest(queryState.contest, false);
@@ -438,7 +544,8 @@ async function initialize() {
     });
     button.dataset.seriesId = entry.id;
     button.addEventListener("click", () => {
-      if (entry.id !== state.seriesId) loadSeries(entry.id).catch(showError);
+      if (entry.id === state.seriesId) openSeriesHome();
+      else loadSeries(entry.id).catch(showError);
     });
     elements.seriesList.append(button);
   }
@@ -447,6 +554,29 @@ async function initialize() {
 }
 
 elements.searchInput.addEventListener("input", () => applySearch());
+elements.clearSearchButton.addEventListener("click", () => {
+  elements.searchInput.value = "";
+  elements.schoolFilterSearch.value = "";
+  state.query = "";
+  state.schools = [];
+  setSchoolMenu(false);
+  renderSchoolControls();
+  applySearch();
+  elements.searchInput.focus();
+});
+elements.schoolFilterButton.addEventListener("click", () => {
+  setSchoolMenu(elements.schoolFilterMenu.hidden);
+});
+elements.schoolFilterSearch.addEventListener("input", renderSchoolOptions);
+elements.schoolFilter.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !elements.schoolFilterMenu.hidden) {
+    setSchoolMenu(false);
+    elements.schoolFilterButton.focus();
+  }
+});
+document.addEventListener("click", (event) => {
+  if (!elements.schoolFilter.contains(event.target)) setSchoolMenu(false);
+});
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
 window.addEventListener("resize", scheduleSeriesRows);
 window.addEventListener("popstate", () => {
@@ -454,7 +584,9 @@ window.addEventListener("popstate", () => {
   if (query.series && query.series !== state.seriesId) loadSeries(query.series, query).catch(showError);
   else {
     state.query = query.query;
+    state.schools = query.schools.filter((school) => state.availableSchools.includes(school));
     elements.searchInput.value = query.query;
+    renderSchoolControls();
     if (query.competitor) openCompetitor(query.competitor, false);
     else if (query.contest) openContest(query.contest, false);
     else showSeries();

@@ -192,10 +192,17 @@ export function ratingTier(rating) {
   return { className: "rating-gray", color: "#808080", legendary: false };
 }
 
-export function searchCompetitors(competitors, query) {
+export function listSchools(competitors) {
+  return [...new Set(competitors.map(({ school }) => school).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "zh-CN"));
+}
+
+export function searchCompetitors(competitors, query, schools = []) {
   const terms = query.trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
-  if (!terms.length) return competitors;
+  const selectedSchools = new Set(schools);
+  if (!terms.length && !selectedSchools.size) return competitors;
   return competitors.filter((competitor) => {
+    if (selectedSchools.size && !selectedSchools.has(competitor.school)) return false;
     const text = `${competitor.member}\n${competitor.school}`.toLocaleLowerCase();
     return terms.every((term) => text.includes(term));
   });
@@ -210,6 +217,7 @@ export function readQueryState(url) {
   return {
     series: params.get("series") || "",
     query: params.get("q") || "",
+    schools: params.getAll("school").filter(Boolean),
     contest: params.get("contest") || "",
     competitor: params.get("competitor") || "",
   };
@@ -220,6 +228,10 @@ export function writeQueryState(url, state) {
   for (const [key, value] of [["series", state.series], ["q", state.query], ["contest", state.contest], ["competitor", state.competitor]]) {
     if (value) next.searchParams.set(key, value);
     else next.searchParams.delete(key);
+  }
+  next.searchParams.delete("school");
+  for (const school of state.schools ?? []) {
+    if (school) next.searchParams.append("school", school);
   }
   return next;
 }

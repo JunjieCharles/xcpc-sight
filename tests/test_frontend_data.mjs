@@ -9,6 +9,7 @@ import {
   fetchJson,
   formatDelta,
   indexSeries,
+  listSchools,
   ratingTier,
   ratingTimeline,
   readQueryState,
@@ -30,6 +31,17 @@ test("versions cache-sensitive frontend assets consistently", async () => {
   assert.ok(stylesheetRevision);
   assert.equal(applicationRevision, stylesheetRevision);
   assert.match(appModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
+});
+
+test("provides a combined clear control and emphasizes zero deltas", async () => {
+  const [indexHtml, stylesheet, appModule] = await Promise.all([
+    readFile(new URL("../static/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(indexHtml, /id="clear-search-button"[^>]*disabled/);
+  assert.match(appModule, /state\.schools = \[\];/);
+  assert.match(stylesheet, /\.delta-zero\s*\{[^}]*font-weight:\s*650/);
 });
 
 function fixture() {
@@ -133,16 +145,35 @@ test("classifies Codeforces-style rating boundaries", () => {
 });
 
 test("searches all terms across member and school", () => {
-  const competitors = fixture().competitors;
+  const competitors = [
+    ...fixture().competitors,
+    { ...fixture().competitors[0], id: "c_2", member: "Bob", school: "Hangzhou Example University" },
+  ];
   assert.equal(searchCompetitors(competitors, "alice university").length, 1);
   assert.equal(searchCompetitors(competitors, "alice missing").length, 0);
   assert.equal(searchCompetitors(competitors, "  "), competitors);
+  assert.deepEqual(listSchools(competitors), ["Example University", "Hangzhou Example University"]);
+  assert.deepEqual(searchCompetitors(competitors, "", ["Example University"]).map(({ id }) => id), ["c_1"]);
+  assert.deepEqual(searchCompetitors(competitors, "", ["Example University", "Hangzhou Example University"]), competitors);
+  assert.equal(searchCompetitors(competitors, "Bob", ["Example University"]).length, 0);
 });
 
 test("round trips URL state without dropping unrelated parameters", () => {
-  const next = writeQueryState("https://example.test/site/?keep=1", { series: "season", query: "Alice 王", contest: "", competitor: "c_1" });
+  const next = writeQueryState("https://example.test/site/?keep=1&school=旧学校", {
+    series: "season",
+    query: "Alice 王",
+    schools: ["电子科技大学", "杭州电子科技大学"],
+    contest: "",
+    competitor: "c_1",
+  });
   assert.equal(next.searchParams.get("keep"), "1");
-  assert.deepEqual(readQueryState(next), { series: "season", query: "Alice 王", contest: "", competitor: "c_1" });
+  assert.deepEqual(readQueryState(next), {
+    series: "season",
+    query: "Alice 王",
+    schools: ["电子科技大学", "杭州电子科技大学"],
+    contest: "",
+    competitor: "c_1",
+  });
 });
 
 test("caches in-flight JSON requests and evicts failures", async () => {
