@@ -7,7 +7,7 @@
 - 通过登录会话获取 HDU 榜单元数据与 UTF-8 CSV，并按稳定 team token 接入 rating；
 - 对所有来源统一过滤无提交队伍，并按题数、罚时重建含并列的比赛排名；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
-- 发布 `2026牛客暑期多校训练营` 第一至第四场；
+- 发布 `2026牛客暑期多校训练营` 第一至第五场；
 - 发布固定 CID `1229`、`1230`、`1231`、`1232` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
@@ -65,7 +65,7 @@ python -m http.server 8000 --directory static
 node --test tests/test_frontend_data.mjs
 ```
 
-获取牛客比赛 `133876`、`133877`、`133878`、`133879` 的完整赛时榜单：
+获取牛客比赛 `133876` 至 `133880` 的完整赛时榜单：
 
 ```bash
 python scripts/fetch_nowcoder_leaderboards.py
@@ -73,7 +73,7 @@ python scripts/fetch_nowcoder_leaderboards.py
 
 结果写入已忽略的 `data-cache/nowcoder/nowcoder-<contest-id>-leaderboard.csv`，属于可丢弃上游下载缓存，不是静态站点发布数据。脚本接受自定义比赛 ID 和 `--output-dir`；可复用代码可通过 `NowcoderClient.fetch_leaderboard` 获取不可变模型。静态系列不伪造成个人身份，而以命名空间化的榜单 standing UID 作为报名实体身份，显示名称通常为队伍名。
 
-- 牛客比赛列表：<https://ac.nowcoder.com/acm/contest/133876>、<https://ac.nowcoder.com/acm/contest/133877>、<https://ac.nowcoder.com/acm/contest/133878>、<https://ac.nowcoder.com/acm/contest/133879>
+- 牛客比赛列表：<https://ac.nowcoder.com/acm/contest/133876>、<https://ac.nowcoder.com/acm/contest/133877>、<https://ac.nowcoder.com/acm/contest/133878>、<https://ac.nowcoder.com/acm/contest/133879>、<https://ac.nowcoder.com/acm/contest/133880>
 - HDU 榜单数据与认证契约见 [HDU 榜单数据](doc/hdu-data.md)
 
 ## 目录结构
