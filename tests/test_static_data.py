@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from types import MappingProxyType
 
 import pytest
@@ -171,6 +172,20 @@ def test_index_sorts_by_latest_contest_then_series_id() -> None:
         "z-series",
     ]
     assert index["defaultSeriesId"] == "a-series"
+
+
+def test_published_index_matches_published_series_documents() -> None:
+    data_dir = Path(__file__).parents[1] / "static" / "data"
+    index = json.loads((data_dir / "index.json").read_text(encoding="utf-8"))
+    publications = tuple(
+        (
+            json.loads((data_dir / entry["path"]).read_text(encoding="utf-8")),
+            entry["path"],
+        )
+        for entry in index["series"]
+    )
+
+    assert index == project_static_data_index(publications)
 
 
 def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
