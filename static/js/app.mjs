@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260804-1";
+} from "./data.mjs?v=20260804-2";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -199,7 +199,7 @@ function renderSeriesHeader() {
   const table = elements.seriesHead.closest("table");
   table.querySelector("colgroup")?.remove();
   table.prepend(columnGroup([62, 220, 104, 76, ...state.series.contests.flatMap(() => [72, 80])]));
-  table.style.width = `${462 + state.series.contests.length * 152}px`;
+  table.style.setProperty("--series-contest-width", `${state.series.contests.length * 152}px`);
 }
 
 function renderSchoolTags() {
