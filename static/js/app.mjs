@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260730-2";
+} from "./data.mjs?v=20260804-1";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;

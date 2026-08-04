@@ -44,6 +44,15 @@ test("provides a combined clear control and emphasizes zero deltas", async () =>
   assert.match(stylesheet, /\.delta-zero\s*\{[^}]*font-weight:\s*650/);
 });
 
+test("keeps four sticky summary columns on wide screens and two on narrow screens", async () => {
+  const stylesheet = await readFile(new URL("../static/styles.css", import.meta.url), "utf8");
+
+  assert.match(stylesheet, /\.wide-table td:nth-child\(4\)[^{]*\{[^}]*position:\s*sticky/);
+  assert.match(stylesheet, /@media \(max-width:\s*700px\)/);
+  assert.match(stylesheet, /\.wide-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
+  assert.match(stylesheet, /\.wide-table thead th:nth-child\(3\)[^{]*\{[^}]*left:\s*auto/);
+});
+
 function fixture() {
   return {
     schemaVersion: 1,
