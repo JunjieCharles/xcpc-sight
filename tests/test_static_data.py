@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import MappingProxyType
 
@@ -338,7 +338,8 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
                 f"hdu:{contest_id}",
                 f"HDU {contest_id}",
                 "hdu-summer-2026",
-                datetime(2026, 7, contest_id - 1201, tzinfo=UTC),
+                datetime(2026, 7, 1, tzinfo=UTC)
+                + timedelta(days=contest_id - 1229),
                 (),
             )
 
@@ -346,12 +347,13 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_hdu_series()
 
-    assert requested == [1229, 1230, 1231, 1232]
+    assert requested == [1229, 1230, 1231, 1232, 1233]
     assert [contest.contest_id for contest in contests] == [
         "hdu:1229",
         "hdu:1230",
         "hdu:1231",
         "hdu:1232",
+        "hdu:1233",
     ]
     hdu_spec = next(
         spec for spec in generate_static_data.series_specs() if spec.series_id == "hdu-summer-2026"

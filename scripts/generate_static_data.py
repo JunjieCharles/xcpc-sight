@@ -44,7 +44,7 @@ NOWCODER_CONTESTS = (
 )
 HDU_SERIES_ID = "hdu-summer-2026"
 HDU_SERIES_TITLE = '2026“钉耙编程”中国大学生算法设计暑期联赛'
-HDU_CONTEST_IDS = (1229, 1230, 1231, 1232)
+HDU_CONTEST_IDS = (1229, 1230, 1231, 1232, 1233)
 
 
 def parse_args() -> argparse.Namespace:

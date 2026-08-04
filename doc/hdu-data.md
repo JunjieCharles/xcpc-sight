@@ -4,7 +4,7 @@
 
 ## 登录与导出契约
 
-固定比赛 CID 为 `1229`、`1230`、`1231`、`1232`。每场先 GET `/contest/problems?cid=<cid>` 读取比赛元数据，再提交登录表单：
+固定比赛 CID 为 `1229`、`1230`、`1231`、`1232`、`1233`。每场先 GET `/contest/problems?cid=<cid>` 读取比赛元数据，再提交登录表单：
 
 ```text
 POST /contest/login?cid=<cid>&redirect=<percent-encoded /contest/rank?cid=<cid>&export=csv>
@@ -29,7 +29,7 @@ const contest={id,now,start,end,isCodeSharing};
 CSV 必须是严格 UTF-8，允许开头 UTF-8 BOM。前四列严格为 `Rank,Author,Solved,Penalty`，后续列均为动态题目列；题目列名须为唯一的 ASCII 数字 problem ID。每行列数必须与 header 一致：
 
 - `Rank` 为正整数且全表单调不降；
-- `Author` 不区分大小写地匹配 `teamNNNN <team> <school>`，team token 统一 casefold 后在一场内唯一；当前 1229、1230、1231、1232 CSV 的队名和学校均不含 ASCII 空格，因此按最后一个空白拆分队名与学校；文本中的 HTML character reference 只解码一次；
+- `Author` 不区分大小写地匹配 `teamNNNN <team> <school>`，team token 统一 casefold 后在一场内唯一；当前 1229、1230、1231、1232、1233 CSV 的队名和学校均不含 ASCII 空格，因此按最后一个空白拆分队名与学校；文本中的 HTML character reference 只解码一次；
 - `Solved` 为不超过题目数的非负整数；
 - `Penalty` 严格使用合法 `HH:MM:SS`；
 - 任一题目单元格非空即表示该队有比赛活动，不能只依据 solved 判断。
@@ -42,6 +42,6 @@ Rating 身份为 `CompetitorId("hdu", team_token)`；队名与学校分别映射
 
 ## 静态生成与测试
 
-`scripts/generate_static_data.py` 注册 CID `1229`、`1230`、`1231`、`1232`，按比赛开始时间排序后生成 `static/data/series/hdu-summer-2026.json`。完整静态生成会访问公网，本次集成不运行线上全量生成。
+`scripts/generate_static_data.py` 注册 CID `1229`、`1230`、`1231`、`1232`、`1233`，按比赛开始时间排序后生成 `static/data/series/hdu-summer-2026.json`。完整静态生成会访问公网。
 
 默认测试全部离线，使用 `httpx.MockTransport` 覆盖登录 URL/redirect/form、默认与注入凭据、重试、错误 Content-Type、严格元数据、UTF-8/CSV/header/行校验、team token 身份、题目活动语义、成绩并列重排名、无提交过滤和完赛边界。真实站点 HTML 或 CSV 契约变化时，应先更新本设计文档和固定测试，再运行人工线上抽样；不得静默放宽解析。
