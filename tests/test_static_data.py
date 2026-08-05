@@ -361,7 +361,7 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
     assert hdu_spec.path == "series/hdu-summer-2026.json"
 
 
-def test_generator_registers_five_nowcoder_contests(monkeypatch) -> None:
+def test_generator_registers_six_nowcoder_contests(monkeypatch) -> None:
     requested: list[int] = []
 
     class FakeNowcoderClient:
@@ -389,13 +389,14 @@ def test_generator_registers_five_nowcoder_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_nowcoder_series()
 
-    assert requested == [133876, 133877, 133878, 133879, 133880]
+    assert requested == [133876, 133877, 133878, 133879, 133880, 133881]
     assert [contest.contest_id for contest in contests] == [
         "nowcoder:133876",
         "nowcoder:133877",
         "nowcoder:133878",
         "nowcoder:133879",
         "nowcoder:133880",
+        "nowcoder:133881",
     ]
 
 

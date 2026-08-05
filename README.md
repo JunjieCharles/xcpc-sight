@@ -65,7 +65,7 @@ python -m http.server 8000 --directory static
 node --test tests/test_frontend_data.mjs
 ```
 
-获取牛客比赛 `133876` 至 `133880` 的完整赛时榜单：
+获取牛客比赛 `133876` 至 `133881` 的完整赛时榜单：
 
 ```bash
 python scripts/fetch_nowcoder_leaderboards.py
@@ -73,7 +73,7 @@ python scripts/fetch_nowcoder_leaderboards.py
 
 结果写入已忽略的 `data-cache/nowcoder/nowcoder-<contest-id>-leaderboard.csv`，属于可丢弃上游下载缓存，不是静态站点发布数据。脚本接受自定义比赛 ID 和 `--output-dir`；可复用代码可通过 `NowcoderClient.fetch_leaderboard` 获取不可变模型。静态系列不伪造成个人身份，而以命名空间化的榜单 standing UID 作为报名实体身份，显示名称通常为队伍名。
 
-- 牛客比赛列表：<https://ac.nowcoder.com/acm/contest/133876>、<https://ac.nowcoder.com/acm/contest/133877>、<https://ac.nowcoder.com/acm/contest/133878>、<https://ac.nowcoder.com/acm/contest/133879>、<https://ac.nowcoder.com/acm/contest/133880>
+- 牛客比赛列表：<https://ac.nowcoder.com/acm/contest/133876>、<https://ac.nowcoder.com/acm/contest/133877>、<https://ac.nowcoder.com/acm/contest/133878>、<https://ac.nowcoder.com/acm/contest/133879>、<https://ac.nowcoder.com/acm/contest/133880>、<https://ac.nowcoder.com/acm/contest/133881>
 - HDU 榜单数据与认证契约见 [HDU 榜单数据](doc/hdu-data.md)
 
 ## 目录结构
