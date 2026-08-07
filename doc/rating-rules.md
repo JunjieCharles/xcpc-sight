@@ -17,6 +17,10 @@ Rating 默认以个人为单位：没有显式 rating 实体的正式队伍展�
 - 未参加某场比赛的选手 rating 保持不变。
 - 计算函数不修改调用方传入的 mapping。
 
+## Unrated 比赛
+
+`Contest.unrated_reason` 为非空字符串时，本场只记录排名，不执行 rating 公式。参赛实体仍按统一规则过滤并重建排名，每人生成一条 `delta == 0` 且 `before == after` 的参赛记录；首次出现的实体以 1400 作为其不变的 rating。这样单场排名、参赛次数和参赛者详情仍完整可查，同时不会改变任何已有或新增实体的 rating。空白原因会在 Rating 边界被拒绝。
+
 ## 单场公式
 
 设赛前 rating 为 `R_i`，队伍排名为 `rank_i`，rating 频次为 `count(R)`。
@@ -77,4 +81,4 @@ new_rating_i = R_i + raw_delta_i + global + top
 - `core.rebuild_competition_ranks`
 - `RatingConfig` 可显式关闭两次修正，用于分析，不改变默认规则。
 
-JSON 字段、稳定身份 ID、稀疏参赛语义和生成流程见 [static-site-data.md](static-site-data.md)。测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、来源排名忽略、成绩并列、非正式/无活动过滤、非法成绩、重复身份、跨比赛状态传递、静态投影不变量与端到端赛季计算。
+JSON 字段、稳定身份 ID、稀疏参赛语义和生成流程见 [static-site-data.md](static-site-data.md)。测试覆盖空比赛、初始 1400、固定 golden vector、第二次修正、来源排名忽略、成绩并列、非正式/无活动过滤、非法成绩、重复身份、跨比赛状态传递、unrated 零变化记录、静态投影不变量与端到端赛季计算。

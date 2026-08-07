@@ -98,6 +98,29 @@ test("accepts an empty display school", () => {
   assert.equal(validateSeries(document).competitors[0].school, "");
 });
 
+test("validates unrated contest metadata", () => {
+  const document = fixture();
+  document.contests[1].rated = false;
+  document.contests[1].unratedReason = "checker挂了";
+  document.competitors[0].participations = [{ contestIndex: 1, contestRank: 2, before: 1400, delta: 0, after: 1400 }];
+  document.competitors[0].contestsParticipated = 1;
+  document.competitors[0].finalRating = 1400;
+  assert.equal(validateSeries(document), document);
+
+  const missingReason = fixture();
+  missingReason.contests[1].rated = false;
+  assert.throws(() => validateSeries(missingReason), /unratedReason/);
+
+  const orphanReason = fixture();
+  orphanReason.contests[1].unratedReason = "checker挂了";
+  assert.throws(() => validateSeries(orphanReason), /requires rated=false/);
+
+  const changedRating = fixture();
+  changedRating.contests[0].rated = false;
+  changedRating.contests[0].unratedReason = "checker挂了";
+  assert.throws(() => validateSeries(changedRating), /must be zero for an unrated contest/);
+});
+
 test("rejects broken rating continuity", () => {
   const series = fixture();
   series.competitors[0].participations[1].before = 1410;

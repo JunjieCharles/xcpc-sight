@@ -110,6 +110,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .detail-header { align-items: start; }
 .back-button { padding: .55rem .85rem; border: 1px solid #aeb8c1; border-radius: 4px; color: var(--ink); background: white; cursor: pointer; }
 .detail-meta { display: flex; flex-wrap: wrap; gap: .6rem 1.5rem; margin: .4rem 0 0; color: var(--muted); }
+.unrated-note { color: #b45309; font-weight: 650; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(20rem, .8fr); gap: 1.25rem; }
 .panel { min-width: 0; padding: 1.2rem; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); box-shadow: var(--shadow); }
 .panel h3 { margin-bottom: 1rem; }

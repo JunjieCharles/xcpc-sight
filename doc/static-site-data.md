@@ -15,7 +15,7 @@ python scripts/generate_static_data.py
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 
-XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133880 榜单；HDU 系列通过认证会话完整获取固定 CID 1229、1230、1231、1232、1233。各来源进入 Rating 前都过滤无提交队伍，并按 solved 降序、精确 penalty 升序重建含并列的比赛排名。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
+XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133881 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1234。各来源进入 Rating 前都过滤无提交队伍，并按 solved 降序、精确 penalty 升序重建含并列的比赛排名。CID 1234 因 checker 故障记为 unrated，只记录排名且所有 rating 不变。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
 
 JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不包含生成时间；固定输入产生固定字节。生成命令访问实时 RankLand、牛客和 HDU，默认离线测试不会执行它。
 
@@ -48,6 +48,7 @@ JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不�
 - `id`、`title`；
 - `collection`：例如 `icpc2025`、`ccpc2025` 或 `nowcoder-summer-2026`；
 - `startAt`：转换到 `Asia/Shanghai` 后的带偏移 ISO 8601 时间。无时区的上游时间按上海时间解释。
+- unrated 场次额外包含 `"rated": false` 与非空 `unratedReason`；rated 场次省略这两个字段。
 
 `competitors[]` 每项包含：
 
@@ -69,10 +70,10 @@ RankLand 系列中 `member` 为个人姓名。牛客系列以报名实体计算�
 
 ## 从稀疏记录派生页面数据
 
-`participations` 只记录实际计入 rating 的场次：
+`participations` 记录实际参赛的场次：
 
 - 某场没有记录表示未参加；
-- 有记录且 `delta == 0` 表示参加但 rating 未变化。
+- 有记录且 `delta == 0` 表示参加但 rating 未变化；可能是 rated 计算恰好为 0，也可能是比赛被标记为 unrated，后者可由对应 contest 的 `rated` 字段区分。
 
 因此可以派生：
 

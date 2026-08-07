@@ -347,18 +347,49 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_hdu_series()
 
-    assert requested == [1229, 1230, 1231, 1232, 1233]
+    assert requested == [1229, 1230, 1231, 1232, 1233, 1234]
     assert [contest.contest_id for contest in contests] == [
         "hdu:1229",
         "hdu:1230",
         "hdu:1231",
         "hdu:1232",
         "hdu:1233",
+        "hdu:1234",
     ]
+    assert contests[-1].unrated_reason == "checker挂了"
     hdu_spec = next(
         spec for spec in generate_static_data.series_specs() if spec.series_id == "hdu-summer-2026"
     )
     assert hdu_spec.path == "series/hdu-summer-2026.json"
+
+
+def test_projection_marks_unrated_contest_and_preserves_zero_delta_rank() -> None:
+    competitor = CompetitorId("大学", "甲")
+    unrated = Contest(
+        "unrated",
+        "故障场",
+        "series",
+        datetime(2026, 8, 6, tzinfo=UTC),
+        (),
+        unrated_reason="checker挂了",
+    )
+    unchanged = change(competitor, "大学", "甲", 1500, 0, 7)
+    ratings = MappingProxyType({competitor: 1500})
+    result = SeriesRatingResult(
+        (ContestRatingResult(unrated, (unchanged,), ratings),), ratings
+    )
+
+    document = project_series_rating_data(result, series_id="series", title="Series")
+
+    assert document["contests"][0]["rated"] is False
+    assert document["contests"][0]["unratedReason"] == "checker挂了"
+    assert document["competitors"][0]["participations"][0] == {
+        "contestIndex": 0,
+        "contestRank": 7,
+        "before": 1500,
+        "delta": 0,
+        "after": 1500,
+    }
 
 
 def test_generator_registers_six_nowcoder_contests(monkeypatch) -> None:

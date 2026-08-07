@@ -204,3 +204,45 @@ def test_series_uses_previous_contest_rating() -> None:
         change for change in result.contests[1].changes if change.display_member == "甲"
     )
     assert second_change.old_rating == first_rating
+
+
+def test_unrated_contest_records_ranks_without_changing_ratings() -> None:
+    existing = CompetitorId("大学", "甲")
+    unrated = Contest(
+        "unrated",
+        "故障场",
+        "series",
+        datetime(2025, 9, 2),
+        (
+            team("new", 99, ("乙",), solved=2, penalty=20_000),
+            team("existing", 98, ("甲",), solved=3, penalty=10_000),
+        ),
+        unrated_reason="checker挂了",
+    )
+
+    result = calculate_contest_ratings(unrated, {existing: 1729})
+    changes = {change.display_member: change for change in result.changes}
+
+    assert changes["甲"].rank == 1
+    assert changes["甲"].old_rating == changes["甲"].new_rating == 1729
+    assert changes["乙"].rank == 2
+    assert changes["乙"].old_rating == changes["乙"].new_rating == 1400
+    assert {change.delta for change in result.changes} == {0}
+    assert dict(result.ratings) == {
+        existing: 1729,
+        CompetitorId("大学", "乙"): 1400,
+    }
+
+
+def test_unrated_contest_requires_a_nonempty_reason() -> None:
+    invalid = Contest(
+        "unrated",
+        "故障场",
+        "series",
+        datetime(2025, 9, 2),
+        (team("one", 1, ("甲",)),),
+        unrated_reason=" ",
+    )
+
+    with pytest.raises(DataValidationError, match="reason must not be empty"):
+        calculate_contest_ratings(invalid)

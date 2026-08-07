@@ -25,6 +25,10 @@ function integer(value, path, minimum = Number.MIN_SAFE_INTEGER) {
   if (!Number.isSafeInteger(value) || value < minimum) fail(path, `expected integer >= ${minimum}`);
 }
 
+function boolean(value, path) {
+  if (typeof value !== "boolean") fail(path, "expected boolean");
+}
+
 function array(value, path) {
   if (!Array.isArray(value)) fail(path, "expected array");
 }
@@ -95,6 +99,9 @@ export function validateSeries(document) {
     string(contest.collection, `${path}.collection`);
     string(contest.startAt, `${path}.startAt`);
     if (Number.isNaN(Date.parse(contest.startAt))) fail(`${path}.startAt`, "expected ISO date-time");
+    if (contest.rated !== undefined) boolean(contest.rated, `${path}.rated`);
+    if (contest.rated === false) string(contest.unratedReason, `${path}.unratedReason`);
+    if (contest.unratedReason !== undefined && contest.rated !== false) fail(`${path}.unratedReason`, "requires rated=false");
     if (contestIds.has(contest.id)) fail(`${path}.id`, "duplicate contest id");
     contestIds.add(contest.id);
   });
@@ -126,6 +133,7 @@ export function validateSeries(document) {
       if (participation.contestIndex >= document.contests.length) fail(`${partPath}.contestIndex`, "out of range");
       if (participation.contestIndex <= previousIndex) fail(`${partPath}.contestIndex`, "must be strictly increasing");
       if (participation.before + participation.delta !== participation.after) fail(partPath, "before + delta must equal after");
+      if (document.contests[participation.contestIndex].rated === false && participation.delta !== 0) fail(`${partPath}.delta`, "must be zero for an unrated contest");
       if (previousAfter !== undefined && participation.before !== previousAfter) fail(`${partPath}.before`, "rating is not continuous");
       previousIndex = participation.contestIndex;
       previousAfter = participation.after;

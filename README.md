@@ -8,7 +8,7 @@
 - 对所有来源统一过滤无提交队伍，并按题数、罚时重建含并列的比赛排名；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
 - 发布 `2026牛客暑期多校训练营` 第一至第五场；
-- 发布固定 CID `1229`、`1230`、`1231`、`1232`、`1233` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
+- 发布固定 CID `1229` 至 `1234` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`，其中 CID `1234` 因 checker 故障记为 unrated；
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
 - 提供零依赖、无需构建的静态 rating 浏览前端；
@@ -43,7 +43,7 @@ document = project_series_rating_data(
 print(len(document["contests"]), len(document["competitors"]))
 ```
 
-也可自行构造 `Contest`/`TeamResult` 后调用 `calculate_contest_ratings` 或 `calculate_series_ratings`，从而完全脱离网络运行。`TeamResult.penalty` 使用非负毫秒；Rating 会忽略调用方提供的 `rank`，过滤非正式或无提交活动的队伍，并按 `solved` 降序、`penalty` 升序重建名次。需要单独标准化比赛时可调用 `rebuild_competition_ranks`。传入 `initial_ratings` 可从指定状态开始；默认新选手为 1400。
+也可自行构造 `Contest`/`TeamResult` 后调用 `calculate_contest_ratings` 或 `calculate_series_ratings`，从而完全脱离网络运行。`TeamResult.penalty` 使用非负毫秒；Rating 会忽略调用方提供的 `rank`，过滤非正式或无提交活动的队伍，并按 `solved` 降序、`penalty` 升序重建名次。需要单独标准化比赛时可调用 `rebuild_competition_ranks`。传入 `initial_ratings` 可从指定状态开始；默认新选手为 1400。为 `Contest.unrated_reason` 提供非空原因可只记录本场排名，所有参赛者的 rating 变化均为 0。
 
 生成静态站点数据：
 

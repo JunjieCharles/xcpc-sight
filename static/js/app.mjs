@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260804-2";
+} from "./data.mjs?v=20260807-1";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -170,14 +170,18 @@ function renderSeriesRows() {
       const participationByContest = new Map(competitor.participations.map((item) => [item.contestIndex, item]));
       const ratings = carriedRatings(competitor, state.series.contests.length, state.series.initialRating);
       ratings.forEach((rating, contestIndex) => {
+        const contest = state.series.contests[contestIndex];
         const participation = participationByContest.get(contestIndex);
+        const participationTitle = contest.rated === false
+          ? `已参赛，本场 Unrated（${contest.unratedReason}），Rating 不变`
+          : `已参赛，变化 ${formatDelta(participation?.delta ?? 0)}`;
         const ratingCell = node("td", {
           className: participation ? "rating-participated" : "rating-absent",
-          title: participation ? `已参赛，变化 ${formatDelta(participation.delta)}` : "本场未参加，Rating 沿用",
+          title: participation ? participationTitle : "本场未参加，Rating 沿用",
         }, [ratingNode(rating)]);
         const deltaCell = node("td", {
           className: participation ? "rating-participated rating-delta" : "rating-absent rating-delta",
-          title: participation ? `已参赛，变化 ${formatDelta(participation.delta)}` : "本场未参加",
+          title: participation ? participationTitle : "本场未参加",
         }, participation ? [deltaNode(participation.delta)] : []);
         row.append(ratingCell, deltaCell);
       });
@@ -191,7 +195,9 @@ function renderSeriesHeader() {
   const contestRow = node("tr");
   ["排名", "参赛者 / 学校", "最终 Rating", "参赛"].forEach((label) => contestRow.append(node("th", { scope: "col", text: label })));
   state.series.contests.forEach((contest) => {
-    const button = node("button", { type: "button", className: "contest-button", text: contest.title, title: contest.title });
+    const label = contest.rated === false ? `${contest.title}（Unrated）` : contest.title;
+    const title = contest.rated === false ? `${contest.title} · Unrated：${contest.unratedReason}` : contest.title;
+    const button = node("button", { type: "button", className: "contest-button", text: label, title });
     button.addEventListener("click", () => openContest(contest.id));
     contestRow.append(node("th", { className: "contest-heading", scope: "colgroup", colSpan: 2 }, [button]));
   });
@@ -330,6 +336,7 @@ function openContest(contestId, updateUrl = true) {
       node("p", { className: "detail-meta" }, [
         node("span", { text: new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(contest.startAt)) }),
         node("span", { text: `${participants.length.toLocaleString("zh-CN")} 位参赛者` }),
+        ...(contest.rated === false ? [node("span", { className: "unrated-note", text: `Unrated：${contest.unratedReason}` })] : []),
       ]),
     ]),
     backButton(),

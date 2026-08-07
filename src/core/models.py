@@ -42,6 +42,7 @@ class Contest:
     start_at: datetime
     teams: tuple[TeamResult, ...]
     provenance: ContestProvenance | None = None
+    unrated_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

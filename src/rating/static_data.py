@@ -38,15 +38,23 @@ def project_series_rating_data(
     """Project a series rating result into the static-site JSON document."""
     if not result.contests:
         raise DataValidationError("published rating series must contain at least one contest")
-    contests = [
-        {
+    contests = []
+    for contest_result in result.contests:
+        contest = {
             "id": contest_result.contest.contest_id,
             "title": contest_result.contest.title,
             "collection": contest_result.contest.series,
             "startAt": _shanghai_isoformat(contest_result.contest.start_at),
         }
-        for contest_result in result.contests
-    ]
+        if contest_result.contest.unrated_reason is not None:
+            if not contest_result.contest.unrated_reason.strip():
+                raise DataValidationError(
+                    f"contest {contest_result.contest.contest_id}: "
+                    "unrated reason must not be empty"
+                )
+            contest["rated"] = False
+            contest["unratedReason"] = contest_result.contest.unrated_reason
+        contests.append(contest)
 
     participations: dict[CompetitorId, list[dict[str, int]]] = {}
     displays: dict[CompetitorId, tuple[str, str]] = {}
@@ -55,6 +63,13 @@ def project_series_rating_data(
         seen_in_contest: set[CompetitorId] = set()
         for change in contest_result.changes:
             competitor = change.competitor
+            if contest_result.contest.unrated_reason is not None and (
+                change.delta != 0 or change.old_rating != change.new_rating
+            ):
+                raise DataValidationError(
+                    f"contest index {contest_index}, competitor {competitor}: "
+                    "unrated contest must not change rating"
+                )
             if competitor in seen_in_contest:
                 raise DataValidationError(
                     f"contest index {contest_index}: duplicate competitor {competitor}"

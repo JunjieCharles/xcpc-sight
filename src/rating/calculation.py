@@ -124,8 +124,38 @@ def calculate_contest_ratings(
     config = config or RatingConfig()
     before = dict(current_ratings or {})
     ranks, display = _expand_competitors(contest, normalizer, config)
+    if contest.unrated_reason is not None and not contest.unrated_reason.strip():
+        raise DataValidationError(
+            f"contest {contest.contest_id}: unrated reason must not be empty"
+        )
     if not ranks:
         return ContestRatingResult(contest, (), MappingProxyType(before))
+
+    if contest.unrated_reason is not None:
+        after = dict(before)
+        changes = []
+        for competitor in sorted(ranks):
+            old_rating = before.get(competitor, config.initial_rating)
+            after[competitor] = old_rating
+            display_school, display_member = display[competitor]
+            changes.append(
+                CompetitorRatingChange(
+                    competitor=competitor,
+                    display_school=display_school,
+                    display_member=display_member,
+                    old_rating=old_rating,
+                    rank=ranks[competitor],
+                    seed=float(ranks[competitor]),
+                    target_rank=float(ranks[competitor]),
+                    performance_rating=old_rating,
+                    raw_delta=0,
+                    global_correction=0,
+                    top_correction=0,
+                    delta=0,
+                    new_rating=old_rating,
+                )
+            )
+        return ContestRatingResult(contest, tuple(changes), MappingProxyType(after))
 
     old_ratings = {
         competitor: before.get(competitor, config.initial_rating) for competitor in ranks
