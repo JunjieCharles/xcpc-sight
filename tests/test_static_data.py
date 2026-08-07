@@ -392,7 +392,7 @@ def test_projection_marks_unrated_contest_and_preserves_zero_delta_rank() -> Non
     }
 
 
-def test_generator_registers_six_nowcoder_contests(monkeypatch) -> None:
+def test_generator_registers_seven_nowcoder_contests(monkeypatch) -> None:
     requested: list[int] = []
 
     class FakeNowcoderClient:
@@ -420,7 +420,7 @@ def test_generator_registers_six_nowcoder_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_nowcoder_series()
 
-    assert requested == [133876, 133877, 133878, 133879, 133880, 133881]
+    assert requested == [133876, 133877, 133878, 133879, 133880, 133881, 133882]
     assert [contest.contest_id for contest in contests] == [
         "nowcoder:133876",
         "nowcoder:133877",
@@ -428,6 +428,7 @@ def test_generator_registers_six_nowcoder_contests(monkeypatch) -> None:
         "nowcoder:133879",
         "nowcoder:133880",
         "nowcoder:133881",
+        "nowcoder:133882",
     ]
 
 
