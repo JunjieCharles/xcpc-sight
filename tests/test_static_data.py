@@ -357,8 +357,7 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
         "hdu:1234",
         "hdu:1235",
     ]
-    assert contests[-2].unrated_reason == "checker挂了"
-    assert contests[-1].unrated_reason is None
+    assert all(contest.unrated_reason is None for contest in contests)
     hdu_spec = next(
         spec for spec in generate_static_data.series_specs() if spec.series_id == "hdu-summer-2026"
     )
@@ -394,7 +393,7 @@ def test_projection_marks_unrated_contest_and_preserves_zero_delta_rank() -> Non
     }
 
 
-def test_generator_registers_seven_nowcoder_contests(monkeypatch) -> None:
+def test_generator_registers_eight_nowcoder_contests(monkeypatch) -> None:
     requested: list[int] = []
 
     class FakeNowcoderClient:
@@ -422,7 +421,16 @@ def test_generator_registers_seven_nowcoder_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_nowcoder_series()
 
-    assert requested == [133876, 133877, 133878, 133879, 133880, 133881, 133882]
+    assert requested == [
+        133876,
+        133877,
+        133878,
+        133879,
+        133880,
+        133881,
+        133882,
+        133883,
+    ]
     assert [contest.contest_id for contest in contests] == [
         "nowcoder:133876",
         "nowcoder:133877",
@@ -431,6 +439,7 @@ def test_generator_registers_seven_nowcoder_contests(monkeypatch) -> None:
         "nowcoder:133880",
         "nowcoder:133881",
         "nowcoder:133882",
+        "nowcoder:133883",
     ]
 
 

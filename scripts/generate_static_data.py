@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -43,11 +43,11 @@ NOWCODER_CONTESTS = (
     (133880, "2026牛客暑期多校训练营（第五场）"),
     (133881, "2026牛客暑期多校训练营（第六场）"),
     (133882, "2026牛客暑期多校训练营（第七场）"),
+    (133883, "2026牛客暑期多校训练营（第八场）"),
 )
 HDU_SERIES_ID = "hdu-summer-2026"
 HDU_SERIES_TITLE = '2026“钉耙编程”中国大学生算法设计暑期联赛'
 HDU_CONTEST_IDS = (1229, 1230, 1231, 1232, 1233, 1234, 1235)
-HDU_UNRATED_REASONS = {1234: "checker挂了"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,11 +96,7 @@ def load_nowcoder_series() -> tuple[Contest, ...]:
 def load_hdu_series() -> tuple[Contest, ...]:
     with HduClient() as client:
         contests = tuple(
-            replace(
-                client.fetch_contest(contest_id),
-                unrated_reason=HDU_UNRATED_REASONS.get(contest_id),
-            )
-            for contest_id in HDU_CONTEST_IDS
+            client.fetch_contest(contest_id) for contest_id in HDU_CONTEST_IDS
         )
     return tuple(sorted(contests, key=lambda contest: contest.start_at))
 

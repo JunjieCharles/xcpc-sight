@@ -40,7 +40,7 @@ CSV 必须是严格 UTF-8，允许开头 UTF-8 BOM。前四列严格为 `Rank,Au
 
 Rating 身份为 `CompetitorId("hdu", team_token)`；队名与学校分别映射到展示 member/school，team token 是跨场身份依据，展示字段变化不会改变身份。CSV 的源排名保留在 `HduStanding` 中用于校验，但转换为标准 `Contest` 时不采用它：先排除无提交活动的队伍，再按 solved 降序、精确罚时升序重建 `1, 2, 2, 4` 式排名，同题同罚时即并列。罚时总秒数无损转换为 `TeamResult` 使用的毫秒；无提交队伍保留供审计但 rank 为 0。比赛 ID 为 `hdu:<cid>`，系列 ID 为 `hdu-summer-2026`。
 
-CID `1234` 因 checker 故障在生成器中显式设置 `unrated_reason="checker挂了"`。其正式且有提交活动的队伍仍按上述规则记录排名，但不参与 rating 计算，所有参赛者的 before/after 相同且 delta 为 0。
+当前注册的 HDU 场次均参与 rating 计算；CID `1234` 已恢复为 rated，并与其他场次使用相同规则。
 
 ## 静态生成与测试
 
