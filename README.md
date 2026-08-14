@@ -9,7 +9,7 @@
 - 通过登录会话获取 HDU 榜单元数据与 UTF-8 CSV，并按稳定 team token 接入 rating；
 - 对所有来源统一过滤无提交队伍，并按题数、罚时重建含并列的比赛排名；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
-- 发布 `2026牛客暑期多校训练营` 第一至第八场；
+- 发布 `2026牛客暑期多校训练营` 第一至第九场；
 - 发布固定 CID `1229` 至 `1236` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
@@ -67,7 +67,7 @@ python -m http.server 8000 --directory static
 node --test tests/test_frontend_data.mjs
 ```
 
-获取牛客比赛 `133876` 至 `133883` 的完整赛时榜单：
+获取牛客比赛 `133876` 至 `133884` 的完整赛时榜单：
 
 ```bash
 python scripts/fetch_nowcoder_leaderboards.py
