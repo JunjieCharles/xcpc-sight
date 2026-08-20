@@ -347,7 +347,7 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
 
     contests = generate_static_data.load_hdu_series()
 
-    assert requested == [1229, 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237]
+    assert requested == [1229, 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1238]
     assert [contest.contest_id for contest in contests] == [
         "hdu:1229",
         "hdu:1230",
@@ -358,6 +358,7 @@ def test_generator_registers_fixed_hdu_contests(monkeypatch) -> None:
         "hdu:1235",
         "hdu:1236",
         "hdu:1237",
+        "hdu:1238",
     ]
     assert all(contest.unrated_reason is None for contest in contests)
     hdu_spec = next(
