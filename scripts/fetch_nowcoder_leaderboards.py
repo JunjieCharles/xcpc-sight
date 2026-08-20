@@ -17,6 +17,7 @@ DEFAULT_CONTEST_IDS = (
     133882,
     133883,
     133884,
+    133885,
 )
 
 
@@ -27,7 +28,7 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         type=int,
         default=DEFAULT_CONTEST_IDS,
-        help="Nowcoder contest IDs (defaults to 133876 through 133884)",
+        help="Nowcoder contest IDs (defaults to 133876 through 133885)",
     )
     parser.add_argument(
         "--output-dir",

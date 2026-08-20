@@ -395,7 +395,7 @@ def test_projection_marks_unrated_contest_and_preserves_zero_delta_rank() -> Non
     }
 
 
-def test_generator_registers_nine_nowcoder_contests(monkeypatch) -> None:
+def test_generator_registers_ten_nowcoder_contests(monkeypatch) -> None:
     requested: list[int] = []
 
     class FakeNowcoderClient:
@@ -433,6 +433,7 @@ def test_generator_registers_nine_nowcoder_contests(monkeypatch) -> None:
         133882,
         133883,
         133884,
+        133885,
     ]
     assert [contest.contest_id for contest in contests] == [
         "nowcoder:133876",
@@ -444,6 +445,7 @@ def test_generator_registers_nine_nowcoder_contests(monkeypatch) -> None:
         "nowcoder:133882",
         "nowcoder:133883",
         "nowcoder:133884",
+        "nowcoder:133885",
     ]
 
 

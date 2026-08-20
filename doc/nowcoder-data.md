@@ -68,6 +68,7 @@ python scripts/fetch_nowcoder_leaderboards.py
 - `133882`：<https://ac.nowcoder.com/acm/contest/133882>
 - `133883`：<https://ac.nowcoder.com/acm/contest/133883>
 - `133884`：<https://ac.nowcoder.com/acm/contest/133884>
+- `133885`：<https://ac.nowcoder.com/acm/contest/133885>
 
 并写入：
 
@@ -80,6 +81,7 @@ python scripts/fetch_nowcoder_leaderboards.py
 - `data-cache/nowcoder/nowcoder-133882-leaderboard.csv`
 - `data-cache/nowcoder/nowcoder-133883-leaderboard.csv`
 - `data-cache/nowcoder/nowcoder-133884-leaderboard.csv`
+- `data-cache/nowcoder/nowcoder-133885-leaderboard.csv`
 
 这些 CSV 是已忽略、可随时重新下载的上游缓存，不属于 `static/data/` 的静态站点发布数据。
 
