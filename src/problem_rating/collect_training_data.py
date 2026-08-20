@@ -1,28 +1,69 @@
 import csv
+import re
 from .analyze_contest import calculate_problem_times
-from .fetch_data import CodeforcesFetcher
+from .fetch_data import CodeforcesAPIError, CodeforcesFetcher
 from .paths import PROCESSED_DATA_DIR, ensure_directory
+
+
+EXCLUDED_DIVISION_PATTERN = re.compile(r"\bDiv\.\s*[34]\b", re.IGNORECASE)
+
+
+def get_rating_changes(fetcher, contest_id):
+    try:
+        rating_changes = fetcher._make_request(
+            "contest.ratingChanges", {"contestId": contest_id}
+        )
+    except CodeforcesAPIError:
+        return []
+
+    return [change for change in rating_changes if "newRating" in change]
+
 
 def get_recent_contests(fetcher, limit=10):
     print("Fetching contest list...")
     contests = fetcher._make_request("contest.list", {"gym": "false"})
     
     target_contests = []
+    excluded_division_count = 0
+    excluded_unrated_count = 0
     for c in contests:
-        if c["phase"] == "FINISHED":
-            target_contests.append(c)
-            if len(target_contests) >= limit:
-                break
-    
+        contest_name = c["name"]
+        if EXCLUDED_DIVISION_PATTERN.search(contest_name):
+            excluded_division_count += 1
+            continue
+
+        if c["phase"] != "FINISHED":
+            continue
+
+        if not get_rating_changes(fetcher, c["id"]):
+            excluded_unrated_count += 1
+            continue
+
+        target_contests.append(c)
+        if len(target_contests) >= limit:
+            break
+
+    print(f"Excluded {excluded_division_count} Div. 3/Div. 4 contests.")
+    print(f"Excluded {excluded_unrated_count} unrated contests.")
     return target_contests
 
 def process_contest(fetcher, contest, writer):
     contest_id = contest["id"]
     contest_name = contest["name"]
+    contest_duration = contest.get("durationSeconds")
     print(f"\nProcessing Contest {contest_id}: {contest_name}")
+
+    if not contest_duration:
+        print("Contest duration is unavailable. Skipping.")
+        return
     
     # 1. Get Problems and Official Ratings
-    problems_data = fetcher.get_contest_problems(contest_id)
+    try:
+        problems_data = fetcher.get_contest_problems(contest_id)
+    except Exception as error:
+        print(f"Failed to fetch contest standings: {error}")
+        return
+
     problem_ratings = {}
     for p in problems_data:
         if "rating" in p:
@@ -34,18 +75,13 @@ def process_contest(fetcher, contest, writer):
 
     print(f"Rated Problems: {len(problem_ratings)}")
 
-    # 2. Get User Ratings (Old Rating)
-    # We use ratingChanges to get the rating BEFORE the contest
-    try:
-        rating_changes = fetcher._make_request("contest.ratingChanges", {"contestId": contest_id})
-    except Exception as e:
-        print(f"Failed to fetch rating changes: {e}")
-        return
-
+    # 2. Get User Ratings (New Rating)
+    # We use ratingChanges to get the rating AFTER the contest.
     user_ratings = {}
+    rating_changes = get_rating_changes(fetcher, contest_id)
     if rating_changes:
         for rc in rating_changes:
-            user_ratings[rc["handle"]] = rc["oldRating"]
+            user_ratings[rc["handle"]] = rc["newRating"]
     else:
         print("No rating changes found. Skipping.")
         return
@@ -93,7 +129,8 @@ def process_contest(fetcher, contest, writer):
                     "problemIndex": p_idx,
                     "problemRating": problem_ratings[p_idx],
                     "userRating": rating,
-                    "timeConsumed": time_sec
+                    "timeConsumed": time_sec,
+                    "contestDurationSeconds": contest_duration,
                 })
                 row_count += 1
                 
@@ -111,7 +148,14 @@ def main():
     output_file = ensure_directory(PROCESSED_DATA_DIR) / "training_data.csv"
     
     with open(output_file, "w", newline="", encoding="utf-8") as f:
-        fieldnames = ["contestId", "problemIndex", "problemRating", "userRating", "timeConsumed"]
+        fieldnames = [
+            "contestId",
+            "problemIndex",
+            "problemRating",
+            "userRating",
+            "timeConsumed",
+            "contestDurationSeconds",
+        ]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         

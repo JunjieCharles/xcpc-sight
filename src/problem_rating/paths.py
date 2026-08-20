@@ -7,6 +7,8 @@ API_CACHE_DIR = RAW_DATA_DIR / "api_cache"
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 ANALYSIS_DIR = PROJECT_ROOT / "outputs" / "analysis"
 PLOTS_DIR = PROJECT_ROOT / "outputs" / "plots"
+MODEL_DIR = PROJECT_ROOT / "outputs" / "models"
+MODEL_FILE = MODEL_DIR / "time_model.json"
 
 
 def ensure_directory(directory: Path) -> Path:

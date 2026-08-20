@@ -1,4 +1,6 @@
+import argparse
 import csv
+import json
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
@@ -6,7 +8,7 @@ import math
 import random
 from collections import defaultdict, Counter
 
-from .paths import PROCESSED_DATA_DIR
+from .paths import MODEL_FILE, PROCESSED_DATA_DIR, ensure_directory
 
 def read_data(filename):
     data = []
@@ -16,7 +18,7 @@ def read_data(filename):
             data.append(row)
     return data
 
-def get_filtered_data(data, min_rating=1200, max_time=300):
+def get_filtered_data(data, min_rating=1200, balance_difficulties=False):
     X_list = [] # [rating, difficulty]
     y_list = [] # time
     
@@ -29,14 +31,15 @@ def get_filtered_data(data, min_rating=1200, max_time=300):
             r = int(row['userRating'])
             d = int(row['problemRating'])
             t_sec = float(row['timeConsumed'])
+            contest_duration = float(row['contestDurationSeconds'])
             t = t_sec # Use seconds for training
             
-            # Filter invalid or extreme times (e.g. practice submissions)
-            if r >= min_rating and 0 < t <= max_time:
+            # Keep only times within the duration of their own contest.
+            if r >= min_rating and 0 < t <= contest_duration:
                 ratings.append(r)
                 difficulties.append(d)
                 times.append(t)
-        except ValueError:
+        except (KeyError, ValueError):
             continue
             
     if not ratings:
@@ -58,41 +61,35 @@ def get_filtered_data(data, min_rating=1200, max_time=300):
     difficulties = np.array(difficulties)[mask]
     times = np.array(times)[mask]
     
-    # Balancing: Downsample frequent difficulties
-    print("Balancing dataset...")
-    bins = defaultdict(list)
-    for i, d in enumerate(difficulties):
-        bins[d].append(i)
-        
-    counts = [len(idxs) for idxs in bins.values()]
-    if counts:
-        # Show initial distribution stats
-        print(f"  Initial samples: {len(ratings)}")
-        print(f"  Difficulty levels: {len(bins)}")
-        print(f"  Min samples/level: {min(counts)}")
-        print(f"  Max samples/level: {max(counts)}")
-        
-        # Cap at median or a reasonable number to flatten distribution
-        cap = int(np.median(counts))
-        # Ensure a minimum reasonable cap
-        cap = max(cap, 100)
-        print(f"  Cap per difficulty level: {cap}")
-        
-        balanced_indices = []
-        for d, idxs in bins.items():
-            if len(idxs) > cap:
-                balanced_indices.extend(random.sample(idxs, cap))
-            else:
-                balanced_indices.extend(idxs)
-        
-        # Shuffle to mix
-        random.shuffle(balanced_indices)
-        
-        ratings = ratings[balanced_indices]
-        difficulties = difficulties[balanced_indices]
-        times = times[balanced_indices]
-        
-        print(f"  Balanced samples: {len(ratings)}")
+    if balance_difficulties:
+        # Downsample frequent difficulty levels to reduce their influence.
+        print("Balancing dataset...")
+        bins = defaultdict(list)
+        for index, difficulty in enumerate(difficulties):
+            bins[difficulty].append(index)
+
+        counts = [len(indices) for indices in bins.values()]
+        if counts:
+            print(f"  Initial samples: {len(ratings)}")
+            print(f"  Difficulty levels: {len(bins)}")
+            print(f"  Min samples/level: {min(counts)}")
+            print(f"  Max samples/level: {max(counts)}")
+
+            cap = max(int(np.median(counts)), 100)
+            print(f"  Cap per difficulty level: {cap}")
+
+            balanced_indices = []
+            for indices in bins.values():
+                if len(indices) > cap:
+                    balanced_indices.extend(random.sample(indices, cap))
+                else:
+                    balanced_indices.extend(indices)
+
+            random.shuffle(balanced_indices)
+            ratings = ratings[balanced_indices]
+            difficulties = difficulties[balanced_indices]
+            times = times[balanced_indices]
+            print(f"  Balanced samples: {len(ratings)}")
     
     for r, d, t in zip(ratings, difficulties, times):
         X_list.append([r, d])
@@ -101,12 +98,24 @@ def get_filtered_data(data, min_rating=1200, max_time=300):
     return X_list, y_list
 
 def main():
+    parser = argparse.ArgumentParser(description="Train the problem difficulty model.")
+    parser.add_argument(
+        "--balance-difficulties",
+        action="store_true",
+        help="Downsample frequent problem-rating levels before training.",
+    )
+    args = parser.parse_args()
+
     csv_file = PROCESSED_DATA_DIR / "training_data.csv"
     print(f"Reading {csv_file}...")
     data = read_data(csv_file)
     
     print("Filtering data...")
-    all_X, all_y = get_filtered_data(data, min_rating=1600, max_time=18000)
+    all_X, all_y = get_filtered_data(
+        data,
+        min_rating=1600,
+        balance_difficulties=args.balance_difficulties,
+    )
     
     all_X = np.array(all_X)
     all_y = np.array(all_y)
@@ -129,6 +138,18 @@ def main():
     
     b0 = reg1.intercept_
     b1, b2 = reg1.coef_
+
+    ensure_directory(MODEL_FILE.parent)
+    with open(MODEL_FILE, "w", encoding="utf-8") as model_file:
+        json.dump(
+            {
+                "intercept": float(b0),
+                "rating_coefficient": float(b1),
+                "difficulty_coefficient": float(b2),
+            },
+            model_file,
+            indent=2,
+        )
     
     print("\n--- Model 1: ln(T) = b0 + b1 * R + b2 * D ---")
     print(f"R2 Score: {r2_1:.4f}")
@@ -136,6 +157,7 @@ def main():
     print(f"Coeff R (b1):   {b1:.6f}")
     print(f"Coeff D (b2):   {b2:.6f}")
     print(f"Formula: T = {math.exp(b0):.4f} * e^({b1:.6f} * R + {b2:.6f} * D)")
+    print(f"Saved model coefficients to {MODEL_FILE}")
     
     # Model 2: ln(T) = b0 + b1 * (D - R)
     # Features: (D - R)

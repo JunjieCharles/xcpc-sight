@@ -1,21 +1,30 @@
 import argparse
+import json
 import numpy as np
 import math
 from .analyze_contest import calculate_problem_times
 from .fetch_data import CodeforcesFetcher
+from .paths import MODEL_FILE
 
-def estimate_difficulty(time_seconds, user_rating):
+def load_model_coefficients():
+    with open(MODEL_FILE, "r", encoding="utf-8") as model_file:
+        return json.load(model_file)
+
+
+def estimate_difficulty(time_seconds, user_rating, coefficients):
     """
-    Inverse formula from Model 1 (Updated with balanced samples, min_rating=1600, time in seconds):
-    ln(T) = 6.7271 - 0.000847 * R + 0.001354 * D
-    => D = (ln(T) - 6.7271 + 0.000847 * R) / 0.001354
+    Inverse formula from the trained Model 1:
+    ln(T) = b0 + b1 * R + b2 * D
+    => D = (ln(T) - b0 - b1 * R) / b2
     """
     if time_seconds <= 0:
         return None # Should not happen for valid AC times
-    
+
+    intercept = coefficients["intercept"]
+    rating_coefficient = coefficients["rating_coefficient"]
+    difficulty_coefficient = coefficients["difficulty_coefficient"]
     ln_t = math.log(time_seconds)
-    d = (ln_t - 6.7271 + 0.000847 * user_rating) / 0.001354
-    return d
+    return (ln_t - intercept - rating_coefficient * user_rating) / difficulty_coefficient
 
 def main():
     parser = argparse.ArgumentParser(description="Estimate problem difficulty based on user solving times.")
@@ -25,6 +34,13 @@ def main():
     
     contest_id = args.contest_id
     fetcher = CodeforcesFetcher()
+
+    try:
+        coefficients = load_model_coefficients()
+    except FileNotFoundError:
+        print(f"Model file not found: {MODEL_FILE}")
+        print("Run problem_rating.unified_model after collecting training data.")
+        return
     
     print(f"Fetching data for contest {contest_id}...")
     
@@ -40,13 +56,13 @@ def main():
             
     print(f"Problems: {problem_indices}")
     
-    # 2. Fetch User Ratings (Pre-contest)
+    # 2. Fetch User Ratings (Post-contest)
     print("Fetching rating changes...")
     rating_changes = fetcher._make_request("contest.ratingChanges", {"contestId": contest_id})
     user_ratings = {}
     if rating_changes:
         for rc in rating_changes:
-            user_ratings[rc["handle"]] = rc["oldRating"]
+            user_ratings[rc["handle"]] = rc["newRating"]
         print(f"Found {len(user_ratings)} rated participants.")
     else:
         print("No rating changes found. This might be an unrated contest or too recent.")
@@ -95,7 +111,7 @@ def main():
             if time_sec < 60.0:
                 time_sec = 60.0 # Avoid log(0) or negative log issues for extremely fast times, clamp to 60 sec
             
-            est_d = estimate_difficulty(time_sec, rating)
+            est_d = estimate_difficulty(time_sec, rating, coefficients)
             
             if p_idx in problem_estimates:
                 problem_estimates[p_idx].append(est_d)

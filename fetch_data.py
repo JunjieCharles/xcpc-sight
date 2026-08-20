@@ -107,7 +107,7 @@ class CodeforcesFetcher:
     def get_user_rating(self, contest_id, handle, participant_type):
         """
         获取用户在这场比赛时的 rating
-        CONTESTANT: 这场比赛 rating 变化前的 rating (oldRating)
+        CONTESTANT: 这场比赛 rating 变化后的 rating (newRating)
         """
         if participant_type == "CONTESTANT":
             # Use contest.ratingChanges
@@ -120,7 +120,7 @@ class CodeforcesFetcher:
             
             for change in rating_changes:
                 if change["handle"] == handle:
-                    return change["oldRating"]
+                    return change["newRating"]
             
             # If not found in rating changes (e.g. unrated participant in rated contest?), return None or 0?
             # Some contests are not rated for everyone.

@@ -6,6 +6,11 @@ import hashlib
 
 from .paths import API_CACHE_DIR, ensure_directory
 
+
+class CodeforcesAPIError(Exception):
+    """Raised when the Codeforces API returns a FAILED response."""
+
+
 class CodeforcesFetcher:
     def __init__(self, data_dir=None):
         self.api_base = "https://codeforces.com/api"
@@ -33,7 +38,8 @@ class CodeforcesFetcher:
 
         for attempt in range(max_retries):
             try:
-                print(f"Requesting {url} (Attempt {attempt + 1})...")
+                request_url = requests.Request("GET", url, params=params).prepare().url
+                print(f"Requesting {request_url} (Attempt {attempt + 1})...")
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
                 data = response.json()
@@ -43,10 +49,13 @@ class CodeforcesFetcher:
                     with open(cache_file, "w", encoding="utf-8") as f:
                         json.dump(data["result"], f, ensure_ascii=False, indent=2)
                     return data["result"]
-                else:
-                    print(f"API Error: {data.get('comment')}")
-                    # If it's a specific API error, maybe don't retry? 
-                    # But for now we treat it as a failure.
+
+                raise CodeforcesAPIError(f"{method}: {data.get('comment', 'Unknown API error')}")
+            except requests.HTTPError as error:
+                if error.response is not None and error.response.status_code == 400:
+                    raise CodeforcesAPIError(f"{method}: {error.response.text}") from error
+
+                print(f"Request failed: {error}")
             except requests.RequestException as e:
                 print(f"Request failed: {e}")
             
@@ -59,14 +68,8 @@ class CodeforcesFetcher:
         """
         获取指定比赛的所有有效参赛者 (仅 CONTESTANT)
         """
-        # showUnofficial=true is needed to get OUT_OF_COMPETITION, but we only want CONTESTANT now.
-        # However, keeping showUnofficial=true doesn't hurt if we filter later.
-        # But if we only want CONTESTANT, showUnofficial=false (default) might be enough?
-        # Actually, let's keep showUnofficial=true to be safe and filter explicitly.
-        data = self._make_request("contest.standings", {
-            "contestId": contest_id,
-            "showUnofficial": "true"
-        })
+        # Non-gym standings are available to anonymous users only with contestId.
+        data = self._make_request("contest.standings", {"contestId": contest_id})
         
         valid_participants = []
         for row in data["rows"]:
@@ -107,7 +110,7 @@ class CodeforcesFetcher:
     def get_user_rating(self, contest_id, handle, participant_type):
         """
         获取用户在这场比赛时的 rating
-        CONTESTANT: 这场比赛 rating 变化前的 rating (oldRating)
+        CONTESTANT: 这场比赛 rating 变化后的 rating (newRating)
         """
         if participant_type == "CONTESTANT":
             # Use contest.ratingChanges
@@ -120,7 +123,7 @@ class CodeforcesFetcher:
             
             for change in rating_changes:
                 if change["handle"] == handle:
-                    return change["oldRating"]
+                    return change["newRating"]
             
             # If not found in rating changes (e.g. unrated participant in rated contest?), return None or 0?
             # Some contests are not rated for everyone.
@@ -138,23 +141,14 @@ class CodeforcesFetcher:
         """
         获取比赛开始时间
         """
-        standings = self._make_request("contest.standings", {
-            "contestId": contest_id,
-            "from": 1,
-            "count": 1
-        })
+        standings = self._make_request("contest.standings", {"contestId": contest_id})
         return standings["contest"]["startTimeSeconds"]
 
     def get_contest_problems(self, contest_id):
         """
         获取指定比赛的所有题目信息
         """
-        # We only need the problem list, so we request minimal rows
-        data = self._make_request("contest.standings", {
-            "contestId": contest_id,
-            "from": 1,
-            "count": 1
-        })
+        data = self._make_request("contest.standings", {"contestId": contest_id})
         return data["problems"]
 
     def get_all_contest_submissions(self, contest_id):
