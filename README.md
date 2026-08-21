@@ -83,6 +83,7 @@ python -m problem_rating.evaluate_contest_difficulty 2164
 python -m problem_rating.plot_results
 python -m problem_rating.build_problem_features
 python -m problem_rating.experiment_models
+python -m problem_rating.experiment_models --suite advanced
 ```
 
 `analyze_contest` 会将单场 CSV 写入 `outputs/analysis/`，并自动在 `outputs/plots/` 生成按题目的 rating-耗时图。
@@ -100,4 +101,4 @@ python -m problem_rating.experiment_models
 - 不使用首次提交的 prev1–prev3 用时中位数、IQR、边界覆盖率和低尾异常率；
 - 比赛时长、题目顺序、题目数量与队伍人数。
 
-`experiment_models` 比较 Ridge、加性样条 GAM 和浅层梯度提升，并同时报告按 contest 分组的交叉验证和最新 20 场的时间留出结果。Ridge/GAM 的正则强度在每个训练折内部继续按 contest 分组选择。当前实验的首选可解释组合是“高斯核条件过题曲线 + prev1 + GAM”；该实验入口不会覆盖现有 `unified_model` 模型文件。
+`experiment_models` 比较 Ridge、加性样条 GAM、浅层梯度提升、HistGradientBoosting 和 RBF-SVR；安装可选的 `catboost` 后还会加入 CatBoost。`--suite advanced` 只运行耗时较短的高级模型对比。实验同时报告按 contest 分组的交叉验证、最新 20 场的时间留出结果、训练耗时和稀疏样本切片。Ridge/GAM/SVR 的参数在每个训练折内部继续按 contest 分组选择；较慢的树模型大网格不纳入日常入口。该实验不会覆盖现有 `unified_model` 模型文件。
