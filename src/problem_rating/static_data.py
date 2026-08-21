@@ -8,7 +8,32 @@ from core.errors import DataValidationError
 
 SCHEMA_VERSION = 1
 MODEL_ID = "gaussian-prev1-3-shallow-gbr"
-_MISSING_PROBLEM_NAMES = frozenset({"官方 guest 数据未提供题名"})
+_MISSING_PROBLEM_NAMES = frozenset(
+    {
+        "官方 guest 数据未提供题名",
+        "RankLand 公开榜单未提供题名",
+    }
+)
+_CONTEST_SHORT_TITLES = {
+    "2025-2026": {
+        "icpc2025preliminary-1": "ICPC 网络赛1",
+        "icpc2025preliminary-2": "ICPC 网络赛2",
+        "ccpc2025preliminary": "CCPC 网络赛",
+        "icpc2025xi_an": "ICPC 西安",
+        "icpc2025chengdu": "ICPC 成都",
+        "icpc2025wuhan": "ICPC 武汉",
+        "ccpc2025harbin": "CCPC 哈尔滨",
+        "icpc2025nanjing": "ICPC 南京",
+        "ccpc2025jinan": "CCPC 济南",
+        "icpc2025shenyang": "ICPC 沈阳",
+        "ccpc2025zhengzhou": "CCPC 郑州",
+        "icpc2025shanghai": "ICPC 上海",
+        "ccpc2025chongqing": "CCPC 重庆",
+        "icpc2025hongkong": "ICPC 香港",
+        "icpc2025ecfinal": "ICPC EC-Final",
+        "ccpc2025final": "CCPC 总决赛",
+    }
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,9 +132,8 @@ def project_problem_rating_series(
         if contest_id in seen_contest_ids:
             raise DataValidationError(f"{context}.id duplicates {contest_id!r}")
         seen_contest_ids.add(contest_id)
-        source, separator, native_contest_id = contest_id.partition(":")
-        if not source or not separator or not native_contest_id:
-            raise DataValidationError(f"{context}.id must use a source:native-id namespace")
+        _, separator, namespaced_native_id = contest_id.partition(":")
+        native_contest_id = namespaced_native_id if separator else contest_id
         contest_records = by_native_id.get(native_contest_id)
         if not contest_records:
             raise DataValidationError(
@@ -130,14 +154,16 @@ def project_problem_rating_series(
             }
             for record in contest_records
         ]
-        contests.append(
-            {
-                "id": contest_id,
-                "title": contest_title,
-                "startAt": start_at,
-                "problems": problems,
-            }
-        )
+        projected_contest: dict[str, object] = {
+            "id": contest_id,
+            "title": contest_title,
+            "startAt": start_at,
+            "problems": problems,
+        }
+        short_title = _CONTEST_SHORT_TITLES.get(series_id, {}).get(contest_id)
+        if short_title:
+            projected_contest["shortTitle"] = short_title
+        contests.append(projected_contest)
 
     extras = sorted(set(by_native_id) - consumed_native_ids)
     if extras:

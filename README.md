@@ -62,13 +62,13 @@ python scripts/generate_static_data.py
 
 默认写入 `static/data/index.json`、`static/data/series/2025-2026.json`、`static/data/series/nowcoder-summer-2026.json` 和 `static/data/series/hdu-summer-2026.json`；可用 `--output-dir` 覆盖。系列按各自最新比赛时间倒序排列，最新系列成为默认系列。系列 JSON 的稀疏参赛记录可派生系列宽表、单场变化表和参赛者完整 rating 曲线。生成过程访问实时 RankLand、牛客和 HDU，不属于默认离线测试。HDU 默认使用可覆盖的 `guest`/`guest` 登录凭据。
 
-在完成牛客/HDU 题目预测后，可以从本地预测 CSV 离线发布独立的题目 Rating JSON：
+在完成 2025–2026 ICPC + CCPC、牛客和 HDU 题目预测后，可以从本地预测 CSV 离线发布独立的题目 Rating JSON：
 
 ```bash
 python scripts/generate_problem_rating_static_data.py
 ```
 
-默认写入 `static/data/problem-rating/index.json` 以及牛客、HDU 两个 series 文件。该命令不访问网络，不修改选手 Rating JSON，也不会发布账号、队伍或逐人提交数据。
+默认写入 `static/data/problem-rating/index.json` 以及三个 series 文件。该命令不访问网络，不修改选手 Rating JSON，也不会发布账号、队伍或逐人提交数据。ICPC + CCPC 队伍 Rating 定义为队内所有非教练选手最终 Rating 的最大值。
 
 本地浏览静态站点（不能直接用 `file://`，因为浏览器需要通过 HTTP 加载 ES module 和 JSON）：
 
@@ -76,7 +76,7 @@ python scripts/generate_problem_rating_static_data.py
 python -m http.server 8000 --directory static
 ```
 
-然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动选手宽表、单场参赛者表，以及上下排列的参赛者 rating 曲线和参赛记录；牛客/HDU 还提供独立的题目难度入口、可点击筛选的场次图例、适配页面宽度的难度曲线和可点击表头双向排序的题目表格。当前视图、题目筛选和排序会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
+然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动选手宽表、单场参赛者表，以及上下排列的参赛者 rating 曲线和参赛记录；三个已发布题目数据的 series 还提供独立的题目难度入口、可点击筛选的场次图例、适配页面宽度的难度曲线和可点击表头双向排序的题目表格。当前视图、题目筛选和排序会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
 
 ```bash
 node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
@@ -103,7 +103,7 @@ scripts/           显式数据获取与静态数据生成脚本
 static/             零构建静态前端
 static/js/          浏览器 ES modules 与数据辅助函数
 static/data/        静态站点发布 JSON
-static/data/problem-rating/  牛客/HDU 题目 Rating 发布 JSON
+static/data/problem-rating/  ICPC+CCPC/牛客/HDU 题目 Rating 发布 JSON
 data-cache/        已忽略、可丢弃的上游下载缓存
 doc/               各功能设计文档
 ```

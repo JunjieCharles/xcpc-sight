@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260821-8";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260821-11";
 
 const SCHEMA_VERSION = 1;
 const validatedIndexes = new WeakSet();
@@ -74,6 +74,7 @@ export function validateProblemRatingSeries(document) {
     object(contest, path);
     string(contest.id, `${path}.id`);
     string(contest.title, `${path}.title`);
+    if (contest.shortTitle !== undefined) string(contest.shortTitle, `${path}.shortTitle`);
     string(contest.startAt, `${path}.startAt`);
     if (Number.isNaN(Date.parse(contest.startAt))) fail(`${path}.startAt`, "expected ISO date-time");
     if (contestIds.has(contest.id)) fail(`${path}.id`, "duplicate contest id");
@@ -120,6 +121,10 @@ export function flattenProblemRatings(document, selectedContestIds = null) {
       problemOrder,
     }));
   });
+}
+
+export function problemSeriesHasNames(document) {
+  return document.contests.some((contest) => contest.problems.some((problem) => problem.name));
 }
 
 function contestProblemComparison(left, right) {

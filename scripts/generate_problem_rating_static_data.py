@@ -15,7 +15,7 @@ from problem_rating import (
     project_problem_rating_series,
 )
 
-SUPPORTED_SERIES = frozenset({"nowcoder-summer-2026", "hdu-summer-2026"})
+SUPPORTED_SERIES = frozenset({"2025-2026", "nowcoder-summer-2026", "hdu-summer-2026"})
 REQUIRED_COLUMNS = (
     "series",
     "nativeContestId",

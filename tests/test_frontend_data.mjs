@@ -55,9 +55,18 @@ test("provides an integrated problem-rating chart filter and sortable table head
   assert.match(indexHtml, /id="problem-contest-sort"[^>]*class="table-sort-button"/);
   assert.match(indexHtml, /id="problem-rating-sort"[^>]*class="table-sort-button"/);
   assert.match(indexHtml, /通过队伍\/有效队伍/);
+  assert.match(indexHtml, /id="problem-name-column"[^>]*>题名<\/th>/);
+  assert.match(appModule, /problemNameColumn\.hidden = !showProblemNames/);
+  assert.match(appModule, /colSpan: showProblemNames \? 5 : 4/);
   assert.match(appModule, /className: "problem-chart-legend"/);
+  assert.match(appModule, /if \(contest\.shortTitle\) return contest\.shortTitle/);
   assert.match(appModule, /text: "全选"/);
   assert.match(appModule, /text: "全不选"/);
+  assert.match(appModule, /text: "仅 ICPC"/);
+  assert.match(appModule, /contestId\.startsWith\("icpc"\)/);
+  assert.match(appModule, /text: "仅 CCPC"/);
+  assert.match(appModule, /contestId\.startsWith\("ccpc"\)/);
+  assert.match(appModule, /state\.problemSeries\.seriesId === "2025-2026"/);
   assert.match(appModule, /const slotWidth = \(width - left - right\) \/ maxSlots/);
   assert.match(stylesheet, /\.problem-rating-chart\s*\{[^}]*width:\s*100%/);
   assert.match(stylesheet, /\.problem-table-shell\s*\{[^}]*overflow:\s*auto/);

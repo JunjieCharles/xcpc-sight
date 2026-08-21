@@ -31,7 +31,7 @@
 - 不设置独立的 `attempted` 特征：没交题不代表没有思考，比赛结尾的试探性提交也不能稳定代表真实尝试；
 - 没有通过某题的参赛者会影响该题的条件过题曲线，但不会贡献 AC 时间特征。
 
-Codeforces 以正式 rating 记录定义参赛身份；牛客和 HDU 适配显式过滤整场无提交队伍。XCPC 预测还要求队伍能够映射到已发布的最新 rating。
+Codeforces 以正式 rating 记录定义参赛身份；RankLand、牛客和 HDU 适配显式过滤非正式队伍及整场无提交队伍。XCPC 预测还要求队伍能够映射到已发布的最新 rating。
 
 ### 3. 高斯核条件过题曲线
 
@@ -145,9 +145,9 @@ python -m problem_rating.experiment_models --suite advanced
 
 实验入口不会覆盖旧 `unified_model` 的模型文件。
 
-### 牛客/HDU series 预测
+### XCPC series 预测
 
-`predict_xcpc` 读取 `xcpc-sight` 发布的两个 series，以每个报名实体的 `finalRating` 作为最新 rating，生成牛客和 HDU 各 10 场的逐题预测：
+`predict_xcpc` 读取 `xcpc-sight` 发布的三个 series，以选手 `finalRating` 作为最新 rating，生成 2025–2026 ICPC + CCPC 16 场、牛客 10 场和 HDU 10 场的逐题预测。ICPC + CCPC 的队伍 Rating 定义为队内所有非教练选手 Rating 的最大值；适配器读取完整成员名单，并按 RankLand 的 `role=coach` 或姓名教练后缀排除教练，不依赖成员顺序。必须能映射全部队员，缺少任一成员时整队排除，不使用部分成员最大值：
 
 ```powershell
 python -m problem_rating.predict_xcpc
@@ -155,15 +155,15 @@ python -m problem_rating.predict_xcpc
 
 默认输出：
 
-- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.xlsx`：牛客、HDU 两个 sheet；
-- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.md`：两个独立 Markdown 表格；
+- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.xlsx`：ICPC+CCPC、牛客、HDU 三个 sheet；
+- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.md`：三个独立 Markdown 表格；
 - `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.csv`：包含 series 标识的完整数据。
 
-牛客题名从公开 `contest/problem-list` 接口取得。HDU 的 guest 榜单数据目前只提供题号；原始预测结果使用缺失说明，静态发布时将该说明规范化为空题名，不影响通过数和 rating 预测。
+牛客题名从公开 `contest/problem-list` 接口取得。RankLand SRK 与 HDU guest 榜单目前只提供题号；原始预测结果使用缺失说明，静态发布时将该说明规范化为空题名，不影响通过数和 rating 预测。RankLand 原始 SRK 缓存在 `data-cache/problem-rating/outputs/analysis/xcpc_cache/rankland/`，包含公开队员和逐题记录，不进入 Git。
 
 ### 静态站点发布
 
-完成预测后，从默认 CSV 离线生成牛客和 HDU 的题目 Rating 静态数据：
+完成预测后，从默认 CSV 离线生成三个系列的题目 Rating 静态数据：
 
 ```powershell
 python scripts/generate_problem_rating_static_data.py
@@ -172,12 +172,13 @@ python scripts/generate_problem_rating_static_data.py
 默认发布：
 
 - `static/data/problem-rating/index.json`：当前支持的 series 及相对路径；
+- `static/data/problem-rating/series/2025-2026.json`；
 - `static/data/problem-rating/series/nowcoder-summer-2026.json`；
 - `static/data/problem-rating/series/hdu-summer-2026.json`。
 
 `ProblemRatingRecord`、`project_problem_rating_series` 和 `project_problem_rating_index` 是 `problem_rating` 的公开纯 Python API。投影以现有选手 Rating series 为比赛 ID、标题、时间和顺序的唯一规范来源，拒绝缺场、额外场次、重复题目、非法计数和跨 series 数据。文件仅包含场次元数据以及题号、题名、预测 Rating、通过队伍数、有效队伍数和时间样本数，不包含选手/队伍身份、team token 或逐人提交。
 
-前端在牛客和 HDU series 内提供“选手 Rating / 题目难度”切换；其他 series 不显示题目入口，系列导航保持在页面左侧。题目页默认选择全部场次，图例始终列出所有场次，支持点击逐场切换以及快捷全选/全不选；表格通过“场次 + 题号”和 Rating 表头切换排序字段，再次点击同一表头切换正序/逆序。通过队伍与有效队伍合并显示，时间样本不在界面展示。每场曲线先按预测 Rating 从易到难排序，Rating 相同按自然题号稳定排序；最长的已选曲线适配可用页面宽度，其他曲线按题目数量比例缩短。曲线使用保持单调的三次插值，圆点才是实际预测值，插值不代表新增模型数据。筛选和排序状态写入 URL。
+前端在三个 series 内提供“选手 Rating / 题目难度”切换，系列导航保持在页面左侧。题目页默认选择全部场次，图例始终列出所有场次，支持点击逐场切换以及快捷全选/全不选；2025–2026 ICPC + CCPC 额外提供“仅 ICPC”和“仅 CCPC”快捷筛选，点击后以对应组织的全部比赛替换当前选择。该系列的 16 场比赛发布独立短名供图例和曲线提示使用，例如 `ICPC 网络赛1`、`CCPC 哈尔滨`、`ICPC EC-Final` 和 `CCPC 总决赛`。表格通过“场次 + 题号”和 Rating 表头切换排序字段，再次点击同一表头切换正序/逆序。当前系列所有题名均为空时，表格隐藏整列题名；只要系列内存在题名则保留该列。通过队伍与有效队伍合并显示，时间样本不在界面展示。每场曲线先按预测 Rating 从易到难排序，Rating 相同按自然题号稳定排序；最长的已选曲线适配可用页面宽度，其他曲线按题目数量比例缩短。曲线使用保持单调的三次插值，圆点才是实际预测值，插值不代表新增模型数据。筛选和排序状态写入 URL。
 
 ## 其他模型与旧流程
 
@@ -204,7 +205,7 @@ python -m problem_rating.plot_results
 - `data-cache/problem-rating/outputs/analysis/`：分析结果、CSV、Markdown 和 Excel；
 - `data-cache/problem-rating/outputs/plots/`：图表；
 - `data-cache/problem-rating/outputs/models/`：旧线性模型文件；
-- `static/data/problem-rating/`：可发布的牛客/HDU 题目级聚合 JSON；
+- `static/data/problem-rating/`：可发布的 ICPC+CCPC/牛客/HDU 题目级聚合 JSON；
 - `doc/problem-rating-api.md`：Codeforces API 参考。
 
 `data-cache/problem-rating/` 整体被 Git 忽略，不属于可发布数据。缓存来自 Codeforces 公共 API，可能包含公开账号 handle、比赛提交和榜单信息；不得在其中混入登录 Cookie、API 密钥或其他凭据。代码不会读取 `.env` 或把认证信息写入缓存。静态前端只读取 `static/data/problem-rating/` 下的聚合文件，不读取或复制本地缓存。

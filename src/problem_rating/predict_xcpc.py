@@ -1,4 +1,4 @@
-"""Predict Nowcoder/HDU problem ratings from xcpc-sight series data."""
+"""Predict RankLand/Nowcoder/HDU problem ratings from xcpc-sight series data."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ import httpx
 import pandas as pd
 from sklearn.base import clone
 
+from core import normalize_srk_contest
+from core.errors import DataValidationError
+from core.normalization import DefaultNormalizer, is_coach_name
+
 from .build_problem_features import DEFAULT_OUTPUT
 from .experiment_models import build_models, prepare_features
 from .paths import ANALYSIS_DIR, PROJECT_ROOT
@@ -31,9 +35,11 @@ from .solve_features import calculate_solve_features
 
 NOWCODER_IDS = tuple(range(133876, 133886))
 HDU_IDS = tuple(range(1229, 1239))
+RANKLAND_SERIES_ID = "2025-2026"
 CENTERS = tuple(range(800, 3501, 100))
 HDU_MISSING_TITLE = "官方 guest 数据未提供题名"
 NOWCODER_MISSING_TITLE = "官方公开页面未提供题名"
+RANKLAND_MISSING_TITLE = "RankLand 公开榜单未提供题名"
 
 
 @dataclass(frozen=True)
@@ -46,7 +52,7 @@ class Participant:
 @dataclass(frozen=True)
 class ContestData:
     series: str
-    contest_id: int
+    contest_id: str | int
     contest_name: str
     start_seconds: float
     duration_seconds: float
@@ -59,12 +65,322 @@ def stable_competitor_id(source: str, key: str) -> str:
     return f"c_{hashlib.sha256(identity).hexdigest()}"
 
 
+def stable_member_competitor_id(
+    school: str,
+    member: str,
+    *,
+    normalizer: DefaultNormalizer | None = None,
+) -> str:
+    """Return the participant-series ID for one normalized school/member identity."""
+    competitor = (normalizer or DefaultNormalizer()).competitor(school, member)
+    identity = f"{competitor.school}\0{competitor.member}".encode()
+    return f"c_{hashlib.sha256(identity).hexdigest()}"
+
+
+def max_member_rating(
+    school: str,
+    members: Iterable[str],
+    ratings: dict[str, int],
+    *,
+    normalizer: DefaultNormalizer | None = None,
+) -> int | None:
+    """Return max(all member ratings), or None unless every member can be mapped."""
+    normalizer = normalizer or DefaultNormalizer()
+    member_ids = [
+        stable_member_competitor_id(school, member, normalizer=normalizer)
+        for member in members
+        if member.strip() and not is_coach_name(member)
+    ]
+    if not member_ids or any(member_id not in ratings for member_id in member_ids):
+        return None
+    return max(ratings[member_id] for member_id in member_ids)
+
+
 def load_series(path: Path) -> tuple[dict, dict[str, int]]:
     document = json.loads(path.read_text(encoding="utf-8"))
     ratings = {
         competitor["id"]: int(competitor["finalRating"]) for competitor in document["competitors"]
     }
     return document, ratings
+
+
+def _rankland_cache_path(cache_dir: Path, contest_id: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", contest_id):
+        raise DataValidationError(f"unsafe RankLand contest ID {contest_id!r}")
+    return cache_dir / f"rankland-{contest_id}.json"
+
+
+def _rankland_envelope(response: httpx.Response, context: str) -> dict:
+    response.raise_for_status()
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise DataValidationError(f"{context}: response must be JSON") from error
+    if not isinstance(payload, dict) or payload.get("success") is not True:
+        raise DataValidationError(f"{context}: unsuccessful RankLand response")
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        raise DataValidationError(f"{context}: data must be an object")
+    return data
+
+
+def fetch_rankland_caches(contests: Iterable[dict], cache_dir: Path) -> None:
+    """Cache public SRK payloads with source provenance for offline prediction."""
+    missing = [
+        contest
+        for contest in contests
+        if not _rankland_cache_path(cache_dir, str(contest["id"])).exists()
+    ]
+    if not missing:
+        return
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    api_root = "https://rl.algoux.cn/api/v2"
+    with httpx.Client(timeout=60, follow_redirects=True) as client:
+        for contest in missing:
+            contest_id = str(contest["id"])
+            print(f"Fetching RankLand {contest_id}...", flush=True)
+            detail = _rankland_envelope(
+                client.get(f"{api_root}/public/contests/{contest_id}"),
+                f"RankLand contest {contest_id}",
+            )
+            file_id = detail.get("srkFileID")
+            if not isinstance(file_id, str) or not file_id:
+                raise DataValidationError(f"RankLand contest {contest_id}: missing srkFileID")
+            metadata = _rankland_envelope(
+                client.get(f"{api_root}/public/files/{file_id}"),
+                f"RankLand file {file_id}",
+            )
+            file_url = metadata.get("url")
+            if not isinstance(file_url, str) or not file_url.startswith("https://"):
+                raise DataValidationError(f"RankLand file {file_id}: invalid public URL")
+            source = client.get(file_url)
+            source.raise_for_status()
+            expected_hash = metadata.get("hashValue")
+            actual_hash = hashlib.sha256(source.content).hexdigest()
+            if isinstance(expected_hash, str) and expected_hash and expected_hash != actual_hash:
+                raise DataValidationError(
+                    f"RankLand contest {contest_id}: SRK sha256 does not match metadata"
+                )
+            try:
+                srk = source.json()
+            except ValueError as error:
+                raise DataValidationError(
+                    f"RankLand contest {contest_id}: SRK file must be JSON"
+                ) from error
+            if not isinstance(srk, dict):
+                raise DataValidationError(
+                    f"RankLand contest {contest_id}: SRK root must be an object"
+                )
+            cached = {
+                "contestId": contest_id,
+                "fileId": file_id,
+                "fileUrl": file_url,
+                "sha256": actual_hash,
+                "srk": srk,
+            }
+            _rankland_cache_path(cache_dir, contest_id).write_text(
+                json.dumps(cached, ensure_ascii=False, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+
+
+def _rankland_text(value: object) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if not isinstance(value, dict):
+        return ""
+    for key in ("zh-CN", "fallback", "en"):
+        candidate = value.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def _rankland_seconds(value: object, context: str) -> float:
+    if not isinstance(value, list) or not value:
+        raise DataValidationError(f"{context}: expected [amount, unit]")
+    amount = value[0]
+    if isinstance(amount, bool) or not isinstance(amount, (int, float)) or amount < 0:
+        raise DataValidationError(f"{context}: duration amount must be non-negative")
+    unit = str(value[1] if len(value) > 1 else "min").casefold()
+    multiplier = {
+        "ms": 0.001,
+        "millisecond": 0.001,
+        "milliseconds": 0.001,
+        "s": 1.0,
+        "sec": 1.0,
+        "second": 1.0,
+        "seconds": 1.0,
+        "min": 60.0,
+        "minute": 60.0,
+        "minutes": 60.0,
+        "h": 3600.0,
+        "hour": 3600.0,
+        "hours": 3600.0,
+    }.get(unit)
+    if multiplier is None:
+        raise DataValidationError(f"{context}: unsupported duration unit {unit!r}")
+    return float(amount) * multiplier
+
+
+def _rankland_accepted_seconds(status: object, context: str) -> float | None:
+    if not isinstance(status, dict) or status.get("result") not in {"AC", "FB"}:
+        return None
+    if status.get("time") is not None:
+        return max(_rankland_seconds(status["time"], f"{context}.time"), 1.0)
+    solutions = status.get("solutions")
+    if isinstance(solutions, list):
+        for solution in reversed(solutions):
+            if (
+                isinstance(solution, dict)
+                and solution.get("result") in {"AC", "FB"}
+                and solution.get("time") is not None
+            ):
+                return max(
+                    _rankland_seconds(solution["time"], f"{context}.solutions.time"),
+                    1.0,
+                )
+    raise DataValidationError(f"{context}: accepted status has no accepted time")
+
+
+def _rankland_competitor_names(raw_row: dict, context: str) -> tuple[str, ...]:
+    user = raw_row.get("user")
+    if not isinstance(user, dict):
+        raise DataValidationError(f"{context}.user must be an object")
+    raw_members = user.get("teamMembers")
+    if not isinstance(raw_members, list):
+        raise DataValidationError(f"{context}.user.teamMembers must be an array")
+
+    members: list[str] = []
+    for member_index, raw_member in enumerate(raw_members):
+        if not isinstance(raw_member, dict):
+            raise DataValidationError(
+                f"{context}.user.teamMembers[{member_index}] must be an object"
+            )
+        name = _rankland_text(raw_member.get("name"))
+        role = _rankland_text(raw_member.get("role")).casefold()
+        if not name or role == "coach" or is_coach_name(name):
+            continue
+        members.append(name)
+
+    if len(raw_members) == 1 and len(members) == 1 and len(members[0].split()) >= 3:
+        return tuple(members[0].split())
+    return tuple(members)
+
+
+def load_rankland_contest(
+    contest: dict,
+    ratings: dict[str, int],
+    cache_dir: Path,
+) -> ContestData:
+    """Adapt one cached RankLand SRK contest using max member final rating per team."""
+    contest_id = str(contest["id"])
+    cache_path = _rankland_cache_path(cache_dir, contest_id)
+    try:
+        cached = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise DataValidationError(f"unable to read RankLand cache {cache_path}") from error
+    if not isinstance(cached, dict) or cached.get("contestId") != contest_id:
+        raise DataValidationError(f"RankLand cache {cache_path}: contest ID mismatch")
+    srk = cached.get("srk")
+    if not isinstance(srk, dict):
+        raise DataValidationError(f"RankLand cache {cache_path}: srk must be an object")
+    normalized = normalize_srk_contest(
+        srk,
+        contest_uk=contest_id,
+        series=RANKLAND_SERIES_ID,
+    )
+    raw_problems = srk.get("problems")
+    raw_rows = srk.get("rows")
+    if not isinstance(raw_problems, list) or not raw_problems:
+        raise DataValidationError(f"RankLand contest {contest_id}: problems must be non-empty")
+    if not isinstance(raw_rows, list) or len(raw_rows) != len(normalized.teams):
+        raise DataValidationError(f"RankLand contest {contest_id}: rows do not match teams")
+
+    problems: list[tuple[str, str]] = []
+    seen_problem_ids: set[str] = set()
+    for problem_index, raw_problem in enumerate(raw_problems):
+        if not isinstance(raw_problem, dict):
+            raise DataValidationError(
+                f"RankLand contest {contest_id}.problems[{problem_index}] must be an object"
+            )
+        alias = _rankland_text(raw_problem.get("alias"))
+        if not alias or alias in seen_problem_ids:
+            raise DataValidationError(
+                f"RankLand contest {contest_id}.problems[{problem_index}]: invalid alias"
+            )
+        seen_problem_ids.add(alias)
+        title = _rankland_text(raw_problem.get("title")) or _rankland_text(raw_problem.get("name"))
+        problems.append((alias, title or RANKLAND_MISSING_TITLE))
+
+    participants: list[Participant] = []
+    excluded_teams: list[str] = []
+    normalizer = DefaultNormalizer()
+    for row_index, (raw_row, team) in enumerate(zip(raw_rows, normalized.teams, strict=True)):
+        if not team.official or not team.has_activity:
+            continue
+        if not isinstance(raw_row, dict):
+            raise DataValidationError(
+                f"RankLand contest {contest_id}.rows[{row_index}] must be an object"
+            )
+        row_context = f"RankLand contest {contest_id}.rows[{row_index}]"
+        members = _rankland_competitor_names(raw_row, row_context)
+        rating = max_member_rating(
+            team.school_name,
+            members,
+            ratings,
+            normalizer=normalizer,
+        )
+        if rating is None:
+            excluded_teams.append(team.team_id)
+            continue
+        statuses = raw_row.get("statuses")
+        if statuses is None:
+            statuses = []
+        if not isinstance(statuses, list) or len(statuses) > len(problems):
+            raise DataValidationError(
+                f"RankLand contest {contest_id}.rows[{row_index}].statuses is invalid"
+            )
+        accepted_times = {}
+        for status_index, status in enumerate(statuses):
+            accepted = _rankland_accepted_seconds(
+                status,
+                f"RankLand contest {contest_id}.rows[{row_index}].statuses[{status_index}]",
+            )
+            if accepted is not None:
+                accepted_times[problems[status_index][0]] = accepted
+        participants.append(
+            Participant(
+                rating=float(rating),
+                accepted_times=accepted_times,
+                team_size=max(len(members), 1),
+            )
+        )
+
+    if excluded_teams:
+        print(
+            f"Excluding RankLand {contest_id}: {len(excluded_teams)} active official "
+            "teams do not map every member to a published final rating",
+            flush=True,
+        )
+    if not participants:
+        raise DataValidationError(f"RankLand contest {contest_id}: no rated participants")
+    raw_contest = srk.get("contest")
+    if not isinstance(raw_contest, dict):
+        raise DataValidationError(f"RankLand contest {contest_id}: contest must be an object")
+    start = datetime.fromisoformat(str(contest["startAt"]))
+    return ContestData(
+        series=RANKLAND_SERIES_ID,
+        contest_id=contest_id,
+        contest_name=str(contest["title"]),
+        start_seconds=start.timestamp(),
+        duration_seconds=_rankland_seconds(
+            raw_contest.get("duration"),
+            f"RankLand contest {contest_id}.duration",
+        ),
+        problems=tuple(problems),
+        participants=tuple(participants),
+    )
 
 
 def parse_bool(value: str) -> bool:
@@ -399,6 +715,7 @@ def predict(rows: list[dict], training_path: Path) -> pd.DataFrame:
 def write_markdown_tables(result: pd.DataFrame, output_path: Path) -> None:
     lines = []
     for series, heading in [
+        (RANKLAND_SERIES_ID, "2025–2026 ICPC + CCPC"),
         ("nowcoder-summer-2026", "牛客 2026 暑期多校"),
         ("hdu-summer-2026", "HDU 2026 暑期多校"),
     ]:
@@ -433,6 +750,7 @@ def write_excel_tables(result: pd.DataFrame, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         for series, sheet_name in [
+            (RANKLAND_SERIES_ID, "ICPC+CCPC"),
             ("nowcoder-summer-2026", "牛客"),
             ("hdu-summer-2026", "HDU"),
         ]:
@@ -481,6 +799,15 @@ def main() -> None:
     hdu_document, hdu_ratings = load_series(
         args.xcpc_root / "static/data/series/hdu-summer-2026.json"
     )
+    rankland_document, rankland_ratings = load_series(
+        args.xcpc_root / "static/data/series/2025-2026.json"
+    )
+    rankland_cache = args.cache_dir / "rankland"
+    fetch_rankland_caches(rankland_document["contests"], rankland_cache)
+    rankland_contests = [
+        load_rankland_contest(contest, rankland_ratings, rankland_cache)
+        for contest in rankland_document["contests"]
+    ]
     nowcoder_cache = args.cache_dir / "nowcoder"
     nowcoder_paths = [
         find_nowcoder_csv(
@@ -512,7 +839,7 @@ def main() -> None:
         load_hdu_contest(contest, hdu_ratings, hdu_cache) for contest in hdu_document["contests"]
     ]
     result = predict(
-        build_feature_rows([*nowcoder_contests, *hdu_contests]),
+        build_feature_rows([*rankland_contests, *nowcoder_contests, *hdu_contests]),
         args.training_features,
     )
     args.output_csv.parent.mkdir(parents=True, exist_ok=True)

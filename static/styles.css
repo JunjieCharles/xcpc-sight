@@ -157,10 +157,10 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .table-sort-button { display: inline-flex; align-items: center; justify-content: flex-end; gap: .3rem; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
 .problem-table #problem-contest-column { text-align: left; }
 .problem-table #problem-contest-column .table-sort-button { justify-content: flex-start; }
-.problem-table thead th:nth-child(2) { text-align: left; }
+.problem-name-column { text-align: left !important; }
 .problem-table td:nth-child(1) { text-align: left; }
 .problem-table td:nth-child(2) { text-align: center; }
-.problem-table td:nth-child(3) { text-align: left; }
+.problem-name-cell { text-align: left !important; }
 .problem-team-counts > span:first-child, .problem-team-counts > span:last-child { display: inline-block; width: 7ch; text-align: right; }
 .problem-team-count-separator { display: inline-block; width: 2ch; color: var(--muted); text-align: center; }
 .problem-table-empty td { height: 8rem; color: var(--muted); text-align: center !important; }

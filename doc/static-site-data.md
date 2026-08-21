@@ -1,6 +1,6 @@
 # 静态站点数据
 
-选手 Rating 生成器发布三个 schema v1 系列：`2025-2026` ICPC + CCPC、`2026牛客暑期多校训练营`，以及 `2026“钉耙编程”中国大学生算法设计暑期联赛`。独立的题目 Rating 生成器从本地预测 CSV 发布牛客和 HDU 的题目级聚合 JSON。项目不包含后端或数据库，也不生成分块或重复的稠密数组；`static/` 同时包含直接消费这些文件的零依赖前端。
+选手 Rating 生成器发布三个 schema v1 系列：`2025-2026` ICPC + CCPC、`2026牛客暑期多校训练营`，以及 `2026“钉耙编程”中国大学生算法设计暑期联赛`。独立的题目 Rating 生成器从本地预测 CSV 发布这三个系列的题目级聚合 JSON。项目不包含后端或数据库，也不生成分块或重复的稠密数组；`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -23,7 +23,7 @@ XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列�
 python scripts/generate_problem_rating_static_data.py
 ```
 
-默认写入 `static/data/problem-rating/index.json`、`static/data/problem-rating/series/nowcoder-summer-2026.json` 和 `static/data/problem-rating/series/hdu-summer-2026.json`。生成器读取已忽略的预测 CSV 以及现有选手 Rating series，准备好两个 series 后依次原子发布系列文件，最后发布入口索引；它不访问网络。
+默认写入 `static/data/problem-rating/index.json`、`static/data/problem-rating/series/2025-2026.json`、`static/data/problem-rating/series/nowcoder-summer-2026.json` 和 `static/data/problem-rating/series/hdu-summer-2026.json`。生成器读取已忽略的预测 CSV 以及现有选手 Rating series，准备好三个 series 后依次原子发布系列文件，最后发布入口索引；它不访问网络。
 
 JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不包含生成时间；固定输入产生固定字节。生成命令访问实时 RankLand、牛客和 HDU，默认离线测试不会执行它。
 
@@ -101,13 +101,15 @@ Rating 文本采用 Codeforces 风格等级色：`<1200` 灰、`1200` 绿、`140
 {"schemaVersion":1,"series":[{"id":"hdu-summer-2026","title":"2026…","path":"series/hdu-summer-2026.json"},{"id":"nowcoder-summer-2026","title":"2026…","path":"series/nowcoder-summer-2026.json"}]}
 ```
 
-series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和 `contests[]`。场次沿用对应选手 Rating series 的 `id`、`title`、`startAt` 与顺序，每场包含非空 `problems[]`。题目字段为：
+series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和 `contests[]`。场次沿用对应选手 Rating series 的 `id`、`title`、`startAt` 与顺序，每场包含非空 `problems[]`；可选的非空 `shortTitle` 仅用于图例和曲线提示，2025–2026 ICPC + CCPC 的 16 场均提供该字段。题目字段为：
 
-- `index`：非空题号；`name` 为字符串，HDU 无法取得题名时发布为空字符串；
+- `index`：非空题号；`name` 为字符串，RankLand 或 HDU 无法取得题名时发布为空字符串；当前系列的题名全部为空时，前端隐藏整列题名；
 - `rating`：有限非负整数预测值；
 - `solvedCount`、`participantCount`、`timeSampleCount`：非负整数，并满足 `timeSampleCount <= solvedCount <= participantCount`。
 
 投影拒绝跨 series、缺场、额外场次、重复题目和非法计数。发布文件不包含选手/队伍名称、Codeforces handle、team token、逐人提交或本地路径；浏览器不会请求 `data-cache/`。
+
+2025–2026 ICPC + CCPC 的题目特征以正式且有提交活动的队伍为样本。每队 Rating 是全部非教练队员 `finalRating` 的最大值；成员使用与选手 Rating 相同的学校/姓名规范化和稳定 ID。只有全部成员均可映射时才纳入该队，避免把部分成员最大值误当成完整队伍 Rating。RankLand SRK 原始成员和逐题记录仅缓存在被 Git 忽略的本地目录，发布投影只保留题目级计数。
 
 ## 静态前端
 
@@ -126,7 +128,7 @@ python -m http.server 8000 --directory static
 - 按最终排名排列的虚拟滚动宽表；比赛列头可打开只含实际参赛者的虚拟滚动表；
 - 参赛者详情、可键盘访问且带悬停/聚焦提示的单系列 SVG rating 曲线，以及排列在曲线下方、提供同一数据的参赛记录表；
 - `series`、`q`、可重复的 `school`、`contest`、`competitor` 查询参数状态及浏览器前进/后退支持。比赛或参赛者详情页除“返回系列”按钮外，也可点击左侧当前系列名回到系列总览。
-- 牛客/HDU series 的“选手 Rating / 题目难度”切换；题目页默认选择全部场次，图例支持点击逐场筛选和快捷全选/全不选；表头点击完成“场次 + 题号”或 Rating 的正序/逆序切换；通过队伍/有效队伍在同一列分别对齐，界面不展示时间样本；
+- 三个已发布题目数据的 series 均提供“选手 Rating / 题目难度”切换；题目页默认选择全部场次，图例支持点击逐场筛选和快捷全选/全不选；2025–2026 ICPC + CCPC 另有“仅 ICPC”和“仅 CCPC”按钮，用对应组织的全部场次替换当前选择；表头点击完成“场次 + 题号”或 Rating 的正序/逆序切换；通过队伍/有效队伍在同一列分别对齐，界面不展示时间样本；
 - 每场题目按预测 Rating 从易到难排列的多曲线 SVG；Rating 相同按自然题号稳定排序，图表适配页面可用宽度，曲线长度与题目数量成正比，并使用不越过相邻点范围的单调三次插值，圆点和提示保留真实预测值；
 - `view=problem-rating`、`problemContests`、`problemSort`、`problemOrder` 查询状态。缺少 `problemContests` 表示全选，`none` 表示取消全部，其他值为逗号分隔的场次 ID。
 

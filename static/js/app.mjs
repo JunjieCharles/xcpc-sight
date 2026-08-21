@@ -8,16 +8,17 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260821-8";
+} from "./data.mjs?v=20260821-11";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
   flattenProblemRatings,
   monotoneCubicPath,
+  problemSeriesHasNames,
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260821-8";
+} from "./problem-rating.mjs?v=20260821-11";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -57,6 +58,8 @@ const elements = {
   problemResultCount: document.querySelector("#problem-result-count"),
   problemChart: document.querySelector("#problem-chart"),
   problemTableBody: document.querySelector("#problem-table-body"),
+  problemNameCol: document.querySelector("#problem-name-col"),
+  problemNameColumn: document.querySelector("#problem-name-column"),
   problemContestColumn: document.querySelector("#problem-contest-column"),
   problemContestSort: document.querySelector("#problem-contest-sort"),
   problemContestSortIndicator: document.querySelector("#problem-contest-sort-indicator"),
@@ -453,19 +456,28 @@ function svgNode(tag, attributes = {}) {
 }
 
 function shortContestTitle(contest, contestIndex) {
+  if (contest.shortTitle) return contest.shortTitle;
   const chinese = contest.title.match(/第([^（）()]+)场/u)?.[0];
   if (chinese) return chinese;
   const numeric = contest.title.match(/[（(](\d+)[）)]/u)?.[1];
   return numeric ? `第${numeric}场` : `第${contestIndex + 1}场`;
 }
 
-function renderProblemTable(rows) {
+function renderProblemTable(rows, showProblemNames) {
+  elements.problemNameCol.hidden = !showProblemNames;
+  elements.problemNameColumn.hidden = !showProblemNames;
   const fragment = document.createDocumentFragment();
   for (const { contest, problem } of rows) {
     const row = node("tr");
     row.append(node("td", { text: contest.title, title: contest.title }));
     row.append(node("td", { text: problem.index }));
-    row.append(node("td", { text: problem.name, title: problem.name }));
+    if (showProblemNames) {
+      row.append(node("td", {
+        className: "problem-name-cell",
+        text: problem.name,
+        title: problem.name,
+      }));
+    }
     row.append(node("td", {}, [ratingNode(problem.rating)]));
     row.append(node("td", { className: "problem-team-counts" }, [
       node("span", { text: problem.solvedCount.toLocaleString("zh-CN") }),
@@ -476,7 +488,7 @@ function renderProblemTable(rows) {
   }
   if (!rows.length) {
     const emptyRow = node("tr", { className: "problem-table-empty" });
-    emptyRow.append(node("td", { colSpan: 5, text: "未选择场次" }));
+    emptyRow.append(node("td", { colSpan: showProblemNames ? 5 : 4, text: "未选择场次" }));
     fragment.append(emptyRow);
   }
   elements.problemTableBody.replaceChildren(fragment);
@@ -513,28 +525,36 @@ function renderProblemChart() {
   const curves = buildDifficultyCurves(state.problemSeries, selectedIds);
   const figure = node("figure", { className: "problem-chart-figure" });
   const legend = node("div", { className: "problem-chart-legend", "aria-label": "场次筛选和图例" });
-  const legendActions = node("span", { className: "problem-legend-actions" }, [
-    node("button", {
+  const allContestIds = state.problemSeries.contests.map(({ id }) => id);
+  const quickSelections = [
+    { text: "全选", contestIds: allContestIds },
+    { text: "全不选", contestIds: [] },
+  ];
+  if (state.problemSeries.seriesId === "2025-2026") {
+    quickSelections.push(
+      {
+        text: "仅 ICPC",
+        contestIds: allContestIds.filter((contestId) => contestId.startsWith("icpc")),
+      },
+      {
+        text: "仅 CCPC",
+        contestIds: allContestIds.filter((contestId) => contestId.startsWith("ccpc")),
+      },
+    );
+  }
+  const legendActions = node("span", { className: "problem-legend-actions" },
+    quickSelections.map(({ text, contestIds }) => node("button", {
       className: "problem-legend-action",
       type: "button",
-      text: "全选",
-      disabled: selectedIds.length === state.problemSeries.contests.length,
+      text,
+      disabled: contestIds.length === selectedIds.length
+        && contestIds.every((contestId) => state.problemSelectedContestIds.has(contestId)),
       onclick: () => {
-        state.problemSelectedContestIds = new Set(state.problemSeries.contests.map(({ id }) => id));
+        state.problemSelectedContestIds = new Set(contestIds);
         applyProblemRatingState();
       },
-    }),
-    node("button", {
-      className: "problem-legend-action",
-      type: "button",
-      text: "全不选",
-      disabled: !selectedIds.length,
-      onclick: () => {
-        state.problemSelectedContestIds = new Set();
-        applyProblemRatingState();
-      },
-    }),
-  ]);
+    })),
+  );
   legend.append(legendActions);
   state.problemSeries.contests.forEach((contest, contestIndex) => {
     const selected = state.problemSelectedContestIds.has(contest.id);
@@ -727,7 +747,7 @@ function applyProblemRatingState({ updateUrl = true } = {}) {
   elements.problemResultCount.textContent = `${rows.length.toLocaleString("zh-CN")} 道题 · ${selectedIds.length} / ${state.problemSeries.contests.length} 场`;
   elements.problemRatingSummary.textContent = `${state.problemSeries.contests.length} 场比赛 · ${state.problemSeries.contests.reduce((total, contest) => total + contest.problems.length, 0)} 道题`;
   renderProblemChart();
-  renderProblemTable(rows);
+  renderProblemTable(rows, problemSeriesHasNames(state.problemSeries));
   if (updateUrl) setUrl();
 }
 

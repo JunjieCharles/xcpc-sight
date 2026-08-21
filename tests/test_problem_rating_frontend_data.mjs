@@ -6,6 +6,7 @@ import {
   createProblemRatingStore,
   flattenProblemRatings,
   monotoneCubicPath,
+  problemSeriesHasNames,
   readProblemRatingQuery,
   sortProblemRows,
   validateProblemRatingIndex,
@@ -23,6 +24,7 @@ function fixture() {
       {
         id: "nowcoder:1",
         title: "Contest 1",
+        shortTitle: "第一场",
         startAt: "2026-07-01T12:00:00+08:00",
         problems: [
           { index: "A", name: "A", rating: 1800, solvedCount: 20, participantCount: 100, timeSampleCount: 10 },
@@ -51,12 +53,24 @@ test("validates problem-rating documents and count invariants", () => {
   const invalid = fixture();
   invalid.contests[0].problems[0].timeSampleCount = 21;
   assert.throws(() => validateProblemRatingSeries(invalid), /exceeds solvedCount/);
+  const invalidShortTitle = fixture();
+  invalidShortTitle.contests[0].shortTitle = "";
+  assert.throws(() => validateProblemRatingSeries(invalidShortTitle), /shortTitle/);
 
   const index = {
     schemaVersion: 1,
     series: [{ id: document.seriesId, title: document.title, path: "series/nowcoder.json" }],
   };
   assert.equal(validateProblemRatingIndex(index), index);
+});
+
+test("reports whether a problem-rating series contains any problem names", () => {
+  assert.equal(problemSeriesHasNames(fixture()), true);
+  const unnamed = structuredClone(fixture());
+  for (const contest of unnamed.contests) {
+    for (const problem of contest.problems) problem.name = "";
+  }
+  assert.equal(problemSeriesHasNames(unnamed), false);
 });
 
 test("filters contests and supports both deterministic sort modes", () => {

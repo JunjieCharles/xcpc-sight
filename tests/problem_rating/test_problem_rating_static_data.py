@@ -21,7 +21,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def rating_series(series_id: str = "nowcoder-summer-2026") -> dict[str, object]:
-    source = "nowcoder" if series_id.startswith("nowcoder") else "hdu"
+    source = (
+        "nowcoder"
+        if series_id.startswith("nowcoder")
+        else "hdu"
+        if series_id.startswith("hdu")
+        else ""
+    )
+
+    def contest_id(native_id: str) -> str:
+        return f"{source}:{native_id}" if source else native_id
+
     return {
         "schemaVersion": 1,
         "id": series_id,
@@ -29,13 +39,13 @@ def rating_series(series_id: str = "nowcoder-summer-2026") -> dict[str, object]:
         "initialRating": 1400,
         "contests": [
             {
-                "id": f"{source}:10",
+                "id": contest_id("10"),
                 "title": "Contest 10",
                 "collection": series_id,
                 "startAt": "2026-07-01T12:00:00+08:00",
             },
             {
-                "id": f"{source}:11",
+                "id": contest_id("11"),
                 "title": "Contest 11",
                 "collection": series_id,
                 "startAt": "2026-07-03T12:00:00+08:00",
@@ -133,6 +143,25 @@ def test_projection_leaves_known_missing_problem_names_blank() -> None:
     assert document["contests"][0]["problems"][0]["name"] == ""
 
 
+def test_projection_publishes_configured_icpc_ccpc_short_titles() -> None:
+    series = rating_series("2025-2026")
+    series["contests"][0]["id"] = "icpc2025preliminary-1"
+    series["contests"][1]["id"] = "ccpc2025final"
+
+    document = project_problem_rating_series(
+        [
+            record("icpc2025preliminary-1", "A", series_id="2025-2026"),
+            record("ccpc2025final", "A", series_id="2025-2026"),
+        ],
+        series,
+    )
+
+    assert [contest["shortTitle"] for contest in document["contests"]] == [
+        "ICPC 网络赛1",
+        "CCPC 总决赛",
+    ]
+
+
 def test_projection_rejects_ambiguous_or_inconsistent_predictions() -> None:
     with pytest.raises(DataValidationError, match="duplicate record"):
         project_problem_rating_series(
@@ -204,8 +233,10 @@ def test_offline_generator_publishes_series_before_index(tmp_path) -> None:
     (rating_data / "series").mkdir(parents=True)
     nowcoder = rating_series()
     hdu = rating_series("hdu-summer-2026")
+    rankland = rating_series("2025-2026")
     (rating_data / "series" / "nowcoder.json").write_text(json.dumps(nowcoder), encoding="utf-8")
     (rating_data / "series" / "hdu.json").write_text(json.dumps(hdu), encoding="utf-8")
+    (rating_data / "series" / "rankland.json").write_text(json.dumps(rankland), encoding="utf-8")
     (rating_data / "index.json").write_text(
         json.dumps(
             {
@@ -222,6 +253,11 @@ def test_offline_generator_publishes_series_before_index(tmp_path) -> None:
                         "title": "Nowcoder",
                         "path": "series/nowcoder.json",
                     },
+                    {
+                        "id": "2025-2026",
+                        "title": "ICPC + CCPC",
+                        "path": "series/rankland.json",
+                    },
                 ],
             }
         ),
@@ -235,6 +271,8 @@ def test_offline_generator_publishes_series_before_index(tmp_path) -> None:
             record("11", "A"),
             record("10", "1001", series_id="hdu-summer-2026"),
             record("11", "1001", series_id="hdu-summer-2026"),
+            record("10", "A", series_id="2025-2026"),
+            record("11", "A", series_id="2025-2026"),
         ],
     )
 
@@ -244,6 +282,7 @@ def test_offline_generator_publishes_series_before_index(tmp_path) -> None:
     assert [item["id"] for item in index["series"]] == [
         "hdu-summer-2026",
         "nowcoder-summer-2026",
+        "2025-2026",
     ]
     published = json.loads(
         (output / "series" / "nowcoder-summer-2026.json").read_text(encoding="utf-8")
@@ -259,8 +298,31 @@ def test_committed_problem_rating_data_matches_canonical_series_without_identiti
     assert [entry["id"] for entry in index["series"]] == [
         "hdu-summer-2026",
         "nowcoder-summer-2026",
+        "2025-2026",
     ]
-    expected_counts = {"hdu-summer-2026": 121, "nowcoder-summer-2026": 128}
+    expected_counts = {
+        "hdu-summer-2026": 121,
+        "nowcoder-summer-2026": 128,
+        "2025-2026": 205,
+    }
+    expected_icpc_ccpc_short_titles = [
+        "ICPC 网络赛1",
+        "ICPC 网络赛2",
+        "CCPC 网络赛",
+        "ICPC 西安",
+        "ICPC 成都",
+        "ICPC 武汉",
+        "CCPC 哈尔滨",
+        "ICPC 南京",
+        "CCPC 济南",
+        "ICPC 沈阳",
+        "CCPC 郑州",
+        "ICPC 上海",
+        "CCPC 重庆",
+        "ICPC 香港",
+        "ICPC EC-Final",
+        "CCPC 总决赛",
+    ]
     allowed_problem_fields = {
         "index",
         "name",
@@ -280,4 +342,8 @@ def test_committed_problem_rating_data_matches_canonical_series_without_identiti
         problems = [problem for contest in document["contests"] for problem in contest["problems"]]
         assert len(problems) == expected_counts[entry["id"]]
         assert all(set(problem) == allowed_problem_fields for problem in problems)
+        if entry["id"] == "2025-2026":
+            assert [contest["shortTitle"] for contest in document["contests"]] == (
+                expected_icpc_ccpc_short_titles
+            )
         assert "competitors" not in document
