@@ -1,108 +1,189 @@
 # Problem Rating
 
-使用 Codeforces 比赛提交记录，研究用户 rating、题目官方 rating 与解题耗时的关系，并据此估计题目难度。
+根据参赛者 rating、逐题通过结果和首次 AC 顺序估计程序设计竞赛题目的难度 rating。训练目标是 Codeforces 官方题目 rating；模型也可以应用于具有稳定参赛者 rating 和逐题榜单的其他比赛。
 
-## 目录结构
+## 当前主线算法
 
-- `src/problem_rating/`: Python 源代码。
-- `data/raw/api_cache/`: Codeforces API 响应缓存。
-- `data/processed/`: 清洗和汇总后的训练数据集。
-- `outputs/analysis/`: 单场比赛分析生成的 CSV 文件。
-- `outputs/plots/`: 图表等可视化结果。
-- `docs/`: 补充文档；[Codeforces API 参考](docs/api.md) 位于此目录。
+当前主线是：
 
-## 当前算法
+> 高斯核条件过题曲线 + prev1–prev3 AC 间隔特征 + 浅层 GradientBoostingRegressor
 
-### 1. 数据采集
+它不把全场总过题率直接等同于难度。不同比赛的参赛者水平构成不同，因此模型先按参赛者 rating 描述“什么水平的人通过了这道题”，再结合通过者的解题顺序和用时信息预测题目 rating。
 
-`collect_training_data` 获取最近 100 场已结束的常规 Codeforces 比赛，明确排除名称中标记为 `Div. 3` 或 `Div. 4` 的比赛，以及 `contest.ratingChanges` 没有有效赛后 rating（`newRating`）记录的 unrated 比赛。对于每一场比赛：
+### 1. 训练数据与 rating 口径
 
-- 读取带官方 rating 的题目；
-- 从 `contest.ratingChanges` 取得用户赛后 rating（`newRating`）；
-- 从 `contest.status` 取得提交，仅保留正式参赛者（`participantType == "CONTESTANT"`）；
-- 为每个“用户-题目”对写入一条训练样本：`userRating`、`problemRating`、`timeConsumed`（秒）和该场比赛的 `contestDurationSeconds`。
+`collect_training_data` 默认收集最近 100 场已结束的常规 Codeforces rated 比赛，排除名称中标记为 `Div. 3` 或 `Div. 4` 的比赛。`build_problem_features` 将数据整理为“一道题一行”的 `data/processed/problem_features.csv`。
 
-### 2. 解题用时计算
+- 训练目标为题目的官方 `problemRating`；
+- Codeforces 参赛者使用 `contest.ratingChanges` 中的赛后 `newRating`，使训练时的 rating 尽量接近部署时可取得的最新水平；
+- XCPC 测试使用对应 series 全部比赛结束后的 `finalRating`；
+- 只保留正式参赛数据，不把练习、虚拟参赛等记录混入样本。
 
-对于同一用户的提交，程序按提交时间正序处理，并只使用每题第一次 AC。当前实现不再依赖第一次提交时刻，而是记录此前最近三次不同题目族的 AC 边界：
+使用最新 rating 是有意选择：模型最终应用时通常只能取得选手当前 rating，而不一定能恢复每场比赛当时的精确赛前状态。
 
-$$
-\Delta_k(p) = t_{\text{AC}}(p) - t_{\text{prev},k}(p), \qquad k=1,2,3
-$$
+### 2. 有效参赛者与未通过样本
 
-不足 $k$ 个边界时使用比赛开始时刻，并额外记录边界是否存在。题号会忽略末尾数字比较，例如 `F1` 和 `F2` 视为同一题目族。兼容接口 `calculate_problem_times` 返回 $\Delta_1$；实验特征同时保留 $\Delta_1,\Delta_2,\Delta_3$。
+参赛池按“是否实际参加整场比赛”确定：
 
-### 3. 训练模型
+- 整场没有任何提交活动的报名选手或队伍排除，不进入任意题目的分母；
+- 只要整场存在提交活动，就作为该场的有效参赛者；
+- 对单道题，未提交和提交后未通过统一记为 `solved = false`；
+- 不设置独立的 `attempted` 特征：没交题不代表没有思考，比赛结尾的试探性提交也不能稳定代表真实尝试；
+- 没有通过某题的参赛者会影响该题的条件过题曲线，但不会贡献 AC 时间特征。
 
-`unified_model` 对训练数据执行以下筛选与拟合：
+Codeforces 以正式 rating 记录定义参赛身份；牛客和 HDU 适配显式过滤整场无提交队伍。XCPC 预测还要求队伍能够映射到已发布的最新 rating。
 
-- 保留 $R \ge 1600$ 且 $0 < T \le L$ 的样本，其中 $L$ 为该条样本所属比赛的 `contestDurationSeconds`；
-- 对 $\ln(T)$ 使用全局 IQR 规则移除离群值；
-- 可选：按题目 rating 分桶，对样本过多的 rating 随机下采样至 `max(该桶样本数中位数, 100)`，降低题目难度分布不均衡的影响；默认关闭，使用 `--balance-difficulties` 开启。
-- 使用 scikit-learn 的普通最小二乘 `LinearRegression` 拟合：
+### 3. 高斯核条件过题曲线
+
+模型在 800–3500、步长 100 的参考 rating 上构造条件过题曲线。对参考点 $c$ 和参赛者 rating $R_i$，使用带宽 100 的高斯权重：
 
 $$
-\ln(T) = b_0 + b_1 R + b_2 D
+w_i(c)=\exp\left(-\frac{1}{2}\left(\frac{R_i-c}{100}\right)^2\right)
 $$
 
-其中 $T$ 为秒，$R$ 为用户赛后 rating，$D$ 为题目官方 rating。训练完成后，模型系数会写入 `outputs/models/time_model.json`，供单场难度估计使用。脚本也会拟合并报告对照模型：
+加权通过数和参赛权重为：
 
 $$
-\ln(T) = c_0 + c_1(D - R)
+S(c)=\sum_i w_i(c)y_i,\qquad N(c)=\sum_i w_i(c)
 $$
 
-### 4. 单场难度估计
-
-`evaluate_contest_difficulty` 对指定比赛中的每道题，使用 rating 不低于 1600 的正式参赛者。为防止极短时间导致不稳定，先令 $T = \max(T, 60)$ 秒。
-
-当前实现加载 `unified_model` 最近一次训练写入的模型系数：
+其中 $y_i\in\{0,1\}$ 表示是否通过。使用 Jeffreys 平滑得到有限的 logit：
 
 $$
-\ln(T) = b_0 + b_1R + b_2D
+\operatorname{logit}(c)=\log\frac{S(c)+0.5}{N(c)-S(c)+0.5}
 $$
 
-对每个有效“用户-题目”记录反解：
+同时记录有效样本量：
 
 $$
-D = \frac{\ln(T) - b_0 - b_1R}{b_2}
+N_{\mathrm{eff}}(c)=\frac{(\sum_i w_i(c))^2}{\sum_i w_i(c)^2}
 $$
 
-某题的最终估计难度为全部有效用户估计值的中位数，并与 Codeforces 官方 rating 一起输出。
+因此，同为 10% 的总过题率，如果通过者集中在 1200 分段或 2400 分段，模型会看到不同的曲线。有效样本量还能区分“可靠的低通过率”和“只有少量参赛者覆盖该 rating 区间”。
 
-## 运行
+### 4. prev1–prev3 AC 间隔
+
+时间特征不使用首次提交时间 $t_{\text{first}}$，因为并非所有平台都能稳定取得该字段。程序只保留每题第一次 AC，并计算此前最近三个不同题目族的 AC 边界：
+
+$$
+\Delta_k(p)=t_{\mathrm{AC}}(p)-t_{\mathrm{prev},k}(p),\qquad k=1,2,3
+$$
+
+- 不足 $k$ 个历史 AC 时，以比赛开始时刻为边界，并记录 `hasPrevK = false`；
+- `F1`、`F2` 等末尾数字不同的拆分题视为同一题目族，不互相充当前序边界；
+- 时间间隔最小截为 60 秒后取对数，减弱同时开题、连续提交等极短记录的影响；
+- 只汇总 rating 不低于 1600 的通过者时间，降低低水平选手随机行为带来的噪声；
+- 每个 $k$ 使用对数时间中位数、IQR 和边界存在率，而不是依赖单个选手记录；
+- 额外记录通过者 rating 的中位数、IQR，以及 prev1 小于 60/120 秒的比例。
+
+时间样本很少时，这些统计量仍可能跳动。例如少数通过者的 `solverRatingIqr` 跨过树分裂阈值，可能产生十几分的预测差异。因此原始预测中的小差值不应被解释为严格的题目次序。
+
+### 5. 其他主线特征
+
+除条件过题曲线和 prev 特征外，模型还使用：
+
+- 有效参赛者总数及各 rating 中心的有效样本量；
+- 题目在比赛中的顺序、该场题目总数；
+- 比赛时长；
+- 通过队伍人数对应的队伍规模中位数；
+- 极短 prev1 间隔比例。
+
+当前主线不直接输入原始 `solvedCount` 或全场总过题率，也没有施加“通过人数越多，预测必须越简单”的单调约束。总通过人数仍会通过各 rating 区间的条件过题曲线间接影响预测，但它不是唯一依据。
+
+### 6. 浅层梯度提升模型
+
+缺失值先使用训练集特征中位数填充，并增加缺失指示变量。回归器配置为：
+
+```python
+GradientBoostingRegressor(
+    n_estimators=200,
+    learning_rate=0.03,
+    max_depth=2,
+    min_samples_leaf=8,
+    loss="huber",
+    random_state=42,
+)
+```
+
+浅层树可以学习条件过题曲线、时间和比赛元数据之间的非线性交互，同时通过深度和叶节点样本数控制复杂度。模型输出连续 rating，不强制取整到 100；实际阅读时，十几分的差异通常没有显著意义。
+
+### 7. 验证方式与当前结果
+
+验证必须按整场比赛切分，避免同一场不同题目的参赛者构成泄漏到训练折和测试折。当前同时报告：
+
+- 5 折 contest-grouped cross-validation；
+- 最新 20 场比赛的时间留出验证；
+- 低/中/高难度以及稀疏时间样本切片。
+
+当前浅层树结果：
+
+| 验证范围 | MAE |
+|---|---:|
+| 按比赛分组交叉验证 | 54.9 |
+| 最新 20 场时间留出 | 61.3 |
+| Contest 2180 整场留出 | 51.2 |
+
+这些误差意味着输出更适合解释为一个难度区间，而不是精确到个位的绝对值。
+
+## 运行主线流程
 
 从项目根目录执行，并确保 `src` 在模块搜索路径中：
 
 ```powershell
 $env:PYTHONPATH = 'src'
-python -m problem_rating.analyze_contest 2164
+
+# 获取/更新 Codeforces 训练数据与缓存
 python -m problem_rating.collect_training_data
-python -m problem_rating.unified_model
-python -m problem_rating.unified_model --balance-difficulties
-python -m problem_rating.evaluate_contest_difficulty 2164
-python -m problem_rating.plot_results
+
+# 从缓存生成一题一行的主线特征
 python -m problem_rating.build_problem_features
+
+# 运行基线、主线和挑战模型验证
 python -m problem_rating.experiment_models
 python -m problem_rating.experiment_models --suite advanced
 ```
 
-`analyze_contest` 会将单场 CSV 写入 `outputs/analysis/`，并自动在 `outputs/plots/` 生成按题目的 rating-耗时图。
+实验入口不会覆盖旧 `unified_model` 的模型文件。
 
-切换为赛后 rating 或比赛时长过滤后，需要依次重新运行 `collect_training_data` 和 `unified_model`，再执行 `evaluate_contest_difficulty`。
+### 牛客/HDU series 预测
 
-## 实验模型
+`predict_xcpc` 读取 `xcpc-sight` 发布的两个 series，以每个报名实体的 `finalRating` 作为最新 rating，生成牛客和 HDU 各 10 场的逐题预测：
 
-`build_problem_features` 从 API 缓存生成一题一行的 `data/processed/problem_features.csv`。主要特征包括：
+```powershell
+python -m problem_rating.predict_xcpc --xcpc-root C:\Code\xcpc-sight
+```
 
-- 所有正式 rated 参赛者的二元 `solved` 结果；没有 AC 的记录统一作为未通过，不区分是否提交；
-- 从 800 到 3500 的参考 rating，以每个参考值为中心上下 100 分计算重叠滑动窗口过题率；
-- 每个窗口的参赛人数、过题人数、Jeffreys 平滑过题率及 logit；
-- 同一组参考 rating 上的三角核、高斯核条件过题曲线，以及两参数单调 IRT 曲线；
-- 不使用首次提交的 prev1–prev3 用时中位数、IQR、边界覆盖率和低尾异常率；
-- 比赛时长、题目顺序、题目数量与队伍人数。
+默认输出：
 
-参赛样本按“是否实际参加整场比赛”确定：整场没有任何提交活动的报名选手或队伍排除，不进入任意题目的分母；只要整场存在提交活动，就作为有效参赛者。对每一道题，未提交和提交后未通过统一记为未通过，不拆分为不同特征；没交题不代表没有思考，而比赛末尾的试探性提交也不能稳定代表真实尝试。没有通过题目的选手只影响条件过题曲线的分母，不贡献 prev1–prev3 时间样本。
+- `outputs/analysis/xcpc_problem_ratings.xlsx`：牛客、HDU 两个 sheet；
+- `outputs/analysis/xcpc_problem_ratings.md`：两个独立 Markdown 表格；
+- `outputs/analysis/xcpc_problem_ratings.csv`：包含 series 标识的完整数据。
 
-`experiment_models` 比较 Ridge、加性样条 GAM、浅层梯度提升、HistGradientBoosting 和 RBF-SVR；安装可选的 `catboost` 后还会加入 CatBoost。`--suite advanced` 只运行耗时较短的高级模型对比。实验同时报告按 contest 分组的交叉验证、最新 20 场的时间留出结果、训练耗时和稀疏样本切片。Ridge/GAM/SVR 的参数在每个训练折内部继续按 contest 分组选择；较慢的树模型大网格不纳入日常入口。该实验不会覆盖现有 `unified_model` 模型文件。
+牛客题名从公开 `contest/problem-list` 接口取得。HDU 的 guest 榜单数据目前只提供题号，无法读取题名时会在表中明确标注，不影响通过数和 rating 预测。
 
-当前主线模型保持为“高斯核条件过题曲线 + prev1–prev3 + 浅层 GradientBoostingRegressor”。HistGradientBoosting 在整体分组验证和最近比赛验证中的 MAE 更低，但目标 rating 本身以整百为主时，其预测容易形成明显的整百平台；在 Contest 2180 上也出现了 A、B、G、H2 几乎精确落在整百、同时 C、D 被一起推向 2000 左右的现象。现阶段将 HistGradientBoosting 作为挑战模型保留，不因单一 MAE 指标替换主线；后续需要继续验证平台化是否具有稳定的泛化收益，并考察非整百标签、校准结果和中等难度题的局部误差。
+## 其他模型与旧流程
+
+- **GAM/Ridge**：作为平滑、较易解释的基线；高斯曲线 + prev1 GAM 的近期留出 MAE 为 64.8。
+- **HistGradientBoosting**：整体 MAE 更低，但预测容易贴近训练标签的整百平台；当前作为挑战模型，不替换主线。
+- **CatBoost、RBF-SVR、模型融合**：已纳入快速对比，当前没有稳定超过浅层树或 HistGradientBoosting。
+- **三角核、滑动方窗、IRT**：用于比较条件过题曲线的表达方式，不是当前主线输入。
+- **`unified_model` 线性时间模型**：早期兼容流程，通过 $\ln(T)$、用户 rating 和题目 rating 建模；`evaluate_contest_difficulty` 仍可读取其模型文件，但它不再代表当前主线。
+
+旧流程和单场分析仍可运行：
+
+```powershell
+python -m problem_rating.unified_model
+python -m problem_rating.evaluate_contest_difficulty 2164
+python -m problem_rating.analyze_contest 2164
+python -m problem_rating.plot_results
+```
+
+## 目录结构
+
+- `src/problem_rating/`：特征、模型、验证和预测代码；
+- `data/raw/api_cache/`：Codeforces API 响应缓存；
+- `data/processed/`：训练数据与题目级特征；
+- `outputs/analysis/`：分析结果、CSV、Markdown 和 Excel；
+- `outputs/plots/`：图表；
+- `outputs/models/`：旧线性模型文件；
+- `docs/api.md`：Codeforces API 参考。
