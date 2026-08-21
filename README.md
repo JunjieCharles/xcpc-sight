@@ -101,4 +101,8 @@ python -m problem_rating.experiment_models --suite advanced
 - 不使用首次提交的 prev1–prev3 用时中位数、IQR、边界覆盖率和低尾异常率；
 - 比赛时长、题目顺序、题目数量与队伍人数。
 
+参赛样本按“是否实际参加整场比赛”确定：整场没有任何提交活动的报名选手或队伍排除，不进入任意题目的分母；只要整场存在提交活动，就作为有效参赛者。对每一道题，未提交和提交后未通过统一记为未通过，不拆分为不同特征；没交题不代表没有思考，而比赛末尾的试探性提交也不能稳定代表真实尝试。没有通过题目的选手只影响条件过题曲线的分母，不贡献 prev1–prev3 时间样本。
+
 `experiment_models` 比较 Ridge、加性样条 GAM、浅层梯度提升、HistGradientBoosting 和 RBF-SVR；安装可选的 `catboost` 后还会加入 CatBoost。`--suite advanced` 只运行耗时较短的高级模型对比。实验同时报告按 contest 分组的交叉验证、最新 20 场的时间留出结果、训练耗时和稀疏样本切片。Ridge/GAM/SVR 的参数在每个训练折内部继续按 contest 分组选择；较慢的树模型大网格不纳入日常入口。该实验不会覆盖现有 `unified_model` 模型文件。
+
+当前主线模型保持为“高斯核条件过题曲线 + prev1–prev3 + 浅层 GradientBoostingRegressor”。HistGradientBoosting 在整体分组验证和最近比赛验证中的 MAE 更低，但目标 rating 本身以整百为主时，其预测容易形成明显的整百平台；在 Contest 2180 上也出现了 A、B、G、H2 几乎精确落在整百、同时 C、D 被一起推向 2000 左右的现象。现阶段将 HistGradientBoosting 作为挑战模型保留，不因单一 MAE 指标替换主线；后续需要继续验证平台化是否具有稳定的泛化收益，并考察非整百标签、校准结果和中等难度题的局部误差。
