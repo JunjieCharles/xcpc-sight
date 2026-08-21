@@ -36,6 +36,14 @@ test("versions cache-sensitive frontend assets consistently", async () => {
   assert.match(problemRatingModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
 });
 
+test("states the rating comparison scope beside the site title", async () => {
+  const indexHtml = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  assert.match(
+    indexHtml,
+    /class="site-rating-note"[^>]*>[\s\S]*Rating 仅在同一系列比赛范围内有效，不与 Codeforces 等平台 Rating 对标。/,
+  );
+});
+
 test("provides an integrated problem-rating chart filter and sortable table headers", async () => {
   const [indexHtml, stylesheet, appModule] = await Promise.all([
     readFile(new URL("../static/index.html", import.meta.url), "utf8"),

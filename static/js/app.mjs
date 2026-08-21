@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260821-4";
+} from "./data.mjs?v=20260821-8";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -17,7 +17,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260821-4";
+} from "./problem-rating.mjs?v=20260821-8";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;

@@ -24,6 +24,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: .15rem; font-size: clamp(2.2rem, 5vw, 3.8rem); letter-spacing: -.045em; }
 .site-subtitle { margin: 0; color: #c8d0d8; font-size: .9rem; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+.site-rating-note { margin: 1rem 0 0; color: #aebcc8; font-size: .82rem; text-align: right; white-space: nowrap; }
 .site-links { display: grid; justify-items: end; gap: .35rem; margin-top: .2rem; }
 .site-links a { display: inline-flex; align-items: center; gap: .4rem; color: #d4edf4; font-size: .86rem; font-weight: 600; text-decoration-color: rgb(212 237 244 / 60%); text-underline-offset: 3px; }
 .site-links a:hover { color: white; }
@@ -181,6 +182,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 @media (max-width: 850px) {
   .site-header, .section-heading, .detail-header { align-items: start; flex-direction: column; gap: .7rem; }
   .site-links { justify-items: start; }
+  .site-rating-note { text-align: left; white-space: normal; }
   .app-layout { grid-template-columns: 1fr; }
   .series-sidebar { position: static; }
   .series-list { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
