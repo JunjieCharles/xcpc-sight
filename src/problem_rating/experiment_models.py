@@ -82,7 +82,6 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
     features["logContestDuration"] = np.log(features["contestDurationSeconds"])
 
     metadata = [
-        "problemOrder",
         "ratedProblemCount",
         "logContestDuration",
         "teamSizeMedian",

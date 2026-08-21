@@ -101,7 +101,7 @@ Rating 文本采用 Codeforces 风格等级色：`<1200` 灰、`1200` 绿、`140
 {"schemaVersion":1,"series":[{"id":"hdu-summer-2026","title":"2026…","path":"series/hdu-summer-2026.json"},{"id":"nowcoder-summer-2026","title":"2026…","path":"series/nowcoder-summer-2026.json"}]}
 ```
 
-series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和 `contests[]`。场次沿用对应选手 Rating series 的 `id`、`title`、`startAt` 与顺序，每场包含非空 `problems[]`；可选的非空 `shortTitle` 仅用于图例和曲线提示，2025–2026 ICPC + CCPC 的 16 场均提供该字段。题目字段为：
+series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和 `contests[]`。当前 `modelId` 为 `gaussian-prev1-3-shallow-gbr-no-order`；模型不输入题号或题目位置，同场中其他模型输入相同的题目必须得到相同预测。场次沿用对应选手 Rating series 的 `id`、`title`、`startAt` 与顺序，每场包含非空 `problems[]`；可选的非空 `shortTitle` 仅用于图例和曲线提示，2025–2026 ICPC + CCPC 的 16 场均提供该字段。题目字段为：
 
 - `index`：非空题号；`name` 为字符串，RankLand 或 HDU 无法取得题名时发布为空字符串；当前系列的题名全部为空时，前端隐藏整列题名；
 - `rating`：有限非负整数预测值；

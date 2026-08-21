@@ -108,7 +108,7 @@ data-cache/        已忽略、可丢弃的上游下载缓存
 doc/               各功能设计文档
 ```
 
-选手/报名实体 rating 位于 `src/rating/`，题目难度 rating 位于独立的 `src/problem_rating/`，两者不共享模型或状态。后者的 Codeforces API 缓存、训练数据和本地输出都位于已忽略的 `data-cache/problem-rating/`；静态前端只发布经过严格投影的题目级聚合数据。详细算法和命令见 [题目难度 Rating](doc/problem-rating.md)。
+选手/报名实体 rating 位于 `src/rating/`，题目难度 rating 位于独立的 `src/problem_rating/`，两者不共享模型或状态。题目难度模型不使用题号或题目在比赛中的位置，避免把 Codeforces 的题号难度先验迁移到 XCPC。后者的 Codeforces API 缓存、训练数据和本地输出都位于已忽略的 `data-cache/problem-rating/`；静态前端只发布经过严格投影的题目级聚合数据。详细算法和命令见 [题目难度 Rating](doc/problem-rating.md)。
 
 库 API 不隐式写文件；脚本负责显式输出。发行名称为 `xcpc-sight`，安装后分别从 `core`、`rating`、`problem_rating` 导入，不提供 `xcpc_sight` facade。
 

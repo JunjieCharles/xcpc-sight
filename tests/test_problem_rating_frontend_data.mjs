@@ -19,7 +19,7 @@ function fixture() {
     schemaVersion: 1,
     seriesId: "nowcoder-summer-2026",
     title: "Nowcoder",
-    modelId: "gaussian-prev1-3-shallow-gbr",
+    modelId: "gaussian-prev1-3-shallow-gbr-no-order",
     contests: [
       {
         id: "nowcoder:1",
