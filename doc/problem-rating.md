@@ -50,7 +50,7 @@ $$
 其中 $y_i\in\{0,1\}$ 表示是否通过。使用 Jeffreys 平滑得到有限的 logit：
 
 $$
-\operatorname{logit}(c)=\log\frac{S(c)+0.5}{N(c)-S(c)+0.5}
+\mathrm{logit}(c)=\log\frac{S(c)+0.5}{N(c)-S(c)+0.5}
 $$
 
 同时记录有效样本量：
