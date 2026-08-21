@@ -8,6 +8,7 @@ from statistics import median
 from typing import Mapping, Sequence
 
 import numpy as np
+from scipy.optimize import minimize
 
 from .solve_features import SolveFeatures, calculate_solve_features
 
@@ -51,6 +52,122 @@ def sliding_window_solve_curve(
             )
 
     return result
+
+
+def kernel_solve_curve(
+    ratings: Sequence[float],
+    solved: Sequence[bool],
+    centers: Sequence[int],
+    *,
+    bandwidth: float = 100.0,
+    kernel: str = "triangular",
+) -> dict[str, float | None]:
+    """Build a continuous rating-conditioned solve curve.
+
+    ``triangular`` has compact support at ``bandwidth``. ``gaussian`` uses
+    ``bandwidth`` as its standard deviation. Effective sample size is emitted
+    with every point so the model can distinguish precise and sparse rates.
+    """
+
+    if len(ratings) != len(solved):
+        raise ValueError("ratings and solved must have the same length")
+    if bandwidth <= 0:
+        raise ValueError("bandwidth must be positive")
+    if kernel not in {"triangular", "gaussian"}:
+        raise ValueError("kernel must be triangular or gaussian")
+
+    rating_values = np.asarray(ratings, dtype=float)
+    solved_values = np.asarray(solved, dtype=float)
+    prefix = "triangle" if kernel == "triangular" else "gaussian"
+    result: dict[str, float | None] = {}
+
+    for center in centers:
+        scaled_distance = np.abs(rating_values - center) / bandwidth
+        if kernel == "triangular":
+            weights = np.maximum(0.0, 1.0 - scaled_distance)
+        else:
+            weights = np.exp(-0.5 * scaled_distance**2)
+
+        total_weight = float(np.sum(weights))
+        squared_weight = float(np.sum(weights**2))
+        solved_weight = float(np.sum(weights * solved_values))
+        effective_count = (
+            total_weight**2 / squared_weight if squared_weight > 0 else 0.0
+        )
+        result[f"{prefix}ParticipantWeightR{center}"] = total_weight
+        result[f"{prefix}SolvedWeightR{center}"] = solved_weight
+        result[f"{prefix}EffectiveCountR{center}"] = effective_count
+
+        if total_weight == 0:
+            result[f"{prefix}SolveRateR{center}"] = None
+            result[f"{prefix}SolveLogitR{center}"] = None
+        else:
+            result[f"{prefix}SolveRateR{center}"] = (solved_weight + 0.5) / (
+                total_weight + 1.0
+            )
+            result[f"{prefix}SolveLogitR{center}"] = math.log(
+                (solved_weight + 0.5)
+                / (total_weight - solved_weight + 0.5)
+            )
+
+    return result
+
+
+def fit_irt_solve_curve(
+    ratings: Sequence[float],
+    solved: Sequence[bool],
+    *,
+    rating_center: float = 1800.0,
+    rating_scale: float = 400.0,
+) -> dict[str, float | None]:
+    """Fit a monotone two-parameter logistic solve curve for one problem."""
+
+    if len(ratings) != len(solved):
+        raise ValueError("ratings and solved must have the same length")
+    if rating_scale <= 0:
+        raise ValueError("rating_scale must be positive")
+    if len(ratings) == 0:
+        return {
+            "irtRating50": None,
+            "irtSlope": None,
+            "irtIntercept": None,
+        }
+
+    rating_values = np.asarray(ratings, dtype=float)
+    solved_values = np.asarray(solved, dtype=float)
+    unique_ratings, inverse = np.unique(rating_values, return_inverse=True)
+    participant_counts = np.bincount(inverse).astype(float)
+    solved_counts = np.bincount(inverse, weights=solved_values).astype(float)
+    scaled_ratings = (unique_ratings - rating_center) / rating_scale
+
+    overall_rate = (float(np.sum(solved_values)) + 0.5) / (
+        len(solved_values) + 1.0
+    )
+    initial_intercept = math.log(overall_rate / (1.0 - overall_rate))
+
+    def objective(parameters):
+        intercept, slope = parameters
+        linear_predictor = intercept + slope * scaled_ratings
+        negative_log_likelihood = np.sum(
+            participant_counts * np.logaddexp(0.0, linear_predictor)
+            - solved_counts * linear_predictor
+        )
+        # Weak regularisation stabilises all/none-solved and sparse tails.
+        return float(negative_log_likelihood + 0.05 * (intercept**2 + slope**2))
+
+    fitted = minimize(
+        objective,
+        x0=np.asarray([initial_intercept, 1.0]),
+        method="L-BFGS-B",
+        bounds=[(-20.0, 20.0), (0.03, 10.0)],
+    )
+    intercept, slope = fitted.x
+    rating_50 = rating_center - rating_scale * intercept / slope
+    return {
+        "irtRating50": float(np.clip(rating_50, 0.0, 5000.0)),
+        "irtSlope": float(slope),
+        "irtIntercept": float(intercept),
+    }
 
 
 def summarize_solve_times(
@@ -208,6 +325,25 @@ def build_contest_problem_features(
                 half_width=half_width,
             )
         )
+        row.update(
+            kernel_solve_curve(
+                ratings,
+                solved_flags,
+                centers,
+                bandwidth=half_width,
+                kernel="triangular",
+            )
+        )
+        row.update(
+            kernel_solve_curve(
+                ratings,
+                solved_flags,
+                centers,
+                bandwidth=half_width,
+                kernel="gaussian",
+            )
+        )
+        row.update(fit_irt_solve_curve(ratings, solved_flags))
         row.update(summarize_solve_times(time_records))
         rows.append(row)
 

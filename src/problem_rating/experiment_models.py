@@ -14,9 +14,9 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GridSearchCV, GroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import SplineTransformer, StandardScaler
 
@@ -44,23 +44,33 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
     """Create transformed feature families discovered from the CSV schema."""
 
     features = data.copy()
-    solve_logits = sorted(
-        [column for column in features if re.fullmatch(r"solveLogitR\d+", column)],
-        key=lambda column: int(column.removeprefix("solveLogitR")),
-    )
-    participant_counts = sorted(
-        [
-            column
-            for column in features
-            if re.fullmatch(r"participantCountR\d+", column)
-        ],
-        key=lambda column: int(column.removeprefix("participantCountR")),
-    )
-    log_participant_counts = []
-    for column in participant_counts:
-        transformed_column = f"log{column[0].upper()}{column[1:]}"
-        features[transformed_column] = np.log1p(features[column])
-        log_participant_counts.append(transformed_column)
+    def centered_columns(prefix: str) -> list[str]:
+        return sorted(
+            [
+                column
+                for column in features
+                if re.fullmatch(rf"{re.escape(prefix)}\d+", column)
+            ],
+            key=lambda column: int(column.removeprefix(prefix)),
+        )
+
+    def log_count_columns(columns: list[str]) -> list[str]:
+        transformed = []
+        for column in columns:
+            transformed_column = f"log{column[0].upper()}{column[1:]}"
+            features[transformed_column] = np.log1p(features[column])
+            transformed.append(transformed_column)
+        return transformed
+
+    solve_logits = centered_columns("solveLogitR")
+    participant_counts = centered_columns("participantCountR")
+    triangle_logits = centered_columns("triangleSolveLogitR")
+    triangle_counts = centered_columns("triangleEffectiveCountR")
+    gaussian_logits = centered_columns("gaussianSolveLogitR")
+    gaussian_counts = centered_columns("gaussianEffectiveCountR")
+    log_participant_counts = log_count_columns(participant_counts)
+    log_triangle_counts = log_count_columns(triangle_counts)
+    log_gaussian_counts = log_count_columns(gaussian_counts)
 
     features["logParticipantCount"] = np.log1p(features["participantCount"])
     features["logContestDuration"] = np.log(features["contestDurationSeconds"])
@@ -93,31 +103,71 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
         "solverRatingMedian",
         "solverRatingIqr",
     ]
-    solve_curve = solve_logits + log_participant_counts + ["logParticipantCount"]
+    def every_second_center(columns: list[str]) -> list[str]:
+        return [
+            column
+            for column in columns
+            if (int(re.search(r"\d+$", column).group()) - 800) % 200 == 0
+        ]
+
+    box_curve = solve_logits + log_participant_counts + ["logParticipantCount"]
+    box_curve_200 = (
+        every_second_center(solve_logits)
+        + every_second_center(log_participant_counts)
+        + ["logParticipantCount"]
+    )
+    triangle_curve = triangle_logits + log_triangle_counts + ["logParticipantCount"]
+    gaussian_curve = gaussian_logits + log_gaussian_counts + ["logParticipantCount"]
+    irt_curve = [
+        "irtRating50",
+        "irtSlope",
+        "irtIntercept",
+        "logParticipantCount",
+    ]
     families = {
         "time prev1": time_prev1 + metadata,
         "time prev1-3": time_prev123 + metadata,
-        "solve curve": solve_curve + metadata,
-        "combined prev1": solve_curve + time_prev1 + metadata,
-        "combined prev1-3": solve_curve + time_prev123 + metadata,
+        "box curve 100": box_curve + metadata,
+        "box curve 200": box_curve_200 + metadata,
+        "triangle curve": triangle_curve + metadata,
+        "gaussian curve": gaussian_curve + metadata,
+        "IRT curve": irt_curve + metadata,
+        "box + prev1": box_curve + time_prev1 + metadata,
+        "triangle + prev1": triangle_curve + time_prev1 + metadata,
+        "gaussian + prev1": gaussian_curve + time_prev1 + metadata,
+        "IRT + prev1": irt_curve + time_prev1 + metadata,
+        "gaussian + prev1-3": gaussian_curve + time_prev123 + metadata,
     }
     return features, families
 
 
 def build_models():
-    alphas = np.logspace(-3, 4, 20)
+    alphas = np.logspace(-2, 4, 9)
+
+    def ridge_search(*, spline_knots: int | None = None):
+        steps = [
+            SimpleImputer(strategy="median", add_indicator=True),
+        ]
+        if spline_knots is not None:
+            steps.append(
+                SplineTransformer(
+                    n_knots=spline_knots,
+                    degree=2,
+                    include_bias=False,
+                )
+            )
+        steps.extend([StandardScaler(), Ridge()])
+        return GridSearchCV(
+            make_pipeline(*steps),
+            param_grid={"ridge__alpha": alphas},
+            scoring="neg_mean_absolute_error",
+            cv=GroupKFold(n_splits=4),
+        )
+
     return {
-        "Ridge": make_pipeline(
-            SimpleImputer(strategy="median", add_indicator=True),
-            StandardScaler(),
-            RidgeCV(alphas=alphas),
-        ),
-        "GAM": make_pipeline(
-            SimpleImputer(strategy="median", add_indicator=True),
-            SplineTransformer(n_knots=4, degree=2, include_bias=False),
-            StandardScaler(),
-            RidgeCV(alphas=alphas),
-        ),
+        "Ridge": ridge_search(),
+        "GAM-3": ridge_search(spline_knots=3),
+        "GAM-4": ridge_search(spline_knots=4),
         "Shallow GBR": make_pipeline(
             SimpleImputer(strategy="median", add_indicator=True),
             GradientBoostingRegressor(
@@ -130,6 +180,14 @@ def build_models():
             ),
         ),
     }
+
+
+def fit_with_groups(estimator, features, target, groups):
+    """Fit grid searches with contest groups and ordinary models normally."""
+
+    if isinstance(estimator, GridSearchCV):
+        return estimator.fit(features, target, groups=groups)
+    return estimator.fit(features, target)
 
 
 def calculate_evaluation(name: str, actual, predicted) -> Evaluation:
@@ -159,9 +217,11 @@ def grouped_predictions(
         data, data["problemRating"], groups=data["contestId"]
     ):
         model = clone(estimator)
-        model.fit(
+        fit_with_groups(
+            model,
             data.iloc[train_indices][feature_columns],
             data.iloc[train_indices]["problemRating"],
+            data.iloc[train_indices]["contestId"],
         )
         predictions[test_indices] = model.predict(
             data.iloc[test_indices][feature_columns]
@@ -183,7 +243,12 @@ def chronological_predictions(
     train_mask = ~data["contestId"].isin(test_contests)
     test_mask = ~train_mask
     model = clone(estimator)
-    model.fit(data.loc[train_mask, feature_columns], data.loc[train_mask, "problemRating"])
+    fit_with_groups(
+        model,
+        data.loc[train_mask, feature_columns],
+        data.loc[train_mask, "problemRating"],
+        data.loc[train_mask, "contestId"],
+    )
     return test_mask.to_numpy(), model.predict(data.loc[test_mask, feature_columns])
 
 
@@ -216,13 +281,19 @@ def main():
     prepared, feature_families = prepare_features(data)
     models = build_models()
     comparisons = [
-        ("time prev1", "GAM"),
-        ("time prev1-3", "GAM"),
-        ("solve curve", "Ridge"),
-        ("solve curve", "GAM"),
-        ("combined prev1", "GAM"),
-        ("combined prev1-3", "GAM"),
-        ("combined prev1-3", "Shallow GBR"),
+        ("time prev1", "GAM-3"),
+        ("box curve 100", "GAM-3"),
+        ("box curve 100", "GAM-4"),
+        ("box curve 200", "GAM-3"),
+        ("triangle curve", "GAM-3"),
+        ("gaussian curve", "GAM-3"),
+        ("IRT curve", "Ridge"),
+        ("IRT curve", "GAM-3"),
+        ("box + prev1", "GAM-3"),
+        ("triangle + prev1", "GAM-3"),
+        ("gaussian + prev1", "GAM-3"),
+        ("IRT + prev1", "GAM-3"),
+        ("gaussian + prev1-3", "Shallow GBR"),
     ]
 
     print("\nContest-grouped cross-validation")

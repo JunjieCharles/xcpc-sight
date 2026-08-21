@@ -96,7 +96,8 @@ python -m problem_rating.experiment_models
 - 所有正式 rated 参赛者的二元 `solved` 结果；没有 AC 的记录统一作为未通过，不区分是否提交；
 - 从 800 到 3500 的参考 rating，以每个参考值为中心上下 100 分计算重叠滑动窗口过题率；
 - 每个窗口的参赛人数、过题人数、Jeffreys 平滑过题率及 logit；
+- 同一组参考 rating 上的三角核、高斯核条件过题曲线，以及两参数单调 IRT 曲线；
 - 不使用首次提交的 prev1–prev3 用时中位数、IQR、边界覆盖率和低尾异常率；
 - 比赛时长、题目顺序、题目数量与队伍人数。
 
-`experiment_models` 比较 Ridge、加性样条 GAM 和浅层梯度提升，并同时报告按 contest 分组的交叉验证和最新 20 场的时间留出结果。该实验入口不会覆盖现有 `unified_model` 模型文件。
+`experiment_models` 比较 Ridge、加性样条 GAM 和浅层梯度提升，并同时报告按 contest 分组的交叉验证和最新 20 场的时间留出结果。Ridge/GAM 的正则强度在每个训练折内部继续按 contest 分组选择。当前实验的首选可解释组合是“高斯核条件过题曲线 + prev1 + GAM”；该实验入口不会覆盖现有 `unified_model` 模型文件。
