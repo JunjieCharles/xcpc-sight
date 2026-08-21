@@ -159,7 +159,25 @@ python -m problem_rating.predict_xcpc
 - `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.md`：两个独立 Markdown 表格；
 - `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.csv`：包含 series 标识的完整数据。
 
-牛客题名从公开 `contest/problem-list` 接口取得。HDU 的 guest 榜单数据目前只提供题号，无法读取题名时会在表中明确标注，不影响通过数和 rating 预测。
+牛客题名从公开 `contest/problem-list` 接口取得。HDU 的 guest 榜单数据目前只提供题号；原始预测结果使用缺失说明，静态发布时将该说明规范化为空题名，不影响通过数和 rating 预测。
+
+### 静态站点发布
+
+完成预测后，从默认 CSV 离线生成牛客和 HDU 的题目 Rating 静态数据：
+
+```powershell
+python scripts/generate_problem_rating_static_data.py
+```
+
+默认发布：
+
+- `static/data/problem-rating/index.json`：当前支持的 series 及相对路径；
+- `static/data/problem-rating/series/nowcoder-summer-2026.json`；
+- `static/data/problem-rating/series/hdu-summer-2026.json`。
+
+`ProblemRatingRecord`、`project_problem_rating_series` 和 `project_problem_rating_index` 是 `problem_rating` 的公开纯 Python API。投影以现有选手 Rating series 为比赛 ID、标题、时间和顺序的唯一规范来源，拒绝缺场、额外场次、重复题目、非法计数和跨 series 数据。文件仅包含场次元数据以及题号、题名、预测 Rating、通过队伍数、有效队伍数和时间样本数，不包含选手/队伍身份、team token 或逐人提交。
+
+前端在牛客和 HDU series 内提供“选手 Rating / 题目难度”切换；其他 series 不显示题目入口，系列导航保持在页面左侧。题目页默认选择全部场次，图例始终列出所有场次，支持点击逐场切换以及快捷全选/全不选；表格通过“场次 + 题号”和 Rating 表头切换排序字段，再次点击同一表头切换正序/逆序。通过队伍与有效队伍合并显示，时间样本不在界面展示。每场曲线先按预测 Rating 从易到难排序，Rating 相同按自然题号稳定排序；最长的已选曲线适配可用页面宽度，其他曲线按题目数量比例缩短。曲线使用保持单调的三次插值，圆点才是实际预测值，插值不代表新增模型数据。筛选和排序状态写入 URL。
 
 ## 其他模型与旧流程
 
@@ -186,9 +204,10 @@ python -m problem_rating.plot_results
 - `data-cache/problem-rating/outputs/analysis/`：分析结果、CSV、Markdown 和 Excel；
 - `data-cache/problem-rating/outputs/plots/`：图表；
 - `data-cache/problem-rating/outputs/models/`：旧线性模型文件；
+- `static/data/problem-rating/`：可发布的牛客/HDU 题目级聚合 JSON；
 - `doc/problem-rating-api.md`：Codeforces API 参考。
 
-`data-cache/problem-rating/` 整体被 Git 忽略，不属于可发布数据。缓存来自 Codeforces 公共 API，可能包含公开账号 handle、比赛提交和榜单信息；不得在其中混入登录 Cookie、API 密钥或其他凭据。代码不会读取 `.env` 或把认证信息写入缓存。题目 rating 当前只提供 Python/命令行流程，尚未适配静态前端。
+`data-cache/problem-rating/` 整体被 Git 忽略，不属于可发布数据。缓存来自 Codeforces 公共 API，可能包含公开账号 handle、比赛提交和榜单信息；不得在其中混入登录 Cookie、API 密钥或其他凭据。代码不会读取 `.env` 或把认证信息写入缓存。静态前端只读取 `static/data/problem-rating/` 下的聚合文件，不读取或复制本地缓存。
 
 ## 迁移与提交历史
 
@@ -196,4 +215,4 @@ python -m problem_rating.plot_results
 
 ## 测试覆盖与限制
 
-聚焦测试覆盖 AC 顺序与拆分题族、滑窗/核/IRT 特征、未提交样本口径、模型集成门控、XCPC 标识稳定性和本地路径隔离。默认测试只读取构造数据，不访问网络，也不依赖已同步的本地缓存。模型精度数字来自源仓库现有实验，迁移本身没有重新抓取数据或复跑完整交叉验证。
+聚焦测试覆盖 AC 顺序与拆分题族、滑窗/核/IRT 特征、未提交样本口径、模型集成门控、XCPC 标识稳定性、本地路径隔离、静态投影、缺失题名规范化和离线生成。Node 测试覆盖 schema（含空题名）、场次筛选、两类双向排序、自然题号、曲线难度顺序、题量比例、单调路径、URL 状态和独立数据加载。默认测试只读取构造数据，不访问网络，也不依赖已同步的本地缓存。模型精度数字来自源仓库现有实验；静态发布不会重新训练模型。

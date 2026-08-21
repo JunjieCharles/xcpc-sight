@@ -1,5 +1,6 @@
-def test_core_and_rating_export_their_public_apis() -> None:
+def test_packages_export_their_public_apis() -> None:
     import core
+    import problem_rating
     import rating
 
     assert core.Contest.__module__ == "core.models"
@@ -15,3 +16,8 @@ def test_core_and_rating_export_their_public_apis() -> None:
     assert rating.calculate_series_ratings.__module__ == "rating.calculation"
     assert rating.project_series_rating_data.__module__ == "rating.static_data"
     assert rating.project_static_data_index.__module__ == "rating.static_data"
+    assert problem_rating.ProblemRatingRecord.__module__ == "problem_rating.static_data"
+    assert (
+        problem_rating.project_problem_rating_series.__module__
+        == "problem_rating.static_data"
+    )

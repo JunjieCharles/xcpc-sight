@@ -1,6 +1,6 @@
 # 静态站点数据
 
-生成器发布三个 schema v1 Rating 系列：`2025-2026` ICPC + CCPC、`2026牛客暑期多校训练营`，以及 `2026“钉耙编程”中国大学生算法设计暑期联赛`。生成器不包含后端或数据库，也不生成统计数据、分块、独立单场文件或重复的稠密数组；`static/` 同时包含直接消费这些文件的零依赖前端。
+选手 Rating 生成器发布三个 schema v1 系列：`2025-2026` ICPC + CCPC、`2026牛客暑期多校训练营`，以及 `2026“钉耙编程”中国大学生算法设计暑期联赛`。独立的题目 Rating 生成器从本地预测 CSV 发布牛客和 HDU 的题目级聚合 JSON。项目不包含后端或数据库，也不生成分块或重复的稠密数组；`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -16,6 +16,14 @@ python scripts/generate_static_data.py
 - `static/data/series/hdu-summer-2026.json`
 
 XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238，且当前均为 rated。各来源进入 Rating 前都过滤无提交队伍，并按 solved 降序、精确 penalty 升序重建含并列的比赛排名。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
+
+题目 Rating 数据在完成 `python -m problem_rating.predict_xcpc` 后离线生成：
+
+```bash
+python scripts/generate_problem_rating_static_data.py
+```
+
+默认写入 `static/data/problem-rating/index.json`、`static/data/problem-rating/series/nowcoder-summer-2026.json` 和 `static/data/problem-rating/series/hdu-summer-2026.json`。生成器读取已忽略的预测 CSV 以及现有选手 Rating series，准备好两个 series 后依次原子发布系列文件，最后发布入口索引；它不访问网络。
 
 JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不包含生成时间；固定输入产生固定字节。生成命令访问实时 RankLand、牛客和 HDU，默认离线测试不会执行它。
 
@@ -85,9 +93,25 @@ Rating 文本采用 Codeforces 风格等级色：`<1200` 灰、`1200` 绿、`140
 
 系列文件不输出 seed、performance、修正项等计算诊断，不生成缺席记录、稠密 rating 数组或重复的单场 JSON。
 
+## 题目 Rating 数据契约
+
+`static/data/problem-rating/index.json` 使用独立 schema v1：
+
+```json
+{"schemaVersion":1,"series":[{"id":"hdu-summer-2026","title":"2026…","path":"series/hdu-summer-2026.json"},{"id":"nowcoder-summer-2026","title":"2026…","path":"series/nowcoder-summer-2026.json"}]}
+```
+
+series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和 `contests[]`。场次沿用对应选手 Rating series 的 `id`、`title`、`startAt` 与顺序，每场包含非空 `problems[]`。题目字段为：
+
+- `index`：非空题号；`name` 为字符串，HDU 无法取得题名时发布为空字符串；
+- `rating`：有限非负整数预测值；
+- `solvedCount`、`participantCount`、`timeSampleCount`：非负整数，并满足 `timeSampleCount <= solvedCount <= participantCount`。
+
+投影拒绝跨 series、缺场、额外场次、重复题目和非法计数。发布文件不包含选手/队伍名称、Codeforces handle、team token、逐人提交或本地路径；浏览器不会请求 `data-cache/`。
+
 ## 静态前端
 
-前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs` 和 `static/js/app.mjs`。入口为 CSS、`app.mjs` 及其 `data.mjs` 依赖使用同一查询版本标识；发布前端改动时必须一并更新该标识，使浏览器和 CDN 请求新的资源 URL，而数据 JSON 则继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
+前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；发布前端改动时必须一并更新该标识，使浏览器和 CDN 请求新的资源 URL，而数据 JSON 则继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
 
 本地必须通过 HTTP 访问，而不是直接打开 `file://`：
 
@@ -97,10 +121,13 @@ python -m http.server 8000 --directory static
 
 页面包含：
 
-- 左侧系列目录和按参赛者名称/学校的多词搜索；学校下拉框支持搜索和多选，所选学校以可移除标签显示在原搜索框内，学校之间为 OR、并与关键词条件按 AND 组合，学校名采用精确匹配；搜索框末尾按钮同时清空关键词和全部学校筛选；
+- 页面左侧的系列目录和按参赛者名称/学校的多词搜索；学校下拉框支持搜索和多选，所选学校以可移除标签显示在原搜索框内，学校之间为 OR、并与关键词条件按 AND 组合，学校名采用精确匹配；搜索框末尾按钮同时清空关键词和全部学校筛选；
 - 按最终排名排列的虚拟滚动宽表；比赛列头可打开只含实际参赛者的虚拟滚动表；
-- 参赛者详情、可键盘访问且带悬停/聚焦提示的单系列 SVG rating 曲线，以及提供同一数据的参赛记录表；
+- 参赛者详情、可键盘访问且带悬停/聚焦提示的单系列 SVG rating 曲线，以及排列在曲线下方、提供同一数据的参赛记录表；
 - `series`、`q`、可重复的 `school`、`contest`、`competitor` 查询参数状态及浏览器前进/后退支持。比赛或参赛者详情页除“返回系列”按钮外，也可点击左侧当前系列名回到系列总览。
+- 牛客/HDU series 的“选手 Rating / 题目难度”切换；题目页默认选择全部场次，图例支持点击逐场筛选和快捷全选/全不选；表头点击完成“场次 + 题号”或 Rating 的正序/逆序切换；通过队伍/有效队伍在同一列分别对齐，界面不展示时间样本；
+- 每场题目按预测 Rating 从易到难排列的多曲线 SVG；Rating 相同按自然题号稳定排序，图表适配页面可用宽度，曲线长度与题目数量成正比，并使用不越过相邻点范围的单调三次插值，圆点和提示保留真实预测值；
+- `view=problem-rating`、`problemContests`、`problemSort`、`problemOrder` 查询状态。缺少 `problemContests` 表示全选，`none` 表示取消全部，其他值为逗号分隔的场次 ID。
 
 数据层以 URL 为键缓存正在进行和已完成的 JSON Promise；失败会从缓存移除以允许重试。索引和系列对象分别只验证一次，系列验证后只建立一次参赛者 ID 与单场参赛者索引。验证包括 schema 版本、必需字段与类型、唯一 ID、比赛引用范围、参赛顺序、rating 算术与连续性，以及最终 rating/参赛次数一致性。未知 schema 版本或不合法文档会显示错误面板，不静默渲染部分数据。
 
@@ -108,10 +135,10 @@ python -m http.server 8000 --directory static
 
 ## 前端测试
 
-`tests/test_frontend_data.mjs` 使用 Node 内置测试运行器，不需要 `package.json`：
+`tests/test_frontend_data.mjs` 与 `tests/test_problem_rating_frontend_data.mjs` 使用 Node 内置测试运行器，不需要 `package.json`：
 
 ```bash
-node --test tests/test_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
 ```
 
-覆盖 schema 校验失败、一次性索引、稀疏记录的 carried rating、关键词与学校精确多选筛选、组合清空控件、零变化量强调、signed delta、含重复学校参数的查询状态、子路径 URL 解析、Promise 缓存失败重试、多系列索引顺序，以及按 ID 加载牛客系列。DOM 虚拟滚动和浏览器交互当前需要人工浏览器检查。
+覆盖选手与题目 schema 校验失败和空题名、一次性索引、稀疏记录的 carried rating、关键词与学校精确多选筛选、组合清空控件、零变化量强调、signed delta、含重复学校参数的查询状态、子路径 URL 解析、Promise 缓存失败重试、多系列索引顺序、题目场次筛选、两类双向排序、自然题号、难度曲线顺序/题量比例、单调路径、题目 URL 状态，以及按 ID 独立加载题目数据。DOM 虚拟滚动和浏览器交互继续通过本地 HTTP 与桌面/移动端浏览器检查。

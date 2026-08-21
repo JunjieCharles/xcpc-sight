@@ -14,7 +14,7 @@
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 以独立的 `problem_rating` 包训练、验证和预测题目难度 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
-- 提供零依赖、无需构建的静态 rating 浏览前端；
+- 提供零依赖、无需构建的选手 Rating 与题目难度浏览前端；
 - 可复用的纯 Python API。
 
 ## 安装
@@ -62,16 +62,24 @@ python scripts/generate_static_data.py
 
 默认写入 `static/data/index.json`、`static/data/series/2025-2026.json`、`static/data/series/nowcoder-summer-2026.json` 和 `static/data/series/hdu-summer-2026.json`；可用 `--output-dir` 覆盖。系列按各自最新比赛时间倒序排列，最新系列成为默认系列。系列 JSON 的稀疏参赛记录可派生系列宽表、单场变化表和参赛者完整 rating 曲线。生成过程访问实时 RankLand、牛客和 HDU，不属于默认离线测试。HDU 默认使用可覆盖的 `guest`/`guest` 登录凭据。
 
+在完成牛客/HDU 题目预测后，可以从本地预测 CSV 离线发布独立的题目 Rating JSON：
+
+```bash
+python scripts/generate_problem_rating_static_data.py
+```
+
+默认写入 `static/data/problem-rating/index.json` 以及牛客、HDU 两个 series 文件。该命令不访问网络，不修改选手 Rating JSON，也不会发布账号、队伍或逐人提交数据。
+
 本地浏览静态站点（不能直接用 `file://`，因为浏览器需要通过 HTTP 加载 ES module 和 JSON）：
 
 ```bash
 python -m http.server 8000 --directory static
 ```
 
-然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动宽表、单场参赛者表、参赛者 rating 曲线和参赛记录；当前视图会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
+然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动选手宽表、单场参赛者表，以及上下排列的参赛者 rating 曲线和参赛记录；牛客/HDU 还提供独立的题目难度入口、可点击筛选的场次图例、适配页面宽度的难度曲线和可点击表头双向排序的题目表格。当前视图、题目筛选和排序会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
 
 ```bash
-node --test tests/test_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
 ```
 
 获取牛客比赛 `133876` 至 `133885` 的完整赛时榜单：
@@ -90,17 +98,19 @@ python scripts/fetch_nowcoder_leaderboards.py
 ```text
 src/core/          RankLand/牛客/HDU 数据获取、标准化、领域模型与赛季选择
 src/rating/        Rating 模型、纯计算算法与静态 JSON 投影
+src/problem_rating/ 题目难度特征、模型、预测与静态 JSON 投影
 scripts/           显式数据获取与静态数据生成脚本
 static/             零构建静态前端
 static/js/          浏览器 ES modules 与数据辅助函数
 static/data/        静态站点发布 JSON
+static/data/problem-rating/  牛客/HDU 题目 Rating 发布 JSON
 data-cache/        已忽略、可丢弃的上游下载缓存
 doc/               各功能设计文档
 ```
 
-选手/报名实体 rating 位于 `src/rating/`，题目难度 rating 位于独立的 `src/problem_rating/`，两者不共享模型或状态。后者的 Codeforces API 缓存、训练数据和本地输出都位于已忽略的 `data-cache/problem-rating/`；详细算法和命令见 [题目难度 Rating](doc/problem-rating.md)。当前静态前端尚未接入题目 rating 结果。
+选手/报名实体 rating 位于 `src/rating/`，题目难度 rating 位于独立的 `src/problem_rating/`，两者不共享模型或状态。后者的 Codeforces API 缓存、训练数据和本地输出都位于已忽略的 `data-cache/problem-rating/`；静态前端只发布经过严格投影的题目级聚合数据。详细算法和命令见 [题目难度 Rating](doc/problem-rating.md)。
 
-库 API 不隐式写文件；脚本负责显式输出。发行名称为 `xcpc-sight`，安装后分别从 `core`、`rating` 导入，不提供 `xcpc_sight` facade。
+库 API 不隐式写文件；脚本负责显式输出。发行名称为 `xcpc-sight`，安装后分别从 `core`、`rating`、`problem_rating` 导入，不提供 `xcpc_sight` facade。
 
 ## 赛季口径
 
@@ -122,7 +132,7 @@ doc/               各功能设计文档
 ```bash
 ruff check .
 pytest --cov=core --cov=rating --cov=problem_rating
-node --test tests/test_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
 ```
 
 默认测试不访问公网。RankLand、牛客和 HDU 都是外部数据源，线上结果可能随上游数据更新；计算核心、JSON 投影与网络适配保持分离。

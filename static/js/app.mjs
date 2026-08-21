@@ -8,14 +8,33 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260807-1";
+} from "./data.mjs?v=20260821-4";
+import {
+  buildDifficultyCurves,
+  createProblemRatingStore,
+  flattenProblemRatings,
+  monotoneCubicPath,
+  readProblemRatingQuery,
+  sortProblemRows,
+  writeProblemRatingQuery,
+} from "./problem-rating.mjs?v=20260821-4";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
 const INDEX_URL = new URL("../data/index.json", import.meta.url).href;
+const PROBLEM_RATING_INDEX_URL = new URL("../data/problem-rating/index.json", import.meta.url).href;
+const PROBLEM_CURVE_COLORS = [
+  "#176b87", "#b45309", "#7c3aed", "#15803d", "#be123c",
+  "#0369a1", "#a16207", "#6d28d9", "#047857", "#c2410c",
+];
 const store = createDataStore(INDEX_URL);
+const problemRatingStore = createProblemRatingStore(PROBLEM_RATING_INDEX_URL);
 const elements = {
   seriesList: document.querySelector("#series-list"),
+  seriesModeSwitch: document.querySelector("#series-mode-switch"),
+  participantRatingTab: document.querySelector("#participant-rating-tab"),
+  problemRatingTab: document.querySelector("#problem-rating-tab"),
+  participantControls: document.querySelector("#participant-controls"),
   searchInput: document.querySelector("#search-input"),
   clearSearchButton: document.querySelector("#clear-search-button"),
   schoolTags: document.querySelector("#school-tags"),
@@ -32,12 +51,25 @@ const elements = {
   seriesHead: document.querySelector("#series-head"),
   seriesBody: document.querySelector("#series-body"),
   seriesScroll: document.querySelector("#series-scroll"),
+  problemRatingView: document.querySelector("#problem-rating-view"),
+  problemRatingTitle: document.querySelector("#problem-rating-title"),
+  problemRatingSummary: document.querySelector("#problem-rating-summary"),
+  problemResultCount: document.querySelector("#problem-result-count"),
+  problemChart: document.querySelector("#problem-chart"),
+  problemTableBody: document.querySelector("#problem-table-body"),
+  problemContestColumn: document.querySelector("#problem-contest-column"),
+  problemContestSort: document.querySelector("#problem-contest-sort"),
+  problemContestSortIndicator: document.querySelector("#problem-contest-sort-indicator"),
+  problemRatingColumn: document.querySelector("#problem-rating-column"),
+  problemRatingSort: document.querySelector("#problem-rating-sort"),
+  problemRatingSortIndicator: document.querySelector("#problem-rating-sort-indicator"),
   detailView: document.querySelector("#detail-view"),
   errorTemplate: document.querySelector("#error-template"),
 };
 
 const state = {
   seriesId: "",
+  view: "participants",
   query: "",
   schools: [],
   availableSchools: [],
@@ -47,6 +79,12 @@ const state = {
   index: null,
   filtered: [],
   renderFrame: 0,
+  problemAvailableSeries: new Set(),
+  problemSeries: null,
+  problemSelectedContestIds: new Set(),
+  problemSort: "contest",
+  problemOrder: "asc",
+  problemChartFrame: 0,
 };
 
 function node(tag, properties = {}, children = []) {
@@ -98,12 +136,23 @@ function columnGroup(widths) {
 }
 
 function setUrl(mode = "replace") {
-  const url = writeQueryState(location.href, {
+  let url = writeQueryState(location.href, {
     series: state.seriesId,
     query: state.query,
     schools: state.schools,
     contest: state.contestId,
     competitor: state.competitorId,
+  });
+  url = writeProblemRatingQuery(url, {
+    view: state.view,
+    allContestIds: state.problemSeries?.contests.map(({ id }) => id) ?? [],
+    selectedContestIds: state.problemSeries
+      ? state.problemSeries.contests
+        .filter(({ id }) => state.problemSelectedContestIds.has(id))
+        .map(({ id }) => id)
+      : [],
+    sort: state.problemSort,
+    order: state.problemOrder,
   });
   history[mode === "push" ? "pushState" : "replaceState"](null, "", `${url.pathname}${url.search}${url.hash}`);
 }
@@ -112,6 +161,8 @@ function showError(error) {
   console.error(error);
   elements.status.hidden = true;
   elements.seriesView.hidden = true;
+  elements.problemRatingView.hidden = true;
+  elements.participantControls.hidden = true;
   elements.detailView.hidden = false;
   elements.detailView.replaceChildren();
   const panel = elements.errorTemplate.content.firstElementChild.cloneNode(true);
@@ -292,11 +343,28 @@ function applySearch({ resetScroll = true } = {}) {
   setUrl();
 }
 
+function updateSeriesMode() {
+  const supported = state.problemAvailableSeries.has(state.seriesId);
+  elements.seriesModeSwitch.hidden = !supported;
+  elements.participantRatingTab.setAttribute(
+    "aria-selected",
+    String(state.view !== "problem-rating"),
+  );
+  elements.problemRatingTab.setAttribute(
+    "aria-selected",
+    String(state.view === "problem-rating"),
+  );
+}
+
 function showSeries() {
+  state.view = "participants";
   state.contestId = "";
   state.competitorId = "";
+  elements.participantControls.hidden = false;
   elements.detailView.hidden = true;
+  elements.problemRatingView.hidden = true;
   elements.seriesView.hidden = false;
+  updateSeriesMode();
   elements.seriesTitle.textContent = state.series.title;
   elements.seriesSummary.textContent = `${state.series.contests.length} 场比赛 · ${state.series.competitors.length.toLocaleString("zh-CN")} 位参赛者`;
   renderSeriesHeader();
@@ -310,9 +378,11 @@ function backButton() {
 }
 
 function openSeriesHome() {
-  if (!state.contestId && !state.competitorId && !elements.seriesView.hidden) return;
+  if (state.view === "participants" && !state.contestId && !state.competitorId
+      && !elements.seriesView.hidden) return;
   state.contestId = "";
   state.competitorId = "";
+  state.view = "participants";
   setUrl("push");
   showSeries();
 }
@@ -322,11 +392,15 @@ function openContest(contestId, updateUrl = true) {
   if (contestIndex < 0) return showSeries();
   const contest = state.series.contests[contestIndex];
   const participants = state.index.participantsByContest[contestIndex];
+  state.view = "participants";
   state.contestId = contest.id;
   state.competitorId = "";
   if (updateUrl) setUrl("push");
   elements.seriesView.hidden = true;
+  elements.problemRatingView.hidden = true;
+  elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
+  updateSeriesMode();
   elements.detailView.replaceChildren();
 
   const heading = node("div", { className: "detail-header" }, [
@@ -376,6 +450,320 @@ function svgNode(tag, attributes = {}) {
   const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
   return element;
+}
+
+function shortContestTitle(contest, contestIndex) {
+  const chinese = contest.title.match(/第([^（）()]+)场/u)?.[0];
+  if (chinese) return chinese;
+  const numeric = contest.title.match(/[（(](\d+)[）)]/u)?.[1];
+  return numeric ? `第${numeric}场` : `第${contestIndex + 1}场`;
+}
+
+function renderProblemTable(rows) {
+  const fragment = document.createDocumentFragment();
+  for (const { contest, problem } of rows) {
+    const row = node("tr");
+    row.append(node("td", { text: contest.title, title: contest.title }));
+    row.append(node("td", { text: problem.index }));
+    row.append(node("td", { text: problem.name, title: problem.name }));
+    row.append(node("td", {}, [ratingNode(problem.rating)]));
+    row.append(node("td", { className: "problem-team-counts" }, [
+      node("span", { text: problem.solvedCount.toLocaleString("zh-CN") }),
+      node("span", { className: "problem-team-count-separator", text: "/" }),
+      node("span", { text: problem.participantCount.toLocaleString("zh-CN") }),
+    ]));
+    fragment.append(row);
+  }
+  if (!rows.length) {
+    const emptyRow = node("tr", { className: "problem-table-empty" });
+    emptyRow.append(node("td", { colSpan: 5, text: "未选择场次" }));
+    fragment.append(emptyRow);
+  }
+  elements.problemTableBody.replaceChildren(fragment);
+  elements.problemContestColumn.removeAttribute("aria-sort");
+  elements.problemRatingColumn.removeAttribute("aria-sort");
+  const sortedColumn = state.problemSort === "rating"
+    ? elements.problemRatingColumn
+    : elements.problemContestColumn;
+  sortedColumn.setAttribute("aria-sort", state.problemOrder === "asc" ? "ascending" : "descending");
+  const indicator = state.problemOrder === "asc" ? "↑" : "↓";
+  elements.problemContestSortIndicator.textContent = state.problemSort === "contest" ? indicator : "";
+  elements.problemRatingSortIndicator.textContent = state.problemSort === "rating" ? indicator : "";
+}
+
+function setProblemSort(sort) {
+  state.problemOrder = state.problemSort === sort && state.problemOrder === "asc" ? "desc" : "asc";
+  state.problemSort = sort;
+  applyProblemRatingState();
+}
+
+function emphasizeProblemCurve(contestId = "") {
+  for (const element of elements.problemChart.querySelectorAll("[data-curve-id]")) {
+    const active = element.getAttribute("data-curve-id") === contestId;
+    element.classList.toggle("is-muted", Boolean(contestId) && !active);
+    element.classList.toggle("is-active", Boolean(contestId) && active);
+  }
+}
+
+function renderProblemChart() {
+  if (!state.problemSeries) return;
+  const selectedIds = state.problemSeries.contests
+    .filter(({ id }) => state.problemSelectedContestIds.has(id))
+    .map(({ id }) => id);
+  const curves = buildDifficultyCurves(state.problemSeries, selectedIds);
+  const figure = node("figure", { className: "problem-chart-figure" });
+  const legend = node("div", { className: "problem-chart-legend", "aria-label": "场次筛选和图例" });
+  const legendActions = node("span", { className: "problem-legend-actions" }, [
+    node("button", {
+      className: "problem-legend-action",
+      type: "button",
+      text: "全选",
+      disabled: selectedIds.length === state.problemSeries.contests.length,
+      onclick: () => {
+        state.problemSelectedContestIds = new Set(state.problemSeries.contests.map(({ id }) => id));
+        applyProblemRatingState();
+      },
+    }),
+    node("button", {
+      className: "problem-legend-action",
+      type: "button",
+      text: "全不选",
+      disabled: !selectedIds.length,
+      onclick: () => {
+        state.problemSelectedContestIds = new Set();
+        applyProblemRatingState();
+      },
+    }),
+  ]);
+  legend.append(legendActions);
+  state.problemSeries.contests.forEach((contest, contestIndex) => {
+    const selected = state.problemSelectedContestIds.has(contest.id);
+    const color = PROBLEM_CURVE_COLORS[contestIndex % PROBLEM_CURVE_COLORS.length];
+    const legendButton = node("button", {
+      className: `problem-legend-item${selected ? "" : " is-unselected"}`,
+      type: "button",
+      title: contest.title,
+      "aria-pressed": String(selected),
+      "data-curve-id": contest.id,
+    }, [
+      node("span", { className: "problem-legend-swatch", "aria-hidden": "true" }),
+      node("span", { text: `${shortContestTitle(contest, contestIndex)}（${contest.problems.length}题）` }),
+    ]);
+    legendButton.querySelector(".problem-legend-swatch").style.backgroundColor = color;
+    legendButton.addEventListener("click", () => {
+      if (selected) state.problemSelectedContestIds.delete(contest.id);
+      else state.problemSelectedContestIds.add(contest.id);
+      applyProblemRatingState();
+    });
+    if (selected) {
+      const emphasize = () => emphasizeProblemCurve(contest.id);
+      legendButton.addEventListener("mouseenter", emphasize);
+      legendButton.addEventListener("focus", emphasize);
+      legendButton.addEventListener("mouseleave", () => emphasizeProblemCurve());
+      legendButton.addEventListener("blur", () => emphasizeProblemCurve());
+    }
+    legend.append(legendButton);
+  });
+
+  if (!curves.length) {
+    figure.append(
+      node("div", { className: "problem-chart-empty" }, [
+        node("p", { className: "empty", text: "请选择至少一场比赛以显示难度曲线。" }),
+      ]),
+      legend,
+    );
+    elements.problemChart.replaceChildren(figure);
+    return;
+  }
+
+  const allRatings = curves.flatMap(({ points }) => points.map(({ problem }) => problem.rating));
+  const rawMin = Math.min(...allRatings);
+  const rawMax = Math.max(...allRatings);
+  const min = Math.floor((rawMin - 100) / 100) * 100;
+  const max = Math.max(min + 100, Math.ceil((rawMax + 100) / 100) * 100);
+  const maxSlots = Math.max(...curves.map(({ slotCount }) => slotCount));
+  const left = 62, right = 28, top = 28, bottom = 54, height = 410;
+  const width = Math.max(320, Math.floor(elements.problemChart.clientWidth || 900));
+  const slotWidth = (width - left - right) / maxSlots;
+  const x = (difficultyIndex) => left + (difficultyIndex + .5) * slotWidth;
+  const y = (rating) => top + (max - rating) * (height - top - bottom) / (max - min);
+
+  const stage = node("div", { className: "problem-chart-stage" });
+  const svg = svgNode("svg", {
+    class: "problem-rating-chart",
+    viewBox: `0 0 ${width} ${height}`,
+    role: "img",
+    "aria-labelledby": "problem-chart-title problem-chart-description",
+  });
+  const title = svgNode("title", { id: "problem-chart-title" });
+  title.textContent = `${state.problemSeries.title}题目难度曲线`;
+  const description = svgNode("desc", { id: "problem-chart-description" });
+  description.textContent = "每场比赛的题目按预测 Rating 从易到难排列，横向长度与题目数量成正比。";
+  svg.append(title, description);
+
+  for (let tick = 0; tick <= 5; tick += 1) {
+    const value = Math.round((min + (max - min) * tick / 5) / 100) * 100;
+    const gridY = y(value);
+    svg.append(svgNode("line", {
+      class: "chart-grid",
+      x1: left,
+      x2: width - right,
+      y1: gridY,
+      y2: gridY,
+    }));
+    const label = svgNode("text", {
+      class: "chart-axis",
+      x: left - 9,
+      y: gridY + 4,
+      "text-anchor": "end",
+    });
+    label.textContent = String(value);
+    svg.append(label);
+  }
+
+  const tooltip = node("div", {
+    className: "chart-tooltip problem-chart-tooltip",
+    hidden: true,
+    role: "status",
+  });
+  curves.forEach((curve) => {
+    const color = PROBLEM_CURVE_COLORS[curve.contestIndex % PROBLEM_CURVE_COLORS.length];
+    const screenPoints = curve.points.map(({ problem, ...point }) => ({
+      ...point,
+      problem,
+      x: x(point.difficultyIndex),
+      y: y(problem.rating),
+    }));
+    const path = svgNode("path", {
+      class: "problem-curve-line",
+      d: monotoneCubicPath(screenPoints),
+      stroke: color,
+      tabindex: 0,
+      role: "img",
+      "aria-label": `${curve.contest.title}，${curve.slotCount} 道题`,
+      "data-curve-id": curve.contest.id,
+    });
+    const emphasize = () => emphasizeProblemCurve(curve.contest.id);
+    const clearEmphasis = () => emphasizeProblemCurve();
+    path.addEventListener("mouseenter", emphasize);
+    path.addEventListener("focus", emphasize);
+    path.addEventListener("mouseleave", clearEmphasis);
+    path.addEventListener("blur", clearEmphasis);
+    svg.append(path);
+
+    screenPoints.forEach((point) => {
+      const dot = svgNode("circle", {
+        class: "problem-curve-point",
+        cx: point.x,
+        cy: point.y,
+        r: 3.5,
+        fill: color,
+        "data-curve-id": curve.contest.id,
+      });
+      const hit = svgNode("circle", {
+        class: "problem-curve-hit",
+        cx: point.x,
+        cy: point.y,
+        r: 11,
+        tabindex: 0,
+        role: "img",
+        "aria-label": `${curve.contest.title}，${point.problem.index}${point.problem.name ? ` ${point.problem.name}` : ""}，Rating ${point.problem.rating}`,
+        "data-curve-id": curve.contest.id,
+      });
+      const show = () => {
+        emphasize();
+        tooltip.hidden = false;
+        tooltip.replaceChildren(
+          node("strong", { text: `${shortContestTitle(curve.contest, curve.contestIndex)} · ${point.problem.index}` }),
+          ...(point.problem.name ? [node("span", { text: point.problem.name })] : []),
+          node("span", {}, [document.createTextNode("Rating "), ratingNode(point.problem.rating)]),
+        );
+        tooltip.style.left = `${Math.min(width - 220, point.x + 10)}px`;
+        tooltip.style.top = `${Math.max(4, point.y - 72)}px`;
+      };
+      const hide = () => {
+        tooltip.hidden = true;
+        clearEmphasis();
+      };
+      hit.addEventListener("mouseenter", show);
+      hit.addEventListener("focus", show);
+      hit.addEventListener("mouseleave", hide);
+      hit.addEventListener("blur", hide);
+      svg.append(dot, hit);
+    });
+
+  });
+
+  stage.append(svg, tooltip);
+  figure.append(
+    stage,
+    legend,
+    node("figcaption", {
+      className: "chart-note",
+      text: "圆点为真实题目预测值；平滑线仅连接相邻题目，不表示题目之间存在额外预测。每场曲线的横向长度与题目数量成正比。",
+    }),
+  );
+  elements.problemChart.replaceChildren(figure);
+}
+
+function scheduleProblemChart() {
+  if (state.problemChartFrame) cancelAnimationFrame(state.problemChartFrame);
+  state.problemChartFrame = requestAnimationFrame(() => {
+    state.problemChartFrame = 0;
+    if (state.view === "problem-rating" && !elements.problemRatingView.hidden) renderProblemChart();
+  });
+}
+
+function applyProblemRatingState({ updateUrl = true } = {}) {
+  if (!state.problemSeries) return;
+  const selectedIds = state.problemSeries.contests
+    .filter(({ id }) => state.problemSelectedContestIds.has(id))
+    .map(({ id }) => id);
+  const rows = sortProblemRows(
+    flattenProblemRatings(state.problemSeries, selectedIds),
+    state.problemSort,
+    state.problemOrder,
+  );
+  elements.problemResultCount.textContent = `${rows.length.toLocaleString("zh-CN")} 道题 · ${selectedIds.length} / ${state.problemSeries.contests.length} 场`;
+  elements.problemRatingSummary.textContent = `${state.problemSeries.contests.length} 场比赛 · ${state.problemSeries.contests.reduce((total, contest) => total + contest.problems.length, 0)} 道题`;
+  renderProblemChart();
+  renderProblemTable(rows);
+  if (updateUrl) setUrl();
+}
+
+async function showProblemRating(query = {}, updateUrl = true) {
+  if (!state.problemAvailableSeries.has(state.seriesId)) return showSeries();
+  state.view = "problem-rating";
+  state.contestId = "";
+  state.competitorId = "";
+  updateSeriesMode();
+  elements.participantControls.hidden = true;
+  elements.seriesView.hidden = true;
+  elements.detailView.hidden = true;
+  elements.problemRatingView.hidden = true;
+  elements.status.hidden = false;
+  elements.status.textContent = "正在加载题目 Rating…";
+  const loaded = await problemRatingStore.getSeries(state.seriesId);
+  const canonicalContestIds = state.series.contests.map(({ id }) => id);
+  const problemContestIds = loaded.series.contests.map(({ id }) => id);
+  if (canonicalContestIds.length !== problemContestIds.length
+      || canonicalContestIds.some((id, index) => id !== problemContestIds[index])) {
+    throw new TypeError(`problem rating series ${state.seriesId}: contest order does not match participant series`);
+  }
+  state.problemSeries = loaded.series;
+  const available = new Set(problemContestIds);
+  state.problemSelectedContestIds = query.selectedContestIds === null
+    || query.selectedContestIds === undefined
+    ? new Set(problemContestIds)
+    : new Set(query.selectedContestIds.filter((id) => available.has(id)));
+  state.problemSort = query.sort === "rating" ? "rating" : "contest";
+  state.problemOrder = query.order === "desc" ? "desc" : "asc";
+  elements.problemRatingTitle.textContent = state.problemSeries.title;
+  elements.status.hidden = true;
+  elements.problemRatingView.hidden = false;
+  applyProblemRatingState({ updateUrl: false });
+  if (updateUrl) setUrl("push");
+  else setUrl();
 }
 
 function ratingChart(competitor) {
@@ -485,11 +873,15 @@ function participationTable(competitor) {
 function openCompetitor(competitorId, updateUrl = true) {
   const competitor = state.index.competitorById.get(competitorId);
   if (!competitor) return showSeries();
+  state.view = "participants";
   state.competitorId = competitor.id;
   state.contestId = "";
   if (updateUrl) setUrl("push");
   elements.seriesView.hidden = true;
+  elements.problemRatingView.hidden = true;
+  elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
+  updateSeriesMode();
   const heading = node("div", { className: "detail-header" }, [
     node("div", {}, [
       node("p", { className: "eyebrow", text: "PARTICIPANT" }),
@@ -520,11 +912,14 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.status.hidden = false;
   elements.status.textContent = "正在加载数据…";
   elements.seriesView.hidden = true;
+  elements.problemRatingView.hidden = true;
   elements.detailView.hidden = true;
   const loaded = await store.getSeries(seriesId);
   state.seriesId = loaded.series.id;
   state.series = loaded.series;
   state.index = loaded.index;
+  state.problemSeries = null;
+  state.problemSelectedContestIds = new Set();
   state.availableSchools = listSchools(state.series.competitors);
   updateSeriesNavigation();
   state.query = queryState.query ?? state.query;
@@ -533,16 +928,36 @@ async function loadSeries(seriesId, queryState = {}) {
   state.schools = requestedSchools.filter((school) => available.has(school));
   elements.searchInput.value = state.query;
   renderSchoolControls();
-  elements.status.hidden = true;
-  if (queryState.competitor && state.index.competitorById.has(queryState.competitor)) openCompetitor(queryState.competitor, false);
-  else if (queryState.contest && state.series.contests.some((contest) => contest.id === queryState.contest)) openContest(queryState.contest, false);
-  else showSeries();
+  updateSeriesMode();
+  if (queryState.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
+    await showProblemRating(queryState, false);
+  } else {
+    elements.status.hidden = true;
+    if (queryState.competitor && state.index.competitorById.has(queryState.competitor)) {
+      openCompetitor(queryState.competitor, false);
+    } else if (queryState.contest
+        && state.series.contests.some((contest) => contest.id === queryState.contest)) {
+      openContest(queryState.contest, false);
+    } else {
+      showSeries();
+    }
+  }
   setUrl();
 }
 
 async function initialize() {
   const index = await store.getIndex();
-  const query = readQueryState(location.href);
+  try {
+    const problemIndex = await problemRatingStore.getIndex();
+    state.problemAvailableSeries = new Set(problemIndex.series.map(({ id }) => id));
+  } catch (error) {
+    console.error("Unable to load problem rating index", error);
+    state.problemAvailableSeries = new Set();
+  }
+  const query = {
+    ...readQueryState(location.href),
+    ...readProblemRatingQuery(location.href),
+  };
   for (const entry of index.series) {
     const button = node("button", {
       type: "button",
@@ -552,7 +967,13 @@ async function initialize() {
     button.dataset.seriesId = entry.id;
     button.addEventListener("click", () => {
       if (entry.id === state.seriesId) openSeriesHome();
-      else loadSeries(entry.id).catch(showError);
+      else {
+        const queryState = state.view === "problem-rating"
+          && state.problemAvailableSeries.has(entry.id)
+          ? { view: "problem-rating", selectedContestIds: null }
+          : {};
+        loadSeries(entry.id, queryState).catch(showError);
+      }
     });
     elements.seriesList.append(button);
   }
@@ -584,12 +1005,26 @@ elements.schoolFilter.addEventListener("keydown", (event) => {
 document.addEventListener("click", (event) => {
   if (!elements.schoolFilter.contains(event.target)) setSchoolMenu(false);
 });
+elements.participantRatingTab.addEventListener("click", openSeriesHome);
+elements.problemRatingTab.addEventListener("click", () => {
+  showProblemRating({ selectedContestIds: null }, true).catch(showError);
+});
+elements.problemContestSort.addEventListener("click", () => setProblemSort("contest"));
+elements.problemRatingSort.addEventListener("click", () => setProblemSort("rating"));
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
-window.addEventListener("resize", scheduleSeriesRows);
+window.addEventListener("resize", () => {
+  scheduleSeriesRows();
+  scheduleProblemChart();
+});
 window.addEventListener("popstate", () => {
-  const query = readQueryState(location.href);
+  const query = {
+    ...readQueryState(location.href),
+    ...readProblemRatingQuery(location.href),
+  };
   if (query.series && query.series !== state.seriesId) loadSeries(query.series, query).catch(showError);
-  else {
+  else if (query.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
+    showProblemRating(query, false).catch(showError);
+  } else {
     state.query = query.query;
     state.schools = query.schools.filter((school) => state.availableSchools.includes(school));
     elements.searchInput.value = query.query;

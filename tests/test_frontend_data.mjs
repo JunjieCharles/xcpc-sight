@@ -21,9 +21,10 @@ import {
 } from "../static/js/data.mjs";
 
 test("versions cache-sensitive frontend assets consistently", async () => {
-  const [indexHtml, appModule] = await Promise.all([
+  const [indexHtml, appModule, problemRatingModule] = await Promise.all([
     readFile(new URL("../static/index.html", import.meta.url), "utf8"),
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/problem-rating.mjs", import.meta.url), "utf8"),
   ]);
   const stylesheetRevision = indexHtml.match(/styles\.css\?v=([\w-]+)/)?.[1];
   const applicationRevision = indexHtml.match(/app\.mjs\?v=([\w-]+)/)?.[1];
@@ -31,6 +32,33 @@ test("versions cache-sensitive frontend assets consistently", async () => {
   assert.ok(stylesheetRevision);
   assert.equal(applicationRevision, stylesheetRevision);
   assert.match(appModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
+  assert.match(appModule, new RegExp(`problem-rating\\.mjs\\?v=${applicationRevision}`));
+  assert.match(problemRatingModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
+});
+
+test("provides an integrated problem-rating chart filter and sortable table headers", async () => {
+  const [indexHtml, stylesheet, appModule] = await Promise.all([
+    readFile(new URL("../static/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(indexHtml, /id="problem-rating-tab"[^>]*aria-controls="problem-rating-view"/);
+  assert.doesNotMatch(indexHtml, /class="problem-controls"/);
+  assert.match(indexHtml, /id="problem-contest-sort"[^>]*class="table-sort-button"/);
+  assert.match(indexHtml, /id="problem-rating-sort"[^>]*class="table-sort-button"/);
+  assert.match(indexHtml, /通过队伍\/有效队伍/);
+  assert.match(appModule, /className: "problem-chart-legend"/);
+  assert.match(appModule, /text: "全选"/);
+  assert.match(appModule, /text: "全不选"/);
+  assert.match(appModule, /const slotWidth = \(width - left - right\) \/ maxSlots/);
+  assert.match(stylesheet, /\.problem-rating-chart\s*\{[^}]*width:\s*100%/);
+  assert.match(stylesheet, /\.problem-table-shell\s*\{[^}]*overflow:\s*auto/);
+  assert.match(
+    stylesheet,
+    /\.app-layout\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 17rem\) minmax\(0, 1fr\)/,
+  );
+  assert.match(stylesheet, /\.series-sidebar\s*\{[^}]*position:\s*sticky/);
+  assert.match(stylesheet, /\.detail-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
 test("provides a combined clear control and emphasizes zero deltas", async () => {

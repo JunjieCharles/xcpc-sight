@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
-  <link rel="stylesheet" href="./styles.css?v=20260807-1">
+  <link rel="stylesheet" href="./styles.css?v=20260821-4">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -41,7 +41,15 @@
     </aside>
 
     <div class="app-content">
-      <section class="controls" aria-label="搜索">
+      <div id="series-mode-switch" class="series-mode-switch" role="tablist"
+           aria-label="Rating 查看方式" hidden>
+        <button id="participant-rating-tab" type="button" role="tab"
+                aria-controls="series-view" aria-selected="true">选手 Rating</button>
+        <button id="problem-rating-tab" type="button" role="tab"
+                aria-controls="problem-rating-view" aria-selected="false">题目难度</button>
+      </div>
+
+      <section id="participant-controls" class="controls" aria-label="搜索">
         <div class="search-label">
           <label for="search-input">搜索参赛者或学校</label>
           <span class="search-field">
@@ -81,11 +89,66 @@
         </div>
       </section>
 
+      <section id="problem-rating-view" hidden aria-labelledby="problem-rating-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PROBLEM RATING</p>
+            <h2 id="problem-rating-title"></h2>
+          </div>
+          <p id="problem-rating-summary" class="section-note"></p>
+        </div>
+
+        <section class="panel problem-chart-panel" aria-labelledby="problem-chart-heading">
+          <div class="panel-heading">
+            <div>
+              <h3 id="problem-chart-heading">难度曲线对比</h3>
+              <p>每场题目按预测 Rating 从易到难排列；点击图例可筛选场次。</p>
+            </div>
+          </div>
+          <div id="problem-chart"></div>
+        </section>
+
+        <section class="panel problem-table-panel" aria-labelledby="problem-table-heading">
+          <div class="problem-table-heading">
+            <h3 id="problem-table-heading">题目 Rating 表格</h3>
+            <p id="problem-result-count" class="result-count" aria-live="polite"></p>
+          </div>
+          <div class="problem-table-shell" tabindex="0" aria-label="题目 Rating 表格">
+            <table class="data-table problem-table">
+              <colgroup>
+                <col class="problem-contest-col">
+                <col class="problem-index-col">
+                <col>
+                <col class="problem-rating-col">
+                <col class="problem-team-count-col">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th id="problem-contest-column" scope="colgroup" colspan="2">
+                    <button id="problem-contest-sort" class="table-sort-button" type="button">
+                      场次 + 题号 <span id="problem-contest-sort-indicator" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th scope="col">题名</th>
+                  <th id="problem-rating-column" scope="col">
+                    <button id="problem-rating-sort" class="table-sort-button" type="button">
+                      Rating <span id="problem-rating-sort-indicator" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th scope="col">通过队伍/有效队伍</th>
+                </tr>
+              </thead>
+              <tbody id="problem-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
       <section id="detail-view" hidden aria-labelledby="detail-title"></section>
     </div>
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20260807-1"></script>
+  <script type="module" src="./js/app.mjs?v=20260821-4"></script>
 </body>
 </html>
