@@ -7,14 +7,13 @@ from collections import defaultdict
 from .fetch_data import CodeforcesFetcher
 from .paths import ANALYSIS_DIR, ensure_directory
 from .plot_results import plot_from_csv
-from .solve_features import calculate_problem_times, get_problem_root as get_problem_root
+from .solve_features import calculate_problem_times
+from .solve_features import get_problem_root as get_problem_root
 
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze Codeforces contest data.")
-    parser.add_argument(
-        "contest_id", type=int, nargs="?", help="The Codeforces contest ID"
-    )
+    parser.add_argument("contest_id", type=int, nargs="?", help="The Codeforces contest ID")
     args = parser.parse_args()
 
     if args.contest_id:
@@ -46,13 +45,9 @@ def main():
 
     problems = fetcher.get_contest_problems(contest_id)
     problem_indices = sorted(problem["index"] for problem in problems)
-    rating_changes = fetcher._make_request(
-        "contest.ratingChanges", {"contestId": contest_id}
-    )
+    rating_changes = fetcher._make_request("contest.ratingChanges", {"contestId": contest_id})
     ratings = {
-        change["handle"]: change["newRating"]
-        for change in rating_changes
-        if "newRating" in change
+        change["handle"]: change["newRating"] for change in rating_changes if "newRating" in change
     }
 
     output_data = []
@@ -77,9 +72,7 @@ def main():
     csv_file = ensure_directory(ANALYSIS_DIR) / f"contest_{contest_id}_analysis.csv"
     print(f"Writing results to {csv_file}...")
     with csv_file.open("w", newline="", encoding="utf-8") as output_file:
-        writer = csv.DictWriter(
-            output_file, fieldnames=["handle", "rating", *problem_indices]
-        )
+        writer = csv.DictWriter(output_file, fieldnames=["handle", "rating", *problem_indices])
         writer.writeheader()
         writer.writerows(output_data)
 

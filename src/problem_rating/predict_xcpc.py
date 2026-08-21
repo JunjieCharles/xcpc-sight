@@ -9,11 +9,11 @@ import json
 import math
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from statistics import median
-from typing import Iterable
 
 import httpx
 import pandas as pd
@@ -21,13 +21,13 @@ from sklearn.base import clone
 
 from .build_problem_features import DEFAULT_OUTPUT
 from .experiment_models import build_models, prepare_features
+from .paths import ANALYSIS_DIR, PROJECT_ROOT
 from .problem_features import (
     kernel_solve_curve,
     sliding_window_solve_curve,
     summarize_solve_times,
 )
 from .solve_features import calculate_solve_features
-
 
 NOWCODER_IDS = tuple(range(133876, 133886))
 HDU_IDS = tuple(range(1229, 1239))
@@ -62,8 +62,7 @@ def stable_competitor_id(source: str, key: str) -> str:
 def load_series(path: Path) -> tuple[dict, dict[str, int]]:
     document = json.loads(path.read_text(encoding="utf-8"))
     ratings = {
-        competitor["id"]: int(competitor["finalRating"])
-        for competitor in document["competitors"]
+        competitor["id"]: int(competitor["finalRating"]) for competitor in document["competitors"]
     }
     return document, ratings
 
@@ -121,9 +120,7 @@ def load_nowcoder_contest(
             )
             if not has_activity:
                 continue
-            competitor_id = stable_competitor_id(
-                "nowcoder", f"standing:{row['uid']}"
-            )
+            competitor_id = stable_competitor_id("nowcoder", f"standing:{row['uid']}")
             rating = ratings.get(competitor_id)
             if rating is None:
                 missing_ratings.append(row["uid"])
@@ -182,9 +179,7 @@ def hdu_cache_path(cache_dir: Path, contest_id: int) -> Path:
 
 def fetch_hdu_caches(cache_dir: Path, xcpc_root: Path) -> None:
     missing = [
-        contest_id
-        for contest_id in HDU_IDS
-        if not hdu_cache_path(cache_dir, contest_id).exists()
+        contest_id for contest_id in HDU_IDS if not hdu_cache_path(cache_dir, contest_id).exists()
     ]
     if not missing:
         return
@@ -218,9 +213,7 @@ def fetch_hdu_caches(cache_dir: Path, xcpc_root: Path) -> None:
 
 def load_hdu_contest(contest: dict, ratings: dict[str, int], cache_dir: Path):
     contest_id = int(str(contest["id"]).split(":", 1)[1])
-    payload = json.loads(
-        hdu_cache_path(cache_dir, contest_id).read_text(encoding="utf-8")
-    )
+    payload = json.loads(hdu_cache_path(cache_dir, contest_id).read_text(encoding="utf-8"))
     participants = []
     missing_ratings = []
     for standing in payload["standings"]:
@@ -237,9 +230,7 @@ def load_hdu_contest(contest: dict, ratings: dict[str, int], cache_dir: Path):
             for problem_id, cell in zip(payload["problems"], cells, strict=True)
             if (accepted_time := parse_hdu_accepted_time(cell)) is not None
         }
-        participants.append(
-            Participant(float(rating), accepted_times, team_size=3)
-        )
+        participants.append(Participant(float(rating), accepted_times, team_size=3))
 
     if missing_ratings:
         print(
@@ -278,23 +269,17 @@ def build_feature_rows(contests: Iterable[ContestData]) -> list[dict]:
             ]
             solves.append(calculate_solve_features(submissions, max_previous=3))
 
-        for problem_order, (problem_index, problem_name) in enumerate(
-            contest.problems, start=1
-        ):
+        for problem_order, (problem_index, problem_name) in enumerate(contest.problems, start=1):
             solved_flags = [problem_index in user_solves for user_solves in solves]
             solved_count = sum(solved_flags)
             time_records = [
                 (participant.rating, user_solves[problem_index])
-                for participant, user_solves in zip(
-                    contest.participants, solves, strict=True
-                )
+                for participant, user_solves in zip(contest.participants, solves, strict=True)
                 if participant.rating >= 1600 and problem_index in user_solves
             ]
             solved_team_sizes = [
                 participant.team_size
-                for participant, solved in zip(
-                    contest.participants, solved_flags, strict=True
-                )
+                for participant, solved in zip(contest.participants, solved_flags, strict=True)
                 if solved
             ]
             row = {
@@ -311,9 +296,7 @@ def build_feature_rows(contests: Iterable[ContestData]) -> list[dict]:
                 "participantCount": len(contest.participants),
                 "solvedCount": solved_count,
                 "solveRate": (solved_count + 0.5) / (len(contest.participants) + 1),
-                "teamSizeMedian": (
-                    float(median(solved_team_sizes)) if solved_team_sizes else None
-                ),
+                "teamSizeMedian": (float(median(solved_team_sizes)) if solved_team_sizes else None),
             }
             row.update(sliding_window_solve_curve(ratings, solved_flags, CENTERS))
             row.update(
@@ -335,11 +318,7 @@ def fetch_nowcoder_problem_titles(
     contest_ids: Iterable[int],
     cache_path: Path,
 ):
-    cached = (
-        json.loads(cache_path.read_text(encoding="utf-8"))
-        if cache_path.exists()
-        else {}
-    )
+    cached = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
     unavailable = {
         problem_id
         for problem_id, title in cached.items()
@@ -364,22 +343,16 @@ def fetch_nowcoder_problem_titles(
             response.raise_for_status()
             payload = response.json()
             if payload.get("code") != 0:
-                raise RuntimeError(
-                    f"Nowcoder {contest_id}: problem-list returned {payload!r}"
-                )
+                raise RuntimeError(f"Nowcoder {contest_id}: problem-list returned {payload!r}")
             for problem in payload["data"]["data"]:
                 problem_id = str(problem["problemId"])
                 title = str(problem["title"]).strip()
                 cached[problem_id] = title or f"Nowcoder problem {problem_id}"
     still_missing = problem_ids - set(cached)
     if still_missing:
-        raise RuntimeError(
-            f"Nowcoder problem-list omitted {len(still_missing)} problem titles"
-        )
+        raise RuntimeError(f"Nowcoder problem-list omitted {len(still_missing)} problem titles")
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(
-        json.dumps(cached, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    cache_path.write_text(json.dumps(cached, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return cached
 
 
@@ -390,9 +363,7 @@ def collect_nowcoder_problem_ids(paths: Iterable[Path]) -> set[str]:
             reader = csv.DictReader(source)
             row = next(reader)
             problem_ids.update(
-                value
-                for column, value in row.items()
-                if column.endswith("_problem_id")
+                value for column, value in row.items() if column.endswith("_problem_id")
             )
     return problem_ids
 
@@ -465,9 +436,7 @@ def write_excel_tables(result: pd.DataFrame, output_path: Path) -> None:
             ("nowcoder-summer-2026", "牛客"),
             ("hdu-summer-2026", "HDU"),
         ]:
-            table = result.loc[result["series"] == series, list(columns)].rename(
-                columns=columns
-            )
+            table = result.loc[result["series"] == series, list(columns)].rename(columns=columns)
             table.to_excel(writer, sheet_name=sheet_name, index=False)
             worksheet = writer.sheets[sheet_name]
             worksheet.freeze_panes = "A2"
@@ -482,27 +451,27 @@ def write_excel_tables(result: pd.DataFrame, output_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--xcpc-root", type=Path, required=True)
+    parser.add_argument("--xcpc-root", type=Path, default=PROJECT_ROOT)
     parser.add_argument("--training-features", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--cache-dir",
         type=Path,
-        default=Path("outputs/analysis/xcpc_cache"),
+        default=ANALYSIS_DIR / "xcpc_cache",
     )
     parser.add_argument(
         "--output-csv",
         type=Path,
-        default=Path("outputs/analysis/xcpc_problem_ratings.csv"),
+        default=ANALYSIS_DIR / "xcpc_problem_ratings.csv",
     )
     parser.add_argument(
         "--output-markdown",
         type=Path,
-        default=Path("outputs/analysis/xcpc_problem_ratings.md"),
+        default=ANALYSIS_DIR / "xcpc_problem_ratings.md",
     )
     parser.add_argument(
         "--output-xlsx",
         type=Path,
-        default=Path("outputs/analysis/xcpc_problem_ratings.xlsx"),
+        default=ANALYSIS_DIR / "xcpc_problem_ratings.xlsx",
     )
     args = parser.parse_args()
 
@@ -540,8 +509,7 @@ def main() -> None:
     hdu_cache = args.cache_dir / "hdu"
     fetch_hdu_caches(hdu_cache, args.xcpc_root)
     hdu_contests = [
-        load_hdu_contest(contest, hdu_ratings, hdu_cache)
-        for contest in hdu_document["contests"]
+        load_hdu_contest(contest, hdu_ratings, hdu_cache) for contest in hdu_document["contests"]
     ]
     result = predict(
         build_feature_rows([*nowcoder_contests, *hdu_contests]),

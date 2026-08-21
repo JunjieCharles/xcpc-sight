@@ -32,7 +32,6 @@ except ImportError:  # pragma: no cover - depends on the optional experiment pac
 
 from .build_problem_features import DEFAULT_OUTPUT
 
-
 warnings.filterwarnings(
     "ignore",
     category=FutureWarning,
@@ -54,13 +53,10 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
     """Create transformed feature families discovered from the CSV schema."""
 
     features = data.copy()
+
     def centered_columns(prefix: str) -> list[str]:
         return sorted(
-            [
-                column
-                for column in features
-                if re.fullmatch(rf"{re.escape(prefix)}\d+", column)
-            ],
+            [column for column in features if re.fullmatch(rf"{re.escape(prefix)}\d+", column)],
             key=lambda column: int(column.removeprefix(prefix)),
         )
 
@@ -113,6 +109,7 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
         "solverRatingMedian",
         "solverRatingIqr",
     ]
+
     def every_second_center(columns: list[str]) -> list[str]:
         return [
             column
@@ -274,9 +271,7 @@ def grouped_predictions(
             data.iloc[train_indices]["problemRating"],
             data.iloc[train_indices]["contestId"],
         )
-        predictions[test_indices] = model.predict(
-            data.iloc[test_indices][feature_columns]
-        )
+        predictions[test_indices] = model.predict(data.iloc[test_indices][feature_columns])
     return predictions
 
 
@@ -287,9 +282,7 @@ def chronological_predictions(
     *,
     holdout_contests: int,
 ) -> tuple[np.ndarray, np.ndarray]:
-    contest_starts = (
-        data.groupby("contestId")["contestStartTimeSeconds"].first().sort_values()
-    )
+    contest_starts = data.groupby("contestId")["contestStartTimeSeconds"].first().sort_values()
     test_contests = set(contest_starts.tail(holdout_contests).index)
     train_mask = ~data["contestId"].isin(test_contests)
     test_mask = ~train_mask
@@ -334,9 +327,7 @@ def ensemble_predictions(
         "gaussian + prev1-3 / CatBoost",
     ]
     available = [
-        predictions_by_name[name]
-        for name in preferred_models
-        if name in predictions_by_name
+        predictions_by_name[name] for name in preferred_models if name in predictions_by_name
     ]
     ensembles = {}
     if len(available) >= 2:
@@ -472,9 +463,7 @@ def main():
     )
     grouped_results.update(grouped_ensembles)
     for label, predictions in grouped_ensembles.items():
-        print_evaluation(
-            calculate_evaluation(label, prepared["problemRating"], predictions)
-        )
+        print_evaluation(calculate_evaluation(label, prepared["problemRating"], predictions))
 
     print(f"\nChronological holdout: newest {args.holdout_contests} contests")
     chronological_results = {}

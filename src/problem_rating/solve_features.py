@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Iterable, Mapping
 
 
 def get_problem_root(index: str) -> str:
@@ -62,15 +62,11 @@ def calculate_solve_features(
     ordered_accepts = sorted(first_accepts.items(), key=lambda item: item[1])
     results: dict[str, SolveFeatures] = {}
 
-    for accepted_order, (problem_index, accepted_time) in enumerate(
-        ordered_accepts, start=1
-    ):
+    for accepted_order, (problem_index, accepted_time) in enumerate(ordered_accepts, start=1):
         current_root = get_problem_root(problem_index)
         previous_times = [
             previous_time
-            for previous_index, previous_time in reversed(
-                ordered_accepts[: accepted_order - 1]
-            )
+            for previous_index, previous_time in reversed(ordered_accepts[: accepted_order - 1])
             if get_problem_root(previous_index) != current_root
         ]
 

@@ -12,7 +12,7 @@
 
 ### 1. 训练数据与 rating 口径
 
-`collect_training_data` 默认收集最近 100 场已结束的常规 Codeforces rated 比赛，排除名称中标记为 `Div. 3` 或 `Div. 4` 的比赛。`build_problem_features` 将数据整理为“一道题一行”的 `data/processed/problem_features.csv`。
+`collect_training_data` 默认收集最近 100 场已结束的常规 Codeforces rated 比赛，排除名称中标记为 `Div. 3` 或 `Div. 4` 的比赛。`build_problem_features` 将数据整理为“一道题一行”的 `data-cache/problem-rating/data/processed/problem_features.csv`。
 
 - 训练目标为题目的官方 `problemRating`；
 - Codeforces 参赛者使用 `contest.ratingChanges` 中的赛后 `newRating`，使训练时的 rating 尽量接近部署时可取得的最新水平；
@@ -150,14 +150,14 @@ python -m problem_rating.experiment_models --suite advanced
 `predict_xcpc` 读取 `xcpc-sight` 发布的两个 series，以每个报名实体的 `finalRating` 作为最新 rating，生成牛客和 HDU 各 10 场的逐题预测：
 
 ```powershell
-python -m problem_rating.predict_xcpc --xcpc-root C:\Code\xcpc-sight
+python -m problem_rating.predict_xcpc
 ```
 
 默认输出：
 
-- `outputs/analysis/xcpc_problem_ratings.xlsx`：牛客、HDU 两个 sheet；
-- `outputs/analysis/xcpc_problem_ratings.md`：两个独立 Markdown 表格；
-- `outputs/analysis/xcpc_problem_ratings.csv`：包含 series 标识的完整数据。
+- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.xlsx`：牛客、HDU 两个 sheet；
+- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.md`：两个独立 Markdown 表格；
+- `data-cache/problem-rating/outputs/analysis/xcpc_problem_ratings.csv`：包含 series 标识的完整数据。
 
 牛客题名从公开 `contest/problem-list` 接口取得。HDU 的 guest 榜单数据目前只提供题号，无法读取题名时会在表中明确标注，不影响通过数和 rating 预测。
 
@@ -181,9 +181,19 @@ python -m problem_rating.plot_results
 ## 目录结构
 
 - `src/problem_rating/`：特征、模型、验证和预测代码；
-- `data/raw/api_cache/`：Codeforces API 响应缓存；
-- `data/processed/`：训练数据与题目级特征；
-- `outputs/analysis/`：分析结果、CSV、Markdown 和 Excel；
-- `outputs/plots/`：图表；
-- `outputs/models/`：旧线性模型文件；
-- `docs/api.md`：Codeforces API 参考。
+- `data-cache/problem-rating/data/raw/api_cache/`：Codeforces API 响应缓存；
+- `data-cache/problem-rating/data/processed/`：训练数据与题目级特征；
+- `data-cache/problem-rating/outputs/analysis/`：分析结果、CSV、Markdown 和 Excel；
+- `data-cache/problem-rating/outputs/plots/`：图表；
+- `data-cache/problem-rating/outputs/models/`：旧线性模型文件；
+- `doc/problem-rating-api.md`：Codeforces API 参考。
+
+`data-cache/problem-rating/` 整体被 Git 忽略，不属于可发布数据。缓存来自 Codeforces 公共 API，可能包含公开账号 handle、比赛提交和榜单信息；不得在其中混入登录 Cookie、API 密钥或其他凭据。代码不会读取 `.env` 或把认证信息写入缓存。题目 rating 当前只提供 Python/命令行流程，尚未适配静态前端。
+
+## 迁移与提交历史
+
+该功能从本地 `problem-rating` 仓库迁入。源仓库 `master` 的 7 个提交作为当前仓库合并提交的第二父链保留，随后按本项目布局移动到 `src/problem_rating/`、`tests/problem_rating/` 和 `doc/`。源仓库的编辑器配置及重复的顶层抓取脚本未纳入最终工作树；可执行实现以 `python -m problem_rating.fetch_data` 及上文各模块入口为准。
+
+## 测试覆盖与限制
+
+聚焦测试覆盖 AC 顺序与拆分题族、滑窗/核/IRT 特征、未提交样本口径、模型集成门控、XCPC 标识稳定性和本地路径隔离。默认测试只读取构造数据，不访问网络，也不依赖已同步的本地缓存。模型精度数字来自源仓库现有实验，迁移本身没有重新抓取数据或复跑完整交叉验证。

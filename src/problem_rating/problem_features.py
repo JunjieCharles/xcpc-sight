@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from statistics import median
-from typing import Mapping, Sequence
 
 import numpy as np
 from scipy.optimize import minimize
@@ -43,12 +43,9 @@ def sliding_window_solve_curve(
             result[f"solveLogitR{center}"] = None
         else:
             # Jeffreys smoothing keeps zero/all-solved windows finite.
-            result[f"solveRateR{center}"] = (solved_count + 0.5) / (
-                participant_count + 1.0
-            )
+            result[f"solveRateR{center}"] = (solved_count + 0.5) / (participant_count + 1.0)
             result[f"solveLogitR{center}"] = math.log(
-                (solved_count + 0.5)
-                / (participant_count - solved_count + 0.5)
+                (solved_count + 0.5) / (participant_count - solved_count + 0.5)
             )
 
     return result
@@ -91,9 +88,7 @@ def kernel_solve_curve(
         total_weight = float(np.sum(weights))
         squared_weight = float(np.sum(weights**2))
         solved_weight = float(np.sum(weights * solved_values))
-        effective_count = (
-            total_weight**2 / squared_weight if squared_weight > 0 else 0.0
-        )
+        effective_count = total_weight**2 / squared_weight if squared_weight > 0 else 0.0
         result[f"{prefix}ParticipantWeightR{center}"] = total_weight
         result[f"{prefix}SolvedWeightR{center}"] = solved_weight
         result[f"{prefix}EffectiveCountR{center}"] = effective_count
@@ -102,12 +97,9 @@ def kernel_solve_curve(
             result[f"{prefix}SolveRateR{center}"] = None
             result[f"{prefix}SolveLogitR{center}"] = None
         else:
-            result[f"{prefix}SolveRateR{center}"] = (solved_weight + 0.5) / (
-                total_weight + 1.0
-            )
+            result[f"{prefix}SolveRateR{center}"] = (solved_weight + 0.5) / (total_weight + 1.0)
             result[f"{prefix}SolveLogitR{center}"] = math.log(
-                (solved_weight + 0.5)
-                / (total_weight - solved_weight + 0.5)
+                (solved_weight + 0.5) / (total_weight - solved_weight + 0.5)
             )
 
     return result
@@ -140,9 +132,7 @@ def fit_irt_solve_curve(
     solved_counts = np.bincount(inverse, weights=solved_values).astype(float)
     scaled_ratings = (unique_ratings - rating_center) / rating_scale
 
-    overall_rate = (float(np.sum(solved_values)) + 0.5) / (
-        len(solved_values) + 1.0
-    )
+    overall_rate = (float(np.sum(solved_values)) + 0.5) / (len(solved_values) + 1.0)
     initial_intercept = math.log(overall_rate / (1.0 - overall_rate))
 
     def objective(parameters):
@@ -202,9 +192,7 @@ def summarize_solve_times(
         [record[1].elapsed_since_previous[:3] for record in solve_records],
         dtype=float,
     )
-    has_previous = np.asarray(
-        [record[1].has_previous[:3] for record in solve_records], dtype=bool
-    )
+    has_previous = np.asarray([record[1].has_previous[:3] for record in solve_records], dtype=bool)
     log_elapsed = np.log(np.maximum(elapsed, minimum_time))
 
     for offset in range(3):
@@ -214,9 +202,7 @@ def summarize_solve_times(
         result[f"logTimePrev{previous}Iqr"] = float(q75 - q25)
         result[f"hasPrev{previous}Rate"] = float(np.mean(has_previous[:, offset]))
 
-    rating_q25, rating_median, rating_q75 = np.percentile(
-        ratings, [25, 50, 75]
-    )
+    rating_q25, rating_median, rating_q75 = np.percentile(ratings, [25, 50, 75])
     result["solverRatingMedian"] = float(rating_median)
     result["solverRatingIqr"] = float(rating_q75 - rating_q25)
     result["burstUnder60Rate"] = float(np.mean(elapsed[:, 0] < 60))
@@ -225,14 +211,10 @@ def summarize_solve_times(
     if len(solve_records) < 20:
         result["lowTimeOutlierRate"] = None
     else:
-        adjusted_log_time = log_elapsed[:, 0] - rating_coefficient * (
-            ratings - rating_median
-        )
+        adjusted_log_time = log_elapsed[:, 0] - rating_coefficient * (ratings - rating_median)
         q25, q75 = np.percentile(adjusted_log_time, [25, 75])
         lower_fence = q25 - 1.5 * (q75 - q25)
-        result["lowTimeOutlierRate"] = float(
-            np.mean(adjusted_log_time < lower_fence)
-        )
+        result["lowTimeOutlierRate"] = float(np.mean(adjusted_log_time < lower_fence))
 
     return result
 
@@ -280,9 +262,7 @@ def build_contest_problem_features(
 
     for problem_order, problem in enumerate(rated_problems, start=1):
         problem_index = problem["index"]
-        solved_flags = [
-            problem_index in solves_by_user.get(handle, {}) for handle in handles
-        ]
+        solved_flags = [problem_index in solves_by_user.get(handle, {}) for handle in handles]
         solved_count = sum(solved_flags)
         participant_count = len(handles)
 
@@ -309,13 +289,9 @@ def build_contest_problem_features(
             "participantCount": participant_count,
             "solvedCount": solved_count,
             "solveRate": (
-                (solved_count + 0.5) / (participant_count + 1.0)
-                if participant_count
-                else None
+                (solved_count + 0.5) / (participant_count + 1.0) if participant_count else None
             ),
-            "teamSizeMedian": (
-                float(median(solved_team_sizes)) if solved_team_sizes else None
-            ),
+            "teamSizeMedian": (float(median(solved_team_sizes)) if solved_team_sizes else None),
         }
         row.update(
             sliding_window_solve_curve(

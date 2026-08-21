@@ -12,6 +12,7 @@
 - 发布 `2026牛客暑期多校训练营` 第一至第十场；
 - 发布固定 CID `1229` 至 `1238` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
+- 以独立的 `problem_rating` 包训练、验证和预测题目难度 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
 - 提供零依赖、无需构建的静态 rating 浏览前端；
 - 可复用的纯 Python API。
@@ -24,6 +25,12 @@ python -m venv .venv
 ```
 
 需要 Python 3.11 或更高版本。
+
+题目难度模型依赖 NumPy、pandas、SciPy 和 scikit-learn 等科学计算包；只使用原有选手 rating 功能时无需安装。运行完整题目 rating 流程前安装对应 extra：
+
+```bash
+.venv/Scripts/python -m pip install -e ".[problem-rating]"
+```
 
 ## 使用
 
@@ -91,6 +98,8 @@ data-cache/        已忽略、可丢弃的上游下载缓存
 doc/               各功能设计文档
 ```
 
+选手/报名实体 rating 位于 `src/rating/`，题目难度 rating 位于独立的 `src/problem_rating/`，两者不共享模型或状态。后者的 Codeforces API 缓存、训练数据和本地输出都位于已忽略的 `data-cache/problem-rating/`；详细算法和命令见 [题目难度 Rating](doc/problem-rating.md)。当前静态前端尚未接入题目 rating 结果。
+
 库 API 不隐式写文件；脚本负责显式输出。发行名称为 `xcpc-sight`，安装后分别从 `core`、`rating` 导入，不提供 `xcpc_sight` facade。
 
 ## 赛季口径
@@ -101,6 +110,7 @@ doc/               各功能设计文档
 
 - [设计文档索引](doc/README.md)
 - [Rating 规则](doc/rating-rules.md)
+- [题目难度 Rating](doc/problem-rating.md)
 - [静态站点数据](doc/static-site-data.md)
 - [RankLand 数据](doc/rankland-data.md)
 - [牛客榜单数据](doc/nowcoder-data.md)
@@ -111,7 +121,7 @@ doc/               各功能设计文档
 
 ```bash
 ruff check .
-pytest --cov=core --cov=rating
+pytest --cov=core --cov=rating --cov=problem_rating
 node --test tests/test_frontend_data.mjs
 ```
 

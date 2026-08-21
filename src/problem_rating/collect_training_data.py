@@ -1,18 +1,16 @@
 import csv
 import re
+
 from .analyze_contest import calculate_problem_times
 from .fetch_data import CodeforcesAPIError, CodeforcesFetcher
 from .paths import PROCESSED_DATA_DIR, ensure_directory
-
 
 EXCLUDED_DIVISION_PATTERN = re.compile(r"\bDiv\.\s*[34]\b", re.IGNORECASE)
 
 
 def get_rating_changes(fetcher, contest_id):
     try:
-        rating_changes = fetcher._make_request(
-            "contest.ratingChanges", {"contestId": contest_id}
-        )
+        rating_changes = fetcher._make_request("contest.ratingChanges", {"contestId": contest_id})
     except CodeforcesAPIError:
         return []
 
@@ -22,7 +20,7 @@ def get_rating_changes(fetcher, contest_id):
 def get_recent_contests(fetcher, limit=10):
     print("Fetching contest list...")
     contests = fetcher._make_request("contest.list", {"gym": "false"})
-    
+
     target_contests = []
     excluded_division_count = 0
     excluded_unrated_count = 0
@@ -47,6 +45,7 @@ def get_recent_contests(fetcher, limit=10):
     print(f"Excluded {excluded_unrated_count} unrated contests.")
     return target_contests
 
+
 def process_contest(fetcher, contest, writer):
     contest_id = contest["id"]
     contest_name = contest["name"]
@@ -56,7 +55,7 @@ def process_contest(fetcher, contest, writer):
     if not contest_duration:
         print("Contest duration is unavailable. Skipping.")
         return
-    
+
     # 1. Get Problems and Official Ratings
     try:
         problems_data = fetcher.get_contest_problems(contest_id)
@@ -68,7 +67,7 @@ def process_contest(fetcher, contest, writer):
     for p in problems_data:
         if "rating" in p:
             problem_ratings[p["index"]] = p["rating"]
-            
+
     if not problem_ratings:
         print("No rated problems found. Skipping.")
         return
@@ -85,7 +84,7 @@ def process_contest(fetcher, contest, writer):
     else:
         print("No rating changes found. Skipping.")
         return
-        
+
     print(f"Rated Participants: {len(user_ratings)}")
 
     # 3. Get Submissions
@@ -117,36 +116,40 @@ def process_contest(fetcher, contest, writer):
         # No need for hardcoded time filter if we trust participantType
         rating = user_ratings[handle]
         times = calculate_problem_times(subs)
-        
+
         for p_idx, time_sec in times.items():
             # Only if problem has an official rating
             if p_idx in problem_ratings:
                 # Use seconds, clamp to 1 second to avoid zero
-                if time_sec < 1.0: time_sec = 1.0
-                
-                writer.writerow({
-                    "contestId": contest_id,
-                    "problemIndex": p_idx,
-                    "problemRating": problem_ratings[p_idx],
-                    "userRating": rating,
-                    "timeConsumed": time_sec,
-                    "contestDurationSeconds": contest_duration,
-                })
+                if time_sec < 1.0:
+                    time_sec = 1.0
+
+                writer.writerow(
+                    {
+                        "contestId": contest_id,
+                        "problemIndex": p_idx,
+                        "problemRating": problem_ratings[p_idx],
+                        "userRating": rating,
+                        "timeConsumed": time_sec,
+                        "contestDurationSeconds": contest_duration,
+                    }
+                )
                 row_count += 1
-                
+
     print(f"Saved {row_count} rows for contest {contest_id}.")
+
 
 def main():
     fetcher = CodeforcesFetcher()
-    
+
     # Find contests
     contests = get_recent_contests(fetcher, limit=100)
     print(f"Found {len(contests)} contests:")
     for c in contests:
         print(f"- {c['id']}: {c['name']}")
-        
+
     output_file = ensure_directory(PROCESSED_DATA_DIR) / "training_data.csv"
-    
+
     with open(output_file, "w", newline="", encoding="utf-8") as f:
         fieldnames = [
             "contestId",
@@ -158,11 +161,12 @@ def main():
         ]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        
+
         for contest in contests:
             process_contest(fetcher, contest, writer)
-            
+
     print(f"\nData collection complete. Saved to {output_file}")
+
 
 if __name__ == "__main__":
     main()

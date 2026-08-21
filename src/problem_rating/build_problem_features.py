@@ -10,7 +10,6 @@ from .fetch_data import CodeforcesFetcher
 from .paths import PROBLEM_FEATURE_FILE, PROCESSED_DATA_DIR, ensure_directory
 from .problem_features import build_contest_problem_features
 
-
 DEFAULT_OUTPUT = PROBLEM_FEATURE_FILE
 
 
@@ -20,9 +19,7 @@ def parse_centers(specification: str) -> list[int]:
     try:
         start, stop, step = map(int, specification.split(":"))
     except ValueError as error:
-        raise argparse.ArgumentTypeError(
-            "rating centers must use START:STOP:STEP"
-        ) from error
+        raise argparse.ArgumentTypeError("rating centers must use START:STOP:STEP") from error
     if step <= 0 or stop < start:
         raise argparse.ArgumentTypeError("invalid rating center range")
     return list(range(start, stop + 1, step))
@@ -68,12 +65,8 @@ def main():
     output_rows: list[dict] = []
     for position, contest_id in enumerate(contest_ids, start=1):
         print(f"[{position}/{len(contest_ids)}] Building contest {contest_id}...")
-        standings = fetcher._make_request(
-            "contest.standings", {"contestId": contest_id}
-        )
-        rating_changes = fetcher._make_request(
-            "contest.ratingChanges", {"contestId": contest_id}
-        )
+        standings = fetcher._make_request("contest.standings", {"contestId": contest_id})
+        rating_changes = fetcher._make_request("contest.ratingChanges", {"contestId": contest_id})
         submissions = fetcher.get_all_contest_submissions(contest_id)
         output_rows.extend(
             build_contest_problem_features(
