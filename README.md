@@ -24,18 +24,13 @@
 
 ### 2. 解题用时计算
 
-对于同一用户的提交，程序按提交时间正序处理，并只使用每题第一次 AC。对题目 $p$：
-
-1. 记录该题第一次提交时刻 $t_{\text{first}}(p)$ 与第一次 AC 时刻 $t_{\text{AC}}(p)$。
-2. 找到此前最近一次 AC 的不同题目时刻 $t_{\text{prev}}$。题号会忽略末尾数字比较，例如 `F1` 和 `F2` 视为同一题目族，避免把它们互相作为切换题目的边界。
-3. 定义开始时刻和用时：
+对于同一用户的提交，程序按提交时间正序处理，并只使用每题第一次 AC。当前实现不再依赖第一次提交时刻，而是记录此前最近三次不同题目族的 AC 边界：
 
 $$
-t_{\text{start}} = \min(t_{\text{first}}(p), t_{\text{prev}}), \qquad
-T = t_{\text{AC}}(p) - t_{\text{start}}
+\Delta_k(p) = t_{\text{AC}}(p) - t_{\text{prev},k}(p), \qquad k=1,2,3
 $$
 
-这个定义将某题的尝试开始时间与上一次完成其他题目的时间结合起来，近似描述连续解题过程中的实际耗时。
+不足 $k$ 个边界时使用比赛开始时刻，并额外记录边界是否存在。题号会忽略末尾数字比较，例如 `F1` 和 `F2` 视为同一题目族。兼容接口 `calculate_problem_times` 返回 $\Delta_1$；实验特征同时保留 $\Delta_1,\Delta_2,\Delta_3$。
 
 ### 3. 训练模型
 
@@ -86,8 +81,22 @@ python -m problem_rating.unified_model
 python -m problem_rating.unified_model --balance-difficulties
 python -m problem_rating.evaluate_contest_difficulty 2164
 python -m problem_rating.plot_results
+python -m problem_rating.build_problem_features
+python -m problem_rating.experiment_models
 ```
 
 `analyze_contest` 会将单场 CSV 写入 `outputs/analysis/`，并自动在 `outputs/plots/` 生成按题目的 rating-耗时图。
 
 切换为赛后 rating 或比赛时长过滤后，需要依次重新运行 `collect_training_data` 和 `unified_model`，再执行 `evaluate_contest_difficulty`。
+
+## 实验模型
+
+`build_problem_features` 从 API 缓存生成一题一行的 `data/processed/problem_features.csv`。主要特征包括：
+
+- 所有正式 rated 参赛者的二元 `solved` 结果；没有 AC 的记录统一作为未通过，不区分是否提交；
+- 从 800 到 3500 的参考 rating，以每个参考值为中心上下 100 分计算重叠滑动窗口过题率；
+- 每个窗口的参赛人数、过题人数、Jeffreys 平滑过题率及 logit；
+- 不使用首次提交的 prev1–prev3 用时中位数、IQR、边界覆盖率和低尾异常率；
+- 比赛时长、题目顺序、题目数量与队伍人数。
+
+`experiment_models` 比较 Ridge、加性样条 GAM 和浅层梯度提升，并同时报告按 contest 分组的交叉验证和最新 20 场的时间留出结果。该实验入口不会覆盖现有 `unified_model` 模型文件。

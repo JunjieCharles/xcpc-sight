@@ -9,6 +9,7 @@ ANALYSIS_DIR = PROJECT_ROOT / "outputs" / "analysis"
 PLOTS_DIR = PROJECT_ROOT / "outputs" / "plots"
 MODEL_DIR = PROJECT_ROOT / "outputs" / "models"
 MODEL_FILE = MODEL_DIR / "time_model.json"
+PROBLEM_FEATURE_FILE = PROCESSED_DATA_DIR / "problem_features.csv"
 
 
 def ensure_directory(directory: Path) -> Path:
