@@ -129,6 +129,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .problem-chart-empty { border: 1px solid var(--line); border-radius: 5px; background: #fbfcfd; }
 .problem-curve-line { fill: none; stroke-width: 2.5; stroke-linecap: round; transition: opacity .12s, stroke-width .12s; }
 .problem-curve-line:focus { outline: none; stroke-width: 4; }
+.problem-curve-hover-target { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: crosshair; }
 .problem-curve-point { transition: opacity .12s; pointer-events: none; }
 .problem-curve-hit { fill: transparent; cursor: crosshair; }
 .problem-curve-line.is-muted, .problem-curve-point.is-muted, .problem-curve-hit.is-muted { opacity: .12; }

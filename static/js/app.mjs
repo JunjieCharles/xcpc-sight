@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260821-13";
+} from "./data.mjs?v=20260821-15";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260821-13";
+} from "./problem-rating.mjs?v=20260821-15";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -610,13 +610,12 @@ function renderProblemChart() {
     class: "problem-rating-chart",
     viewBox: `0 0 ${width} ${height}`,
     role: "img",
-    "aria-labelledby": "problem-chart-title problem-chart-description",
+    "aria-label": `${state.problemSeries.title}题目难度曲线`,
+    "aria-describedby": "problem-chart-description",
   });
-  const title = svgNode("title", { id: "problem-chart-title" });
-  title.textContent = `${state.problemSeries.title}题目难度曲线`;
   const description = svgNode("desc", { id: "problem-chart-description" });
   description.textContent = "每场比赛的题目按预测 Rating 从易到难排列，横向长度与题目数量成正比。";
-  svg.append(title, description);
+  svg.append(description);
 
   for (let tick = 0; tick <= 5; tick += 1) {
     const value = Math.round((min + (max - min) * tick / 5) / 100) * 100;
@@ -662,11 +661,39 @@ function renderProblemChart() {
     });
     const emphasize = () => emphasizeProblemCurve(curve.contest.id);
     const clearEmphasis = () => emphasizeProblemCurve();
-    path.addEventListener("mouseenter", emphasize);
-    path.addEventListener("focus", emphasize);
-    path.addEventListener("mouseleave", clearEmphasis);
-    path.addEventListener("blur", clearEmphasis);
-    svg.append(path);
+    const positionCurveTooltip = (event) => {
+      const middle = screenPoints[Math.floor(screenPoints.length / 2)];
+      if (event.type === "mouseenter" || event.type === "mousemove") {
+        const bounds = stage.getBoundingClientRect();
+        tooltip.style.left = `${Math.min(width - 220, Math.max(4, event.clientX - bounds.left + 10))}px`;
+        tooltip.style.top = `${Math.max(4, event.clientY - bounds.top - 46)}px`;
+      } else {
+        tooltip.style.left = `${Math.min(width - 220, middle.x + 10)}px`;
+        tooltip.style.top = `${Math.max(4, middle.y - 48)}px`;
+      }
+    };
+    const showCurve = (event) => {
+      emphasize();
+      tooltip.hidden = false;
+      tooltip.replaceChildren(node("strong", { text: curve.contest.title }));
+      positionCurveTooltip(event);
+    };
+    const hideCurve = () => {
+      tooltip.hidden = true;
+      clearEmphasis();
+    };
+    const hoverPath = svgNode("path", {
+      class: "problem-curve-hover-target",
+      d: monotoneCubicPath(screenPoints),
+      "aria-hidden": "true",
+      "data-curve-id": curve.contest.id,
+    });
+    path.addEventListener("focus", showCurve);
+    path.addEventListener("blur", hideCurve);
+    hoverPath.addEventListener("mouseenter", showCurve);
+    hoverPath.addEventListener("mousemove", positionCurveTooltip);
+    hoverPath.addEventListener("mouseleave", hideCurve);
+    svg.append(path, hoverPath);
 
     screenPoints.forEach((point) => {
       const dot = svgNode("circle", {
@@ -691,7 +718,7 @@ function renderProblemChart() {
         emphasize();
         tooltip.hidden = false;
         tooltip.replaceChildren(
-          node("strong", { text: `${shortContestTitle(curve.contest, curve.contestIndex)} · ${point.problem.index}` }),
+          node("strong", { text: `${curve.contest.title} · ${point.problem.index}` }),
           ...(point.problem.name ? [node("span", { text: point.problem.name })] : []),
           node("span", {}, [document.createTextNode("Rating "), ratingNode(point.problem.rating)]),
         );

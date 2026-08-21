@@ -72,6 +72,12 @@ test("provides an integrated problem-rating chart filter and sortable table head
   assert.match(appModule, /const slotWidth = \(width - left - right\) \/ maxSlots/);
   assert.doesNotMatch(appModule, /PROBLEM_CURVE_COLORS/);
   assert.match(appModule, /problemCurveColor\(contestIndex\)/);
+  assert.doesNotMatch(appModule, /svgNode\("title", \{ id: "problem-chart-title" \}\)/);
+  assert.match(appModule, /class: "problem-curve-hover-target"/);
+  assert.match(appModule, /tooltip\.replaceChildren\(node\("strong", \{ text: curve\.contest\.title \}\)\)/);
+  assert.match(appModule, /text: `\$\{curve\.contest\.title\} · \$\{point\.problem\.index\}`/);
+  assert.doesNotMatch(appModule, /shortContestTitle\(curve\.contest, curve\.contestIndex\)/);
+  assert.match(stylesheet, /\.problem-curve-hover-target\s*\{[^}]*stroke-width:\s*14/);
   assert.match(stylesheet, /\.problem-rating-chart\s*\{[^}]*width:\s*100%/);
   assert.match(stylesheet, /\.problem-table-shell\s*\{[^}]*overflow:\s*auto/);
   assert.match(
