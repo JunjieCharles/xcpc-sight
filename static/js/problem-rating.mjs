@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260821-11";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260821-13";
 
 const SCHEMA_VERSION = 1;
 const validatedIndexes = new WeakSet();
@@ -107,6 +107,16 @@ export function validateProblemRatingSeries(document) {
 
 export function compareProblemIndexes(left, right) {
   return problemIndexCollator.compare(left, right);
+}
+
+export function problemCurveColor(contestIndex) {
+  if (!Number.isSafeInteger(contestIndex) || contestIndex < 0) {
+    throw new RangeError("contestIndex must be a non-negative safe integer");
+  }
+  const hue = (212 + contestIndex * 137.507764) % 360;
+  const saturation = contestIndex % 2 ? 72 : 78;
+  const lightness = [36, 45, 40][contestIndex % 3];
+  return `hsl(${hue.toFixed(1)} ${saturation}% ${lightness}%)`;
 }
 
 export function flattenProblemRatings(document, selectedContestIds = null) {

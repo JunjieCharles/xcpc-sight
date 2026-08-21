@@ -59,6 +59,8 @@ test("provides an integrated problem-rating chart filter and sortable table head
   assert.match(appModule, /problemNameColumn\.hidden = !showProblemNames/);
   assert.match(appModule, /colSpan: showProblemNames \? 5 : 4/);
   assert.match(appModule, /className: "problem-chart-legend"/);
+  assert.match(appModule, /text: shortContestTitle\(contest, contestIndex\)/);
+  assert.doesNotMatch(appModule, /shortContestTitle\(contest, contestIndex\).*problems\.length/);
   assert.match(appModule, /if \(contest\.shortTitle\) return contest\.shortTitle/);
   assert.match(appModule, /text: "全选"/);
   assert.match(appModule, /text: "全不选"/);
@@ -68,6 +70,8 @@ test("provides an integrated problem-rating chart filter and sortable table head
   assert.match(appModule, /contestId\.startsWith\("ccpc"\)/);
   assert.match(appModule, /state\.problemSeries\.seriesId === "2025-2026"/);
   assert.match(appModule, /const slotWidth = \(width - left - right\) \/ maxSlots/);
+  assert.doesNotMatch(appModule, /PROBLEM_CURVE_COLORS/);
+  assert.match(appModule, /problemCurveColor\(contestIndex\)/);
   assert.match(stylesheet, /\.problem-rating-chart\s*\{[^}]*width:\s*100%/);
   assert.match(stylesheet, /\.problem-table-shell\s*\{[^}]*overflow:\s*auto/);
   assert.match(

@@ -6,6 +6,7 @@ import {
   createProblemRatingStore,
   flattenProblemRatings,
   monotoneCubicPath,
+  problemCurveColor,
   problemSeriesHasNames,
   readProblemRatingQuery,
   sortProblemRows,
@@ -71,6 +72,14 @@ test("reports whether a problem-rating series contains any problem names", () =>
     for (const problem of contest.problems) problem.name = "";
   }
   assert.equal(problemSeriesHasNames(unnamed), false);
+});
+
+test("assigns stable non-repeating colors to all mixed-series contests", () => {
+  const colors = Array.from({ length: 16 }, (_, contestIndex) => problemCurveColor(contestIndex));
+  assert.equal(new Set(colors).size, 16);
+  assert.equal(problemCurveColor(7), colors[7]);
+  assert.match(colors[0], /^hsl\([\d.]+ \d+% \d+%\)$/);
+  assert.throws(() => problemCurveColor(-1), /non-negative safe integer/);
 });
 
 test("filters contests and supports both deterministic sort modes", () => {

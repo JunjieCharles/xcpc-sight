@@ -8,26 +8,23 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260821-11";
+} from "./data.mjs?v=20260821-13";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
   flattenProblemRatings,
   monotoneCubicPath,
+  problemCurveColor,
   problemSeriesHasNames,
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260821-11";
+} from "./problem-rating.mjs?v=20260821-13";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
 const INDEX_URL = new URL("../data/index.json", import.meta.url).href;
 const PROBLEM_RATING_INDEX_URL = new URL("../data/problem-rating/index.json", import.meta.url).href;
-const PROBLEM_CURVE_COLORS = [
-  "#176b87", "#b45309", "#7c3aed", "#15803d", "#be123c",
-  "#0369a1", "#a16207", "#6d28d9", "#047857", "#c2410c",
-];
 const store = createDataStore(INDEX_URL);
 const problemRatingStore = createProblemRatingStore(PROBLEM_RATING_INDEX_URL);
 const elements = {
@@ -558,7 +555,7 @@ function renderProblemChart() {
   legend.append(legendActions);
   state.problemSeries.contests.forEach((contest, contestIndex) => {
     const selected = state.problemSelectedContestIds.has(contest.id);
-    const color = PROBLEM_CURVE_COLORS[contestIndex % PROBLEM_CURVE_COLORS.length];
+    const color = problemCurveColor(contestIndex);
     const legendButton = node("button", {
       className: `problem-legend-item${selected ? "" : " is-unselected"}`,
       type: "button",
@@ -567,7 +564,7 @@ function renderProblemChart() {
       "data-curve-id": contest.id,
     }, [
       node("span", { className: "problem-legend-swatch", "aria-hidden": "true" }),
-      node("span", { text: `${shortContestTitle(contest, contestIndex)}（${contest.problems.length}题）` }),
+      node("span", { text: shortContestTitle(contest, contestIndex) }),
     ]);
     legendButton.querySelector(".problem-legend-swatch").style.backgroundColor = color;
     legendButton.addEventListener("click", () => {
@@ -647,7 +644,7 @@ function renderProblemChart() {
     role: "status",
   });
   curves.forEach((curve) => {
-    const color = PROBLEM_CURVE_COLORS[curve.contestIndex % PROBLEM_CURVE_COLORS.length];
+    const color = problemCurveColor(curve.contestIndex);
     const screenPoints = curve.points.map(({ problem, ...point }) => ({
       ...point,
       problem,
