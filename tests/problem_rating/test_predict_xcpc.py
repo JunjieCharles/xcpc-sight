@@ -1,12 +1,58 @@
 import json
 
 from problem_rating.predict_xcpc import (
+    ContestData,
+    Participant,
+    build_feature_rows,
+    load_nowcoder_contest,
     load_rankland_contest,
     max_member_rating,
     parse_hdu_accepted_time,
     stable_competitor_id,
     stable_member_competitor_id,
 )
+
+
+def test_prediction_features_do_not_require_team_size():
+    contest = ContestData(
+        series="test",
+        contest_id=1,
+        contest_name="Test Contest",
+        start_seconds=0,
+        duration_seconds=18_000,
+        problems=(("A", "Problem A"),),
+        participants=(Participant(rating=1800, accepted_times={"A": 600}),),
+    )
+
+    rows = build_feature_rows([contest])
+
+    assert len(rows) == 1
+    assert "teamSizeMedian" not in rows[0]
+
+
+def test_nowcoder_loader_does_not_require_team_member_list(tmp_path):
+    cache_dir = tmp_path / "nowcoder"
+    cache_dir.mkdir()
+    (cache_dir / "nowcoder-123-leaderboard.csv").write_text(
+        "uid,accepted_count,A_problem_id,A_submit,A_accepted,A_accepted_time_ms\n"
+        "42,1,problem-1,true,true,0\n",
+        encoding="utf-8",
+    )
+    competitor_id = stable_competitor_id("nowcoder", "standing:42")
+
+    loaded = load_nowcoder_contest(
+        {
+            "id": "nowcoder:123",
+            "title": "Nowcoder Test",
+            "startAt": "2026-07-01T12:00:00+08:00",
+        },
+        {competitor_id: 1800},
+        xcpc_root=tmp_path / "xcpc-sight",
+        local_cache=cache_dir,
+        titles={"problem-1": "Problem A"},
+    )
+
+    assert loaded.participants == (Participant(rating=1800, accepted_times={"A": 1.0}),)
 
 
 def test_parse_hdu_accepted_time_ignores_failed_only_cells():

@@ -85,10 +85,20 @@ $$
 - 有效参赛者总数及各 rating 中心的有效样本量；
 - 该场题目总数；题号和题目在比赛中的位置不进入模型，避免把 Codeforces 题号顺序的难度先验迁移到 XCPC；
 - 比赛时长；
-- 通过队伍人数对应的队伍规模中位数；
 - 极短 prev1 间隔比例。
 
 离线特征表仍保留 `problemOrder` 作为审计字段，但 `prepare_features` 不把它加入任何模型特征族。因而题号、字母顺序或出题人排列不能改变预测；同场比赛中其他模型输入完全相同的题目会得到相同结果。
+
+`teamSizeMedian` 不进入模型，训练特征和 XCPC 预测特征也不再生成该字段。部分比赛无法可靠取得完整队伍规模，不能让该上游字段成为训练或部署依赖；已有旧版 `problem_features.csv` 即使仍保留该列，`prepare_features` 也会忽略它。
+
+移除前后的同切分对比表明该字段没有稳定收益：
+
+| 版本 | 输入列数 | 分组交叉验证 MAE | 最新 20 场 MAE |
+|---|---:|---:|---:|
+| 包含 `teamSizeMedian` | 73 | 54.539 | 61.545 |
+| 移除 `teamSizeMedian` | 72 | 54.557 | 61.395 |
+
+交叉验证变化为 +0.018 rating，时间留出反而改善 0.150 rating，均远小于模型本身的误差和切分波动。
 
 当前主线不直接输入原始 `solvedCount` 或全场总过题率，也没有施加“通过人数越多，预测必须越简单”的单调约束。总通过人数仍会通过各 rating 区间的条件过题曲线间接影响预测，但它不是唯一依据。
 
@@ -121,11 +131,62 @@ GradientBoostingRegressor(
 
 | 验证范围 | MAE |
 |---|---:|
-| 按比赛分组交叉验证 | 54.8 |
-| 最新 20 场时间留出 | 61.5 |
+| 按比赛分组交叉验证 | 54.5 |
+| 最新 20 场时间留出 | 61.4 |
 | Contest 2180 整场留出 | 53.0 |
 
 这些误差意味着输出更适合解释为一个难度区间，而不是精确到个位的绝对值。
+
+### 8. 特征重要性排行榜
+
+2026-08-22 移除 `teamSizeMedian` 后，使用当前 `problem_features.csv` 的 718 道题、100 场比赛和主线模型的 72 列输入重新分析。所有切分继续以整场比赛为单位。这里同时使用两种口径：
+
+- **分组打乱**：在每个测试折内把一组特征整体按行打乱，重复 20 次；MAE 增量表示当前已训练模型对该组的依赖程度。同组列使用同一个排列，以保留曲线内部形状。
+- **删除重训**：删除整组特征后，用相同配置重新做 5 折训练；MAE 增量表示该组包含多少无法由其他特征替代的信息。最新 20 场也单独复核。
+
+特征族按分组打乱的 MAE 增量排名如下：
+
+| 排名 | 特征族 | 分组打乱 ΔMAE | 删除重训 ΔMAE | 最新 20 场删除重训 ΔMAE |
+|---:|---|---:|---:|---:|
+| 1 | 高斯条件过题曲线 logit（800–3500） | +845.82 ± 19.54 | +74.10 | +57.88 |
+| 2 | prev3 AC 间隔（中位数、IQR、边界存在率） | +13.37 ± 0.69 | +0.14 | +0.60 |
+| 3 | prev1 AC 间隔（中位数、IQR、边界存在率） | +11.11 ± 0.50 | +0.19 | -0.41 |
+| 4 | prev2 AC 间隔（中位数、IQR、边界存在率） | +6.35 ± 0.38 | +0.07 | +0.12 |
+| 5 | 通过者 Rating 分布（中位数、IQR） | +3.13 ± 0.40 | +0.22 | +0.38 |
+| 6 | 极短 prev1 间隔比例 | +0.01 ± 0.02 | +0.07 | +0.01 |
+| 7 | 曲线有效样本量及总参赛人数 | -0.00 ± 0.06 | -0.08 | -0.13 |
+| 8 | 比赛结构元数据（题数、时长） | -0.01 ± 0.01 | +0.04 | +0.12 |
+
+结论分为两个层次：
+
+1. **条件过题曲线是唯一稳定且不可替代的核心特征。** 删除它后，分组交叉验证 MAE 从 54.56 上升到 128.66，最新 20 场从 61.39 上升到 119.28。
+2. **时间特征是当前模型实际使用的局部修正项，但独立增益很小。** 打乱 prev1–prev3 会明显破坏已学习的交互；重新训练后，过题曲线可以替代其中大部分信息。除过题曲线外，各组删除重训的变化都小于 1 rating，并且在不同折或时间留出上可能变号，因此第 2–8 名不应解释为稳定的精确优劣。
+
+若把曲线拆成单列，分组打乱的重要性前十名全部是条件过题 logit：
+
+| 排名 | 单列特征 | 打乱 ΔMAE |
+|---:|---|---:|
+| 1 | `gaussianSolveLogitR2000` | +112.84 |
+| 2 | `gaussianSolveLogitR1900` | +107.74 |
+| 3 | `gaussianSolveLogitR1700` | +74.87 |
+| 4 | `gaussianSolveLogitR2100` | +74.06 |
+| 5 | `gaussianSolveLogitR1800` | +52.63 |
+| 6 | `gaussianSolveLogitR1600` | +50.30 |
+| 7 | `gaussianSolveLogitR2200` | +33.74 |
+| 8 | `gaussianSolveLogitR1300` | +19.66 |
+| 9 | `gaussianSolveLogitR1000` | +19.47 |
+| 10 | `gaussianSolveLogitR2700` | +15.59 |
+
+非曲线单列中前三名是 `logTimePrev1Median`（+8.76）、`logTimePrev3Median`（+7.58）和 `logTimePrev2Median`（+6.17）。相邻 rating 中心的曲线点高度相关，树还会在它们之间替换分裂，因此单列名次只用于定位模型最常利用的区间，不能解释为因果贡献或稳定的精确顺序。分组打乱还会制造“时间统计来自一道题、过题曲线来自另一道题”的分布外组合，所以判断特征是否真正不可替代时，应以删除重训列为准。
+
+完整结果已导出到：
+
+- `data-cache/problem-rating/outputs/analysis/problem_rating_feature_importance.md`：完整 Markdown 报告，包含运行元数据、全部特征族、删除重训逐折结果和全部 72 个单特征排名；
+- `data-cache/problem-rating/outputs/analysis/problem_rating_feature_importance_groups.csv`：8 个特征族的机器可读结果；
+- `data-cache/problem-rating/outputs/analysis/problem_rating_feature_importance_features.csv`：全部 72 个单特征的机器可读结果；
+- `data-cache/problem-rating/outputs/analysis/problem_rating_feature_importance_folds.csv`：8 个特征族在 5 个测试折上的 40 条删除重训明细。
+
+这些文件属于本地分析产物，随 `data-cache/problem-rating/` 一起被 Git 忽略，不进入静态站点发布数据。
 
 ## 运行主线流程
 
@@ -178,7 +239,7 @@ python scripts/generate_problem_rating_static_data.py
 - `static/data/problem-rating/series/nowcoder-summer-2026.json`；
 - `static/data/problem-rating/series/hdu-summer-2026.json`。
 
-`ProblemRatingRecord`、`project_problem_rating_series` 和 `project_problem_rating_index` 是 `problem_rating` 的公开纯 Python API。投影以现有选手 Rating series 为比赛 ID、标题、时间和顺序的唯一规范来源，拒绝缺场、额外场次、重复题目、非法计数和跨 series 数据。文件仅包含场次元数据以及题号、题名、预测 Rating、通过队伍数、有效队伍数和时间样本数，不包含选手/队伍身份、team token 或逐人提交。
+`MODEL_ID`、`ProblemRatingRecord`、`project_problem_rating_series` 和 `project_problem_rating_index` 是 `problem_rating` 的公开纯 Python API。当前 `MODEL_ID` 为 `gaussian-prev1-3-shallow-gbr-no-order-no-team-size`，在发布文件中标识不使用题目位置和队伍规模的 72 列模型。投影以现有选手 Rating series 为比赛 ID、标题、时间和顺序的唯一规范来源，拒绝缺场、额外场次、重复题目、非法计数和跨 series 数据。文件仅包含场次元数据以及题号、题名、预测 Rating、通过队伍数、有效队伍数和时间样本数，不包含选手/队伍身份、team token 或逐人提交。
 
 前端在三个 series 内提供“选手 Rating / 题目难度”切换，系列导航保持在页面左侧。题目页默认选择全部场次，图例始终列出所有场次，支持点击逐场切换以及快捷全选/全不选；2025–2026 ICPC + CCPC 额外提供“仅 ICPC”和“仅 CCPC”快捷筛选，点击后以对应组织的全部比赛替换当前选择。该系列的 16 场比赛发布独立短名供图例使用，例如 `ICPC 网络赛1`、`CCPC 哈尔滨`、`ICPC EC-Final` 和 `CCPC 总决赛`；图例只显示短名，不重复附加题目数量。曲线颜色按场次索引使用黄金角色相和交替明度确定性生成，筛选前后保持不变，并避免固定短色板循环造成重复。曲线本体使用透明宽命中带：悬停在两题之间时显示正式比赛场次名，悬停题目圆点时显示正式比赛场次名、题号和 Rating。表格通过“场次 + 题号”和 Rating 表头切换排序字段，再次点击同一表头切换正序/逆序。当前系列所有题名均为空时，表格隐藏整列题名；只要系列内存在题名则保留该列。通过队伍与有效队伍合并显示，时间样本不在界面展示。每场曲线先按预测 Rating 从易到难排序，Rating 相同按自然题号稳定排序；最长的已选曲线适配可用页面宽度，其他曲线按题目数量比例缩短。曲线使用保持单调的三次插值，圆点才是实际预测值，插值不代表新增模型数据。筛选和排序状态写入 URL。
 
@@ -218,4 +279,4 @@ python -m problem_rating.plot_results
 
 ## 测试覆盖与限制
 
-聚焦测试覆盖 AC 顺序与拆分题族、滑窗/核/IRT 特征、未提交样本口径、题目位置特征排除、模型集成门控、XCPC 标识稳定性、本地路径隔离、静态投影、缺失题名规范化和离线生成。Node 测试覆盖 schema（含空题名）、场次筛选、两类双向排序、自然题号、曲线难度顺序、题量比例、单调路径、URL 状态和独立数据加载。默认测试只读取构造数据，不访问网络，也不依赖已同步的本地缓存。模型精度数字来自当前离线训练特征的重新验证；静态发布不会重新训练模型。
+聚焦测试覆盖 AC 顺序与拆分题族、滑窗/核/IRT 特征、未提交样本口径、题目位置和 `teamSizeMedian` 特征排除、预测特征不依赖队伍规模、模型集成门控、XCPC 标识稳定性、本地路径隔离、静态投影、缺失题名规范化和离线生成。Node 测试覆盖 schema（含空题名）、场次筛选、两类双向排序、自然题号、曲线难度顺序、题量比例、单调路径、URL 状态和独立数据加载。默认测试只读取构造数据，不访问网络，也不依赖已同步的本地缓存。模型精度数字来自当前离线训练特征的重新验证；静态发布不会重新训练模型。

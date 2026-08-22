@@ -13,7 +13,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from statistics import median
 
 import httpx
 import pandas as pd
@@ -46,7 +45,6 @@ RANKLAND_MISSING_TITLE = "RankLand 公开榜单未提供题名"
 class Participant:
     rating: float
     accepted_times: dict[str, float]
-    team_size: int
 
 
 @dataclass(frozen=True)
@@ -353,7 +351,6 @@ def load_rankland_contest(
             Participant(
                 rating=float(rating),
                 accepted_times=accepted_times,
-                team_size=max(len(members), 1),
             )
         )
 
@@ -447,12 +444,10 @@ def load_nowcoder_contest(
                     continue
                 accepted_ms = int(row[f"{label}_accepted_time_ms"])
                 accepted_times[label] = max((accepted_ms - start_ms) / 1000, 1.0)
-            members = json.loads(row["team_member_uids"])
             participants.append(
                 Participant(
                     rating=float(rating),
                     accepted_times=accepted_times,
-                    team_size=max(len(members), 1),
                 )
             )
 
@@ -546,7 +541,7 @@ def load_hdu_contest(contest: dict, ratings: dict[str, int], cache_dir: Path):
             for problem_id, cell in zip(payload["problems"], cells, strict=True)
             if (accepted_time := parse_hdu_accepted_time(cell)) is not None
         }
-        participants.append(Participant(float(rating), accepted_times, team_size=3))
+        participants.append(Participant(float(rating), accepted_times))
 
     if missing_ratings:
         print(
@@ -593,11 +588,6 @@ def build_feature_rows(contests: Iterable[ContestData]) -> list[dict]:
                 for participant, user_solves in zip(contest.participants, solves, strict=True)
                 if participant.rating >= 1600 and problem_index in user_solves
             ]
-            solved_team_sizes = [
-                participant.team_size
-                for participant, solved in zip(contest.participants, solved_flags, strict=True)
-                if solved
-            ]
             row = {
                 "series": contest.series,
                 "nativeContestId": contest.contest_id,
@@ -612,7 +602,6 @@ def build_feature_rows(contests: Iterable[ContestData]) -> list[dict]:
                 "participantCount": len(contest.participants),
                 "solvedCount": solved_count,
                 "solveRate": (solved_count + 0.5) / (len(contest.participants) + 1),
-                "teamSizeMedian": (float(median(solved_team_sizes)) if solved_team_sizes else None),
             }
             row.update(sliding_window_solve_curve(ratings, solved_flags, CENTERS))
             row.update(

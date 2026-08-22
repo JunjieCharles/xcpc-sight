@@ -106,3 +106,4 @@ def test_unattempted_and_failed_participants_are_both_unsolved():
     assert rows[0]["solvedCount"] == 1
     assert rows[0]["participantCountR1500"] == 3
     assert rows[0]["solvedCountR1500"] == 1
+    assert "teamSizeMedian" not in rows[0]

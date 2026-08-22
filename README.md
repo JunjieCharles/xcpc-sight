@@ -68,7 +68,7 @@ python scripts/generate_static_data.py
 python scripts/generate_problem_rating_static_data.py
 ```
 
-默认写入 `static/data/problem-rating/index.json` 以及三个 series 文件。该命令不访问网络，不修改选手 Rating JSON，也不会发布账号、队伍或逐人提交数据。ICPC + CCPC 队伍 Rating 定义为队内所有非教练选手最终 Rating 的最大值。
+默认写入 `static/data/problem-rating/index.json` 以及三个 series 文件。当前发布模型标识为 `gaussian-prev1-3-shallow-gbr-no-order-no-team-size`。该命令不访问网络，不修改选手 Rating JSON，也不会发布账号、队伍或逐人提交数据。ICPC + CCPC 队伍 Rating 定义为队内所有非教练选手最终 Rating 的最大值。
 
 本地浏览静态站点（不能直接用 `file://`，因为浏览器需要通过 HTTP 加载 ES module 和 JSON）：
 

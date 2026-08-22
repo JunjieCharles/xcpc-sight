@@ -18,13 +18,14 @@ def test_sample_gated_model_uses_shallow_tree_for_sparse_times():
     )
 
 
-def test_problem_order_is_excluded_from_every_model_feature_family():
+def test_unavailable_or_audit_fields_are_excluded_from_every_model_feature_family():
     data = pd.DataFrame(
         [
             {
                 "participantCount": 100,
                 "contestDurationSeconds": 7200,
                 "problemOrder": 7,
+                "teamSizeMedian": 3,
             }
         ]
     )
@@ -32,4 +33,5 @@ def test_problem_order_is_excluded_from_every_model_feature_family():
     _, families = prepare_features(data)
 
     assert all("problemOrder" not in columns for columns in families.values())
+    assert all("teamSizeMedian" not in columns for columns in families.values())
     assert all("ratedProblemCount" in columns for columns in families.values())

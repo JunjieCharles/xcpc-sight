@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from core.errors import DataValidationError
 
 SCHEMA_VERSION = 1
-MODEL_ID = "gaussian-prev1-3-shallow-gbr-no-order"
+MODEL_ID = "gaussian-prev1-3-shallow-gbr-no-order-no-team-size"
 _MISSING_PROBLEM_NAMES = frozenset(
     {
         "官方 guest 数据未提供题名",

@@ -84,7 +84,6 @@ def prepare_features(data: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, list[s
     metadata = [
         "ratedProblemCount",
         "logContestDuration",
-        "teamSizeMedian",
         "burstUnder60Rate",
         "burstUnder120Rate",
     ]

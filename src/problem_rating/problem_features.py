@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from statistics import median
 
 import numpy as np
 from scipy.optimize import minimize
@@ -239,8 +238,6 @@ def build_contest_problem_features(
         if "newRating" in change
     }
     submissions_by_user: dict[str, list[Mapping]] = defaultdict(list)
-    team_sizes: dict[str, int] = {}
-
     for submission in submissions:
         author = submission.get("author") or {}
         members = author.get("members") or []
@@ -250,7 +247,6 @@ def build_contest_problem_features(
         if handle not in user_ratings:
             continue
         submissions_by_user[handle].append(submission)
-        team_sizes[handle] = len(members)
 
     solves_by_user = {
         handle: calculate_solve_features(user_submissions, max_previous=3)
@@ -272,12 +268,6 @@ def build_contest_problem_features(
             if user_ratings[handle] >= minimum_time_rating
             and problem_index in solves_by_user.get(handle, {})
         ]
-        solved_team_sizes = [
-            team_sizes.get(handle, 1)
-            for handle in handles
-            if problem_index in solves_by_user.get(handle, {})
-        ]
-
         row = {
             "contestId": contest_id,
             "contestStartTimeSeconds": contest.get("startTimeSeconds"),
@@ -291,7 +281,6 @@ def build_contest_problem_features(
             "solveRate": (
                 (solved_count + 0.5) / (participant_count + 1.0) if participant_count else None
             ),
-            "teamSizeMedian": (float(median(solved_team_sizes)) if solved_team_sizes else None),
         }
         row.update(
             sliding_window_solve_curve(
