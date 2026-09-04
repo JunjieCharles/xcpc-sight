@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-10";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-19";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -248,6 +248,18 @@ export function sortPreviewTeams(teams, sort, order = "desc", previewPower = nul
     }
     return compared || left.sourceIndex - right.sourceIndex;
   });
+}
+
+export function buildPreviewSchoolRanks(sortedTeams, sort) {
+  if (["school", "name", "members"].includes(sort)) return new Map();
+  const rankedSchools = new Set();
+  const ranks = new Map();
+  for (const team of sortedTeams) {
+    if (rankedSchools.has(team.school)) continue;
+    rankedSchools.add(team.school);
+    ranks.set(team.id, rankedSchools.size);
+  }
+  return ranks;
 }
 
 export function readPreviewQuery(url) {

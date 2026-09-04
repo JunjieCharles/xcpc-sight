@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   buildPreviewPower,
   buildPreviewRanks,
+  buildPreviewSchoolRanks,
   createPreviewStore,
   previewRatingValue,
   readPreviewQuery,
@@ -85,17 +86,20 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(indexHtml, /id="preview-team-source"/);
   assert.match(indexHtml, /id="preview-metric-sources"/);
   assert.match(indexHtml, /id="preview-contest-select"/);
+  assert.match(indexHtml, /学校排名随表格当前排序方式变化。/);
   assert.doesNotMatch(indexHtml, /id="preview-(?:summary|note)"/);
   assert.doesNotMatch(stylesheet, /ⓘ|cursor:\s*help/);
   assert.match(stylesheet, /\.table-shell\s*\{[^}]*container-type:\s*inline-size/);
-  assert.match(stylesheet, /\.preview-table\s*\{[^}]*width:\s*var\(--preview-table-width\)/);
+  assert.match(stylesheet, /\.preview-table\s*\{[^}]*--preview-school-width:\s*min\(200px, 24cqw\)/);
+  assert.match(stylesheet, /\.preview-table\s*\{[^}]*--preview-team-width:\s*min\(170px, calc\(40cqw - var\(--preview-school-width\)\)\)/);
   assert.match(stylesheet, /\.preview-table td:nth-child\(3\)[^{]*\{[^}]*position:\s*sticky/);
   assert.match(stylesheet, /\.preview-table \.table-sort-button\s*\{[^}]*justify-content:\s*center/);
-  assert.match(stylesheet, /@container \(max-width:\s*1040px\)[\s\S]*--preview-school-width:\s*min\(112px, 23cqw\)/);
-  assert.match(stylesheet, /@container \(max-width:\s*1040px\)[\s\S]*--preview-team-width:\s*min\(128px, 27cqw\)/);
+  assert.match(stylesheet, /\.preview-school-content\s*\{[^}]*grid-template-columns:\s*1\.9rem minmax\(0, 1fr\)/);
+  assert.doesNotMatch(stylesheet, /\.preview-school-cell\s*\{[^}]*display:\s*grid/);
+  assert.match(stylesheet, /\.preview-table td\.preview-school-cell\s*\{[^}]*padding-right:\s*\.45rem;[^}]*padding-left:\s*\.45rem/);
   assert.match(stylesheet, /width:\s*calc\(var\(--preview-non-frozen-width\) \+ var\(--preview-school-width\) \+ var\(--preview-team-width\)\)/);
   assert.match(stylesheet, /\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*var\(--preview-school-width\)/);
-  assert.match(stylesheet, /@container \(max-width:\s*1040px\)[\s\S]*\.preview-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
+  assert.match(stylesheet, /@container \(max-width:\s*1120px\)[\s\S]*\.preview-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
   assert.match(stylesheet, /\.preview-rating-xcpcrating\s*\{[^}]*color:/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo\.rating-orange\s*\{[^}]*#ff8c00/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo-legendary\s*\{[^}]*#ff0000/);
@@ -113,6 +117,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
   assert.match(appModule, /elements\.previewContestSelect\.replaceChildren/);
+  assert.match(appModule, /const widths = \[200, 170, 190, 96,/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-table-width"/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-non-frozen-width"/);
   assert.match(appModule, /previewSortHeader\("奖牌", "medals"\)/);
@@ -154,6 +159,35 @@ test("sorts nullable ratings last and medals by gold, silver, bronze", () => {
   assert.deepEqual(sortPreviewTeams(teams, "xcpcrating", "desc").map(({ id }) => id), ["a", "b"]);
   assert.deepEqual(sortPreviewTeams(teams, "xcpcElo", "desc").map(({ id }) => id), ["b", "a"]);
   assert.deepEqual(sortPreviewTeams(teams, "medals", "desc").map(({ id }) => id), ["a", "b"]);
+});
+
+test("ranks schools from the unfiltered current preview order", () => {
+  const makeTeam = (id, sourceIndex, school, score) => ({
+    id,
+    sourceIndex,
+    school,
+    name: id,
+    members: [{ name: id }],
+    ratings: { score },
+    medals: { gold: 0, silver: 0, bronze: 0 },
+  });
+  const teams = [
+    makeTeam("a-low", 0, "甲大学", 10),
+    makeTeam("b-best", 1, "乙大学", 30),
+    makeTeam("a-best", 2, "甲大学", 20),
+  ];
+  const sorted = sortPreviewTeams(teams, "score", "desc");
+  const ranks = buildPreviewSchoolRanks(sorted, "score");
+
+  assert.deepEqual([...ranks], [["b-best", 1], ["a-best", 2]]);
+  assert.equal(ranks.has("a-low"), false);
+  assert.deepEqual(
+    searchPreviewTeams(sorted, "a-low").map((team) => [team.id, ranks.get(team.id) ?? null]),
+    [["a-low", null]],
+  );
+  assert.deepEqual(buildPreviewSchoolRanks(sorted, "school"), new Map());
+  assert.deepEqual(buildPreviewSchoolRanks(sorted, "name"), new Map());
+  assert.deepEqual(buildPreviewSchoolRanks(sorted, "members"), new Map());
 });
 
 test("ranks comprehensive power by a descending five-value dominance tuple", () => {

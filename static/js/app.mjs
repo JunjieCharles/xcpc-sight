@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260904-10";
+} from "./data.mjs?v=20260904-19";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,10 +19,11 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260904-10";
+} from "./problem-rating.mjs?v=20260904-19";
 import {
   buildPreviewPower,
   buildPreviewRanks,
+  buildPreviewSchoolRanks,
   createPreviewStore,
   listPreviewSchools,
   previewRatingValue,
@@ -30,7 +31,7 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260904-10";
+} from "./preview.mjs?v=20260904-19";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -112,6 +113,7 @@ const state = {
   preview: null,
   previewPower: new Map(),
   previewRanks: new Map(),
+  previewSchoolRanks: new Map(),
   previewSort: "power",
   previewOrder: "desc",
   previewRenderFrame: 0,
@@ -373,12 +375,14 @@ function setSchoolMenu(open) {
 function applySearch({ resetScroll = true } = {}) {
   state.query = elements.searchInput.value;
   if (state.view === "preview") {
-    state.filtered = sortPreviewTeams(
-      searchPreviewTeams(state.preview.teams, state.query, state.schools),
+    const sortedTeams = sortPreviewTeams(
+      state.preview.teams,
       state.previewSort,
       state.previewOrder,
       state.previewPower,
     );
+    state.previewSchoolRanks = buildPreviewSchoolRanks(sortedTeams, state.previewSort);
+    state.filtered = searchPreviewTeams(sortedTeams, state.query, state.schools);
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
   } else {
     state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
@@ -659,7 +663,13 @@ function renderPreviewRows() {
       const row = node("tr");
       row.dataset.teamId = team.id;
       row.setAttribute("aria-rowindex", String(index + 2));
-      row.append(node("td", { text: team.school, title: team.school }));
+      const schoolRank = state.previewSchoolRanks.get(team.id);
+      row.append(node("td", { className: "preview-school-cell", title: team.school }, [
+        node("span", { className: "preview-school-content" }, [
+          node("small", { className: "preview-school-rank", text: schoolRank ? `#${schoolRank}` : "" }),
+          node("span", { text: team.school }),
+        ]),
+      ]));
       row.append(node("td", { text: team.name, title: team.name }));
       const memberNames = team.members.map(({ name }) => name).join(" / ");
       row.append(node("td", { text: memberNames, title: memberNames }));
@@ -734,7 +744,7 @@ function renderPreviewHeader() {
   row.append(previewSortHeader("奖牌", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
-  const widths = [160, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150];
+  const widths = [200, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150];
   table.style.setProperty("--preview-table-width", `${widths.reduce((sum, width) => sum + width, 0)}px`);
   table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((sum, width) => sum + width, 0)}px`);
   table.querySelector("colgroup")?.remove();
