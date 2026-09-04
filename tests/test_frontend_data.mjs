@@ -102,18 +102,18 @@ test("provides a combined clear control and emphasizes zero deltas", async () =>
   assert.match(stylesheet, /\.delta-zero\s*\{[^}]*font-weight:\s*650/);
 });
 
-test("keeps four sticky summary columns on wide screens and two on narrow screens", async () => {
+test("keeps frozen rating columns within half of their scroll container", async () => {
   const [stylesheet, appModule] = await Promise.all([
     readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
   ]);
 
   assert.match(stylesheet, /\.wide-table td:nth-child\(4\)[^{]*\{[^}]*position:\s*sticky/);
-  assert.match(stylesheet, /@media \(max-width:\s*700px\)/);
+  assert.match(stylesheet, /@container \(max-width:\s*924px\)/);
+  assert.match(stylesheet, /--series-rank-width:\s*min\(62px,\s*20cqw\)/);
+  assert.match(stylesheet, /--series-person-width:\s*min\(220px,\s*30cqw\)/);
   assert.match(stylesheet, /\.wide-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
   assert.match(stylesheet, /\.wide-table thead th:nth-child\(3\)[^{]*\{[^}]*left:\s*auto/);
-  assert.match(stylesheet, /@media \(orientation:\s*portrait\)/);
-  assert.match(stylesheet, /--series-person-width:\s*min\(220px,\s*calc\(50vw\s*-\s*62px\)\)/);
   assert.match(appModule, /--series-contest-width/);
 });
 
