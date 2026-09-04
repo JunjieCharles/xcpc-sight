@@ -21,10 +21,11 @@ import {
 } from "../static/js/data.mjs";
 
 test("versions cache-sensitive frontend assets consistently", async () => {
-  const [indexHtml, appModule, problemRatingModule] = await Promise.all([
+  const [indexHtml, appModule, problemRatingModule, previewModule] = await Promise.all([
     readFile(new URL("../static/index.html", import.meta.url), "utf8"),
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../static/js/problem-rating.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/preview.mjs", import.meta.url), "utf8"),
   ]);
   const stylesheetRevision = indexHtml.match(/styles\.css\?v=([\w-]+)/)?.[1];
   const applicationRevision = indexHtml.match(/app\.mjs\?v=([\w-]+)/)?.[1];
@@ -33,7 +34,9 @@ test("versions cache-sensitive frontend assets consistently", async () => {
   assert.equal(applicationRevision, stylesheetRevision);
   assert.match(appModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
   assert.match(appModule, new RegExp(`problem-rating\\.mjs\\?v=${applicationRevision}`));
+  assert.match(appModule, new RegExp(`preview\\.mjs\\?v=${applicationRevision}`));
   assert.match(problemRatingModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
+  assert.match(previewModule, new RegExp(`data\\.mjs\\?v=${applicationRevision}`));
 });
 
 test("states the rating comparison scope beside the site title", async () => {

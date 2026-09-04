@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-1";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-8";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -113,6 +113,99 @@ export function searchPreviewTeams(teams, query, schools = []) {
   });
 }
 
+function comparePowerValues(left, right) {
+  if (left === null && right === null) return 0;
+  if (left === null) return -1;
+  if (right === null) return 1;
+  return left - right;
+}
+
+function compareMedals(left, right) {
+  for (const medal of ["gold", "silver", "bronze"]) {
+    const compared = left[medal] - right[medal];
+    if (compared) return compared;
+  }
+  return 0;
+}
+
+function countStrictlyLower(teams, valueOf, compare) {
+  const ordered = teams
+    .map((team) => ({ id: team.id, value: valueOf(team), sourceIndex: team.sourceIndex }))
+    .sort((left, right) => compare(left.value, right.value) || left.sourceIndex - right.sourceIndex);
+  const counts = new Map();
+  let groupStart = 0;
+  ordered.forEach((item, index) => {
+    if (index && compare(item.value, ordered[index - 1].value)) groupStart = index;
+    counts.set(item.id, groupStart);
+  });
+  return counts;
+}
+
+function competitionRanks(teams, valueOf, compare, skipNull = false) {
+  const ordered = teams
+    .map((team) => ({ id: team.id, value: valueOf(team), sourceIndex: team.sourceIndex }))
+    .filter(({ value }) => !skipNull || value !== null)
+    .sort((left, right) => compare(right.value, left.value) || left.sourceIndex - right.sourceIndex);
+  const ranks = new Map(teams.map(({ id }) => [id, null]));
+  let previousValue;
+  let rank = 0;
+  ordered.forEach((item, index) => {
+    if (!index || compare(item.value, previousValue)) rank = index + 1;
+    ranks.set(item.id, rank);
+    previousValue = item.value;
+  });
+  return ranks;
+}
+
+export function buildPreviewRanks(teams, metricIds = Object.keys(teams[0]?.ratings ?? {})) {
+  const ratingRanks = new Map(metricIds.map((id) => [
+    id,
+    competitionRanks(teams, (team) => team.ratings[id] ?? null, comparePowerValues, true),
+  ]));
+  const medalRanks = competitionRanks(teams, (team) => team.medals, compareMedals);
+  return new Map(teams.map((team) => [team.id, {
+    ratings: Object.fromEntries(metricIds.map((id) => [id, ratingRanks.get(id).get(team.id)])),
+    medals: medalRanks.get(team.id),
+  }]));
+}
+
+function comparePowerVectors(left, right, order = "desc") {
+  const direction = order === "asc" ? 1 : -1;
+  for (let index = 0; index < left.length; index += 1) {
+    const compared = (left[index] - right[index]) * direction;
+    if (compared) return compared;
+  }
+  return 0;
+}
+
+export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratings ?? {})) {
+  const dimensions = [
+    ...metricIds.map((id) => countStrictlyLower(
+      teams,
+      (team) => team.ratings[id] ?? null,
+      comparePowerValues,
+    )),
+    countStrictlyLower(teams, (team) => team.medals, compareMedals),
+  ];
+  const power = new Map(teams.map((team) => {
+    const counts = dimensions.map((values) => values.get(team.id));
+    return [team.id, { counts, vector: [...counts].sort((left, right) => right - left), rank: 0 }];
+  }));
+  const ranked = [...teams].sort((left, right) => (
+    comparePowerVectors(power.get(left.id).vector, power.get(right.id).vector)
+    || left.sourceIndex - right.sourceIndex
+  ));
+  let previousVector = null;
+  let rank = 0;
+  ranked.forEach((team, index) => {
+    const entry = power.get(team.id);
+    if (previousVector === null || comparePowerVectors(entry.vector, previousVector)) rank = index + 1;
+    entry.rank = rank;
+    previousVector = entry.vector;
+  });
+  return power;
+}
+
 function compareNullableNumber(left, right, order) {
   if (left === null && right === null) return 0;
   if (left === null) return 1;
@@ -120,8 +213,9 @@ function compareNullableNumber(left, right, order) {
   return order === "asc" ? left - right : right - left;
 }
 
-export function sortPreviewTeams(teams, sort, order = "desc") {
+export function sortPreviewTeams(teams, sort, order = "desc", previewPower = null) {
   const direction = order === "asc" ? 1 : -1;
+  const power = sort === "power" && !previewPower ? buildPreviewPower(teams) : previewPower;
   return [...teams].sort((left, right) => {
     let compared = 0;
     if (sort === "school" || sort === "name") {
@@ -135,6 +229,12 @@ export function sortPreviewTeams(teams, sort, order = "desc") {
         compared = (left.medals[medal] - right.medals[medal]) * direction;
         if (compared) break;
       }
+    } else if (sort === "power") {
+      compared = comparePowerVectors(
+        power.get(left.id).vector,
+        power.get(right.id).vector,
+        order,
+      );
     } else {
       compared = compareNullableNumber(left.ratings[sort] ?? null, right.ratings[sort] ?? null, order);
     }
@@ -145,7 +245,7 @@ export function sortPreviewTeams(teams, sort, order = "desc") {
 export function readPreviewQuery(url) {
   const params = new URL(url, "http://localhost/").searchParams;
   return {
-    previewSort: params.get("previewSort") || "xcpcrating",
+    previewSort: params.get("previewSort") || "power",
     previewOrder: params.get("previewOrder") === "asc" ? "asc" : "desc",
   };
 }
@@ -157,7 +257,7 @@ export function writePreviewQuery(url, query) {
     return next;
   }
   next.searchParams.set("view", "preview");
-  if (query.sort && query.sort !== "xcpcrating") next.searchParams.set("previewSort", query.sort);
+  if (query.sort && query.sort !== "power") next.searchParams.set("previewSort", query.sort);
   else next.searchParams.delete("previewSort");
   if (query.order === "asc") next.searchParams.set("previewOrder", "asc");
   else next.searchParams.delete("previewOrder");

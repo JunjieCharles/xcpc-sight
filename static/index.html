@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
-  <link rel="stylesheet" href="./styles.css?v=20260904-1">
+  <link rel="stylesheet" href="./styles.css?v=20260904-8">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -86,13 +86,15 @@
             <p class="eyebrow">PREVIEW</p>
             <h2 id="preview-title"></h2>
           </div>
-          <p id="preview-summary" class="section-note"></p>
+          <label class="preview-contest-picker">
+            <span>选择比赛</span>
+            <select id="preview-contest-select" aria-label="选择前瞻比赛"></select>
+          </label>
         </div>
-        <div class="preview-notice" role="note">
-          <strong>静态赛前快照</strong>
-          <span id="preview-note"></span>
+        <div class="preview-sources">
+          <p id="preview-team-source"></p>
+          <p id="preview-metric-sources"></p>
         </div>
-        <p id="preview-sources" class="preview-sources"></p>
         <div class="table-shell preview-table-shell" id="preview-scroll" tabindex="0"
              aria-label="赛前队伍数据表，可点击表头排序并悬浮查看成员明细">
           <table class="data-table preview-table">
@@ -176,6 +178,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20260904-1"></script>
+  <script type="module" src="./js/app.mjs?v=20260904-8"></script>
 </body>
 </html>

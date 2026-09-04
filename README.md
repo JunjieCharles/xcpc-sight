@@ -77,7 +77,7 @@ python scripts/generate_problem_rating_static_data.py
 python -m http.server 8000 --directory static
 ```
 
-然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录。2026–2027 系列当前只有 ICPC 网络赛第一场前瞻：2535 支公开报名队伍，展示学校、中文队名、非教练成员、三套外部评分、本仓库上赛季 Rating、CPC Finder 评分及队员奖牌总数。评分列取队内最高值，悬浮或键盘聚焦可查看全员明细，所有表头均可双向排序，奖牌按金、银、铜依次捆绑排序。前瞻名单是外部静态快照，不来自 Pintia 比赛榜单，也不随比赛自动更新；后续只按用户明确指定的场次或名单更新。完整口径见 [2026–2027 赛季与前瞻](doc/season-2026-2027-preview.md)。
+然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录。2026–2027 系列当前只有 ICPC 网络赛第一场前瞻：2535 支公开报名队伍，展示学校、中文队名、非教练成员、三套外部评分、本仓库上赛季 Rating、CPC Finder 评分及队员奖牌总数，标题区已预留比赛选择下拉框。评分列取队内最高值且不使用千分位，XCPC Rating 固定两位小数，除 CPC Finder 外沿用各来源配色；四项 Rating 与奖牌值后以 `#x` 单行显示该项在全部队伍中的并列名次，各列为名次保留相同的窄槽，筛选不重新计算。无需提示图标，正常悬浮或键盘聚焦即可查看全员明细。综合战力统计每队在四项 Rating 和奖牌上分别严格超过的队伍数，将五个计数降序后按五元组排序；该列显示全局名次并在悬浮时只展示五边形雷达图，页面默认按此排序。所有表头均可双向排序，奖牌按金、银、铜依次捆绑排序。名单来源与数据来源分开显示，前瞻始终有独立 tab；桌面冻结紧凑的学校、队名和成员列，手机冻结进一步压缩的学校和队名、取消成员冻结。悬浮窗会根据视口空间显示在格子上方或下方，不被表格底部裁切。前瞻名单是外部静态快照，不来自 Pintia 比赛榜单，也不随比赛自动更新；后续只按用户明确指定的场次或名单更新。完整口径见 [2026–2027 赛季与前瞻](doc/season-2026-2027-preview.md)。
 
 ```bash
 node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260904-1";
+} from "./data.mjs?v=20260904-8";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,15 +19,17 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260904-1";
+} from "./problem-rating.mjs?v=20260904-8";
 import {
+  buildPreviewPower,
+  buildPreviewRanks,
   createPreviewStore,
   listPreviewSchools,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260904-1";
+} from "./preview.mjs?v=20260904-8";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -76,9 +78,9 @@ const elements = {
   problemRatingSortIndicator: document.querySelector("#problem-rating-sort-indicator"),
   previewView: document.querySelector("#preview-view"),
   previewTitle: document.querySelector("#preview-title"),
-  previewSummary: document.querySelector("#preview-summary"),
-  previewNote: document.querySelector("#preview-note"),
-  previewSources: document.querySelector("#preview-sources"),
+  previewContestSelect: document.querySelector("#preview-contest-select"),
+  previewTeamSource: document.querySelector("#preview-team-source"),
+  previewMetricSources: document.querySelector("#preview-metric-sources"),
   previewScroll: document.querySelector("#preview-scroll"),
   previewHead: document.querySelector("#preview-head"),
   previewBody: document.querySelector("#preview-body"),
@@ -107,10 +109,13 @@ const state = {
   problemOrder: "asc",
   problemChartFrame: 0,
   preview: null,
-  previewSort: "xcpcrating",
+  previewPower: new Map(),
+  previewRanks: new Map(),
+  previewSort: "power",
   previewOrder: "desc",
   previewRenderFrame: 0,
 };
+let activePreviewTooltip = null;
 
 function node(tag, properties = {}, children = []) {
   const element = document.createElement(tag);
@@ -371,6 +376,7 @@ function applySearch({ resetScroll = true } = {}) {
       searchPreviewTeams(state.preview.teams, state.query, state.schools),
       state.previewSort,
       state.previewOrder,
+      state.previewPower,
     );
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
   } else {
@@ -393,7 +399,7 @@ function updateSeriesMode() {
   const problemSupported = participantsSupported && state.problemAvailableSeries.has(state.seriesId);
   const previewSupported = Boolean(state.seriesEntry?.previewPath);
   const supportedCount = [participantsSupported, problemSupported, previewSupported].filter(Boolean).length;
-  elements.seriesModeSwitch.hidden = supportedCount <= 1;
+  elements.seriesModeSwitch.hidden = supportedCount === 0;
   elements.participantRatingTab.hidden = !participantsSupported;
   elements.problemRatingTab.hidden = !problemSupported;
   elements.previewTab.hidden = !previewSupported;
@@ -430,34 +436,219 @@ function showSeries() {
   applySearch({ resetScroll: false });
 }
 
-function formatPreviewRating(value) {
+function formatPreviewRating(value, minimumFractionDigits = 0) {
   if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat("zh-CN", {
+    useGrouping: false,
+    minimumFractionDigits,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-function previewValueControl(team, displayValue, memberValue) {
+function previewRatingNode(sourceId, value) {
+  if (value === null || value === undefined) {
+    return node("span", { className: "preview-rating preview-missing", text: "—" });
+  }
+  if (sourceId === "previousSeason") {
+    return ratingNode(value, "preview-rating preview-rating-previous-season");
+  }
+  if (sourceId === "xcpcElo") {
+    if (value >= 3000) {
+      const text = formatPreviewRating(value);
+      return node("span", {
+        className: "preview-rating preview-rating-xcpc-elo preview-rating-xcpc-elo-legendary",
+      }, [
+        node("span", { className: "preview-rating-xcpc-elo-first", text: text[0] }),
+        document.createTextNode(text.slice(1)),
+      ]);
+    }
+    const ratingElement = ratingNode(value, "preview-rating preview-rating-xcpc-elo");
+    if (value >= 2300 && value < 2400) {
+      ratingElement.classList.remove("rating-orange");
+      ratingElement.classList.add("rating-red");
+    }
+    return ratingElement;
+  }
+  return node("span", {
+    className: `preview-rating preview-rating-${sourceId}`,
+    text: formatPreviewRating(value, sourceId === "xcpcrating" ? 2 : 0),
+  });
+}
+
+function previewRankedValue(displayed, rank) {
+  if (rank === null) return displayed;
+  return node("span", { className: "preview-ranked-value" }, [
+    displayed,
+    node("small", { className: "preview-global-rank", text: `#${rank}` }),
+  ]);
+}
+
+function previewValueControl(team, value, rank, memberValue, renderValue) {
   const tooltip = node("span", { className: "preview-member-tooltip", role: "tooltip" });
   for (const member of team.members) {
-    const value = memberValue(member);
     tooltip.append(node("span", {}, [
       node("strong", { text: member.name }),
-      node("span", { text: value }),
+      renderValue(memberValue(member)),
     ]));
   }
-  return node("button", {
+  const displayed = renderValue(value);
+  const rankLabel = rank === null ? "" : `；全体队伍第 ${rank} 名`;
+  const control = node("span", {
     className: "preview-value-control",
-    type: "button",
-    "aria-label": `${displayValue}；悬浮或聚焦查看所有成员明细`,
-  }, [node("span", { text: displayValue }), tooltip]);
+    tabIndex: 0,
+    "aria-label": `${displayed.textContent}${rankLabel}；悬浮或聚焦查看所有成员明细`,
+  }, [previewRankedValue(displayed, rank), tooltip]);
+  attachPreviewTooltip(control, tooltip);
+  return control;
+}
+
+function positionPreviewTooltip(control, tooltip) {
+  const viewportMargin = 8;
+  const gap = 6;
+  const controlRect = control.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const maximumLeft = Math.max(viewportMargin, window.innerWidth - tooltipRect.width - viewportMargin);
+  const left = Math.min(Math.max(viewportMargin, controlRect.right - tooltipRect.width), maximumLeft);
+  const below = controlRect.bottom + gap;
+  const above = controlRect.top - tooltipRect.height - gap;
+  const top = below + tooltipRect.height <= window.innerHeight - viewportMargin
+    ? below
+    : Math.max(viewportMargin, above);
+  tooltip.style.left = `${Math.round(left)}px`;
+  tooltip.style.top = `${Math.round(top)}px`;
+}
+
+function attachPreviewTooltip(control, tooltip) {
+  let hovering = false;
+  let focused = false;
+  const show = () => {
+    if (activePreviewTooltip && activePreviewTooltip !== tooltip) {
+      activePreviewTooltip.classList.remove("preview-tooltip-visible");
+      activePreviewTooltip.remove();
+    }
+    document.body.append(tooltip);
+    positionPreviewTooltip(control, tooltip);
+    tooltip.classList.add("preview-tooltip-visible");
+    activePreviewTooltip = tooltip;
+  };
+  const hide = () => {
+    if (hovering || focused) return;
+    tooltip.classList.remove("preview-tooltip-visible");
+    tooltip.remove();
+    if (activePreviewTooltip === tooltip) activePreviewTooltip = null;
+  };
+  control.addEventListener("mouseenter", () => {
+    hovering = true;
+    show();
+  });
+  control.addEventListener("mouseleave", () => {
+    hovering = false;
+    hide();
+  });
+  control.addEventListener("focus", () => {
+    focused = true;
+    show();
+  });
+  control.addEventListener("blur", () => {
+    focused = false;
+    hide();
+  });
 }
 
 function previewMedalText(medals) {
-  return `🥇${medals.gold} · 🥈${medals.silver} · 🥉${medals.bronze}`;
+  return `🥇${medals.gold}  🥈${medals.silver}  🥉${medals.bronze}`;
+}
+
+function radarPoint(index, count, dimensionCount, maximum, radius, centerX, centerY) {
+  const angle = -Math.PI / 2 + index * Math.PI * 2 / dimensionCount;
+  const distance = radius * count / maximum;
+  return [centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance];
+}
+
+function radarPoints(counts, maximum, radius, centerX, centerY) {
+  return counts.map((count, index) => (
+    radarPoint(index, count, counts.length, maximum, radius, centerX, centerY).join(",")
+  )).join(" ");
+}
+
+function previewPowerRadar(power) {
+  const labels = [...state.preview.metricSources.map(({ title }) => title), "奖牌"];
+  const maximum = Math.max(1, state.preview.teams.length - 1);
+  const centerX = 150;
+  const centerY = 105;
+  const radius = 58;
+  const labelRadius = 87;
+  const svg = svgNode("svg", {
+    class: "preview-power-radar",
+    viewBox: "0 0 300 215",
+    role: "img",
+    "aria-label": `五维综合战力雷达图，超过队伍数：${power.counts.join("、")}`,
+  });
+  for (const scale of [0.5, 1]) {
+    svg.append(svgNode("polygon", {
+      class: "preview-power-grid",
+      points: radarPoints(labels.map(() => maximum * scale), maximum, radius, centerX, centerY),
+    }));
+  }
+  labels.forEach((label, index) => {
+    const outer = radarPoint(index, maximum, labels.length, maximum, radius, centerX, centerY);
+    const labelPoint = radarPoint(
+      index,
+      maximum,
+      labels.length,
+      maximum,
+      labelRadius,
+      centerX,
+      centerY,
+    );
+    svg.append(svgNode("line", {
+      class: "preview-power-axis",
+      x1: centerX,
+      y1: centerY,
+      x2: outer[0],
+      y2: outer[1],
+    }));
+    const text = svgNode("text", {
+      class: "preview-power-label",
+      x: labelPoint[0],
+      y: labelPoint[1],
+      "text-anchor": labelPoint[0] < centerX - 8
+        ? "end"
+        : labelPoint[0] > centerX + 8 ? "start" : "middle",
+    });
+    text.textContent = label;
+    svg.append(text);
+  });
+  svg.append(svgNode("polygon", {
+    class: "preview-power-shape",
+    points: radarPoints(power.counts, maximum, radius, centerX, centerY),
+  }));
+  return svg;
+}
+
+function previewPowerControl(team) {
+  const power = state.previewPower.get(team.id);
+  const tooltip = node("span", { className: "preview-power-tooltip", role: "tooltip" }, [
+    node("strong", { text: `综合战力 #${power.rank}` }),
+    previewPowerRadar(power),
+  ]);
+  const control = node("span", {
+    className: "preview-power-control",
+    tabIndex: 0,
+    "aria-label": `综合战力第 ${power.rank} 名；悬浮或聚焦查看五维雷达图`,
+  }, [document.createTextNode(`#${power.rank}`), tooltip]);
+  attachPreviewTooltip(control, tooltip);
+  return control;
 }
 
 function renderPreviewRows() {
   if (!state.preview) return;
-  const columns = state.preview.metricSources.length + 4;
+  if (activePreviewTooltip) {
+    activePreviewTooltip.classList.remove("preview-tooltip-visible");
+    activePreviewTooltip.remove();
+    activePreviewTooltip = null;
+  }
+  const columns = state.preview.metricSources.length + 5;
   renderVirtualRows({
     container: elements.previewScroll,
     body: elements.previewBody,
@@ -471,21 +662,29 @@ function renderPreviewRows() {
       row.append(node("td", { text: team.name, title: team.name }));
       const memberNames = team.members.map(({ name }) => name).join(" / ");
       row.append(node("td", { text: memberNames, title: memberNames }));
+      row.append(node("td", { className: "preview-metric-cell preview-power-cell" }, [
+        previewPowerControl(team),
+      ]));
       for (const source of state.preview.metricSources) {
         const value = team.ratings[source.id];
+        const rank = state.previewRanks.get(team.id).ratings[source.id];
         row.append(node("td", {
           className: `preview-metric-cell${value === null ? " preview-missing" : ""}`,
         }, [previewValueControl(
           team,
-          formatPreviewRating(value),
-          (member) => formatPreviewRating(member.ratings[source.id]),
+          value,
+          rank,
+          (member) => member.ratings[source.id],
+          (rating) => previewRatingNode(source.id, rating),
         )]));
       }
       row.append(node("td", { className: "preview-metric-cell preview-medals" }, [
         previewValueControl(
           team,
-          previewMedalText(team.medals),
-          (member) => previewMedalText(member.medals),
+          team.medals,
+          state.previewRanks.get(team.id).medals,
+          (member) => member.medals,
+          (medals) => node("span", { text: previewMedalText(medals) }),
         ),
       ]));
       return row;
@@ -528,20 +727,20 @@ function renderPreviewHeader() {
     previewSortHeader("学校", "school"),
     previewSortHeader("中文队名", "name"),
     previewSortHeader("成员", "members"),
+    previewSortHeader("综合战力", "power"),
   );
   for (const source of state.preview.metricSources) row.append(previewSortHeader(source.title, source.id));
   row.append(previewSortHeader("奖牌（🥇/🥈/🥉）", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
   table.querySelector("colgroup")?.remove();
-  table.prepend(columnGroup([210, 220, 250, ...state.preview.metricSources.map(() => 118), 140]));
+  table.prepend(columnGroup([160, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150]));
 }
 
-function renderPreviewSources() {
-  const children = [document.createTextNode("名单来源：")];
-  const sources = [state.preview.teamSource, ...state.preview.metricSources];
+function renderSourceLinks(container, label, sources) {
+  const children = [node("strong", { text: label })];
   sources.forEach((source, index) => {
-    if (index) children.push(document.createTextNode(" · "));
+    children.push(document.createTextNode(index ? " · " : " "));
     children.push(node("a", {
       text: source.title,
       href: source.url,
@@ -549,7 +748,12 @@ function renderPreviewSources() {
       rel: source.url.startsWith("http") ? "noopener noreferrer" : "",
     }));
   });
-  elements.previewSources.replaceChildren(...children);
+  container.replaceChildren(...children);
+}
+
+function renderPreviewSources() {
+  renderSourceLinks(elements.previewTeamSource, "名单来源：", [state.preview.teamSource]);
+  renderSourceLinks(elements.previewMetricSources, "数据来源：", state.preview.metricSources);
 }
 
 function showPreview() {
@@ -569,8 +773,10 @@ function showPreview() {
   elements.previewView.hidden = false;
   updateSeriesMode();
   elements.previewTitle.textContent = state.preview.title;
-  elements.previewSummary.textContent = `${state.preview.teams.length.toLocaleString("zh-CN")} 支队伍 · 快照 ${state.preview.snapshotDate}`;
-  elements.previewNote.textContent = `${state.preview.teamSource.note} 后续仅按用户指定更新。${state.preview.matchingPolicy}`;
+  elements.previewContestSelect.replaceChildren(node("option", {
+    value: state.preview.id,
+    text: state.preview.title,
+  }));
   renderPreviewSources();
   renderPreviewHeader();
   applySearch({ resetScroll: false });
@@ -1184,6 +1390,12 @@ async function loadSeries(seriesId, queryState = {}) {
   state.series = loaded?.series ?? null;
   state.index = loaded?.index ?? null;
   state.preview = preview;
+  state.previewPower = preview
+    ? buildPreviewPower(preview.teams, preview.metricSources.map(({ id }) => id))
+    : new Map();
+  state.previewRanks = preview
+    ? buildPreviewRanks(preview.teams, preview.metricSources.map(({ id }) => id))
+    : new Map();
   state.problemSeries = null;
   state.problemSelectedContestIds = new Set();
   updateSeriesNavigation();
@@ -1196,10 +1408,10 @@ async function loadSeries(seriesId, queryState = {}) {
   const available = new Set(state.availableSchools);
   state.schools = requestedSchools.filter((school) => available.has(school));
   const previewSorts = new Set([
-    "school", "name", "members", "medals",
+    "school", "name", "members", "power", "medals",
     ...(state.preview?.metricSources.map(({ id }) => id) ?? []),
   ]);
-  state.previewSort = previewSorts.has(queryState.previewSort) ? queryState.previewSort : "xcpcrating";
+  state.previewSort = previewSorts.has(queryState.previewSort) ? queryState.previewSort : "power";
   state.previewOrder = queryState.previewOrder === "asc" ? "asc" : "desc";
   elements.searchInput.value = state.query;
   renderSchoolControls();
