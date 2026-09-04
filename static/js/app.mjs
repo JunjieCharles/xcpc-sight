@@ -25,6 +25,7 @@ import {
   buildPreviewRanks,
   createPreviewStore,
   listPreviewSchools,
+  previewRatingValue,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
@@ -666,7 +667,7 @@ function renderPreviewRows() {
         previewPowerControl(team),
       ]));
       for (const source of state.preview.metricSources) {
-        const value = team.ratings[source.id];
+        const value = previewRatingValue(source.id, team.ratings[source.id]);
         const rank = state.previewRanks.get(team.id).ratings[source.id];
         row.append(node("td", {
           className: `preview-metric-cell${value === null ? " preview-missing" : ""}`,
@@ -674,7 +675,7 @@ function renderPreviewRows() {
           team,
           value,
           rank,
-          (member) => member.ratings[source.id],
+          (member) => previewRatingValue(source.id, member.ratings[source.id]),
           (rating) => previewRatingNode(source.id, rating),
         )]));
       }
@@ -730,7 +731,7 @@ function renderPreviewHeader() {
     previewSortHeader("综合战力", "power"),
   );
   for (const source of state.preview.metricSources) row.append(previewSortHeader(source.title, source.id));
-  row.append(previewSortHeader("奖牌（🥇/🥈/🥉）", "medals"));
+  row.append(previewSortHeader("奖牌", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
   table.querySelector("colgroup")?.remove();

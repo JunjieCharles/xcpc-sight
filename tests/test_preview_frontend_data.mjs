@@ -6,6 +6,7 @@ import {
   buildPreviewPower,
   buildPreviewRanks,
   createPreviewStore,
+  previewRatingValue,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
@@ -107,6 +108,8 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
   assert.match(appModule, /elements\.previewContestSelect\.replaceChildren/);
+  assert.match(appModule, /previewSortHeader\("奖牌", "medals"\)/);
+  assert.doesNotMatch(appModule, /奖牌（🥇\/🥈\/🥉）/);
   assert.match(appModule, /function positionPreviewTooltip\(/);
   assert.match(appModule, /document\.body\.append\(tooltip\)/);
   assert.doesNotMatch(appModule, /排序元组：|preview-power-vector/);
@@ -190,6 +193,43 @@ test("ranks each displayed metric globally with competition ties", () => {
   assert.equal(tiedRanks.get("b").ratings.xcpcElo, 1);
   assert.equal(tiedRanks.get("a").ratings.xcpcElo, 2);
   assert.equal(tiedRanks.get("c").ratings.xcpcElo, 2);
+});
+
+test("treats a zero CPC Finder score as missing for display and ranking", () => {
+  const teams = [
+    {
+      id: "scored",
+      sourceIndex: 0,
+      ratings: { cpcfinder: 100 },
+      medals: { gold: 0, silver: 0, bronze: 0 },
+    },
+    {
+      id: "zero",
+      sourceIndex: 1,
+      ratings: { cpcfinder: 0 },
+      medals: { gold: 0, silver: 0, bronze: 0 },
+    },
+    {
+      id: "missing",
+      sourceIndex: 2,
+      ratings: { cpcfinder: null },
+      medals: { gold: 0, silver: 0, bronze: 0 },
+    },
+  ];
+
+  assert.equal(previewRatingValue("cpcfinder", 0), null);
+  assert.equal(previewRatingValue("xcpcElo", 0), 0);
+  assert.deepEqual(buildPreviewRanks(teams, ["cpcfinder"]), new Map([
+    ["scored", { ratings: { cpcfinder: 1 }, medals: 1 }],
+    ["zero", { ratings: { cpcfinder: null }, medals: 1 }],
+    ["missing", { ratings: { cpcfinder: null }, medals: 1 }],
+  ]));
+  assert.deepEqual(
+    sortPreviewTeams(teams, "cpcfinder", "desc").map(({ id }) => id),
+    ["scored", "zero", "missing"],
+  );
+  const power = buildPreviewPower(teams, ["cpcfinder"]);
+  assert.equal(power.get("zero").rank, power.get("missing").rank);
 });
 
 test("comprehensive power treats missing ratings as weakest and preserves ties", () => {

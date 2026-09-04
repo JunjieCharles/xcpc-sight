@@ -113,6 +113,10 @@ export function searchPreviewTeams(teams, query, schools = []) {
   });
 }
 
+export function previewRatingValue(metricId, value) {
+  return metricId === "cpcfinder" && value === 0 ? null : value;
+}
+
 function comparePowerValues(left, right) {
   if (left === null && right === null) return 0;
   if (left === null) return -1;
@@ -160,7 +164,7 @@ function competitionRanks(teams, valueOf, compare, skipNull = false) {
 export function buildPreviewRanks(teams, metricIds = Object.keys(teams[0]?.ratings ?? {})) {
   const ratingRanks = new Map(metricIds.map((id) => [
     id,
-    competitionRanks(teams, (team) => team.ratings[id] ?? null, comparePowerValues, true),
+    competitionRanks(teams, (team) => previewRatingValue(id, team.ratings[id] ?? null), comparePowerValues, true),
   ]));
   const medalRanks = competitionRanks(teams, (team) => team.medals, compareMedals);
   return new Map(teams.map((team) => [team.id, {
@@ -182,7 +186,7 @@ export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratin
   const dimensions = [
     ...metricIds.map((id) => countStrictlyLower(
       teams,
-      (team) => team.ratings[id] ?? null,
+      (team) => previewRatingValue(id, team.ratings[id] ?? null),
       comparePowerValues,
     )),
     countStrictlyLower(teams, (team) => team.medals, compareMedals),
@@ -236,7 +240,11 @@ export function sortPreviewTeams(teams, sort, order = "desc", previewPower = nul
         order,
       );
     } else {
-      compared = compareNullableNumber(left.ratings[sort] ?? null, right.ratings[sort] ?? null, order);
+      compared = compareNullableNumber(
+        previewRatingValue(sort, left.ratings[sort] ?? null),
+        previewRatingValue(sort, right.ratings[sort] ?? null),
+        order,
+      );
     }
     return compared || left.sourceIndex - right.sourceIndex;
   });
