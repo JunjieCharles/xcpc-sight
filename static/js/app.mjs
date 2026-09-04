@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260904-8";
+} from "./data.mjs?v=20260904-9";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260904-8";
+} from "./problem-rating.mjs?v=20260904-9";
 import {
   buildPreviewPower,
   buildPreviewRanks,
@@ -30,7 +30,7 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260904-8";
+} from "./preview.mjs?v=20260904-9";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -734,8 +734,11 @@ function renderPreviewHeader() {
   row.append(previewSortHeader("奖牌", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
+  const widths = [160, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150];
+  table.style.setProperty("--preview-table-width", `${widths.reduce((sum, width) => sum + width, 0)}px`);
+  table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((sum, width) => sum + width, 0)}px`);
   table.querySelector("colgroup")?.remove();
-  table.prepend(columnGroup([160, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150]));
+  table.prepend(columnGroup(widths));
 }
 
 function renderSourceLinks(container, label, sources) {
