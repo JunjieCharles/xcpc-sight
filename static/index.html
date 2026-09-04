@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
-  <link rel="stylesheet" href="./styles.css?v=20260821-15">
+  <link rel="stylesheet" href="./styles.css?v=20260904-1">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -50,11 +50,13 @@
                 aria-controls="series-view" aria-selected="true">选手 Rating</button>
         <button id="problem-rating-tab" type="button" role="tab"
                 aria-controls="problem-rating-view" aria-selected="false">题目难度</button>
+        <button id="preview-tab" type="button" role="tab" hidden
+                aria-controls="preview-view" aria-selected="false">前瞻</button>
       </div>
 
       <section id="participant-controls" class="controls" aria-label="搜索">
         <div class="search-label">
-          <label for="search-input">搜索参赛者或学校</label>
+          <label id="search-label-text" for="search-input">搜索参赛者或学校</label>
           <span class="search-field">
             <span id="school-tags" class="school-tags"></span>
             <input id="search-input" type="search" autocomplete="off" placeholder="输入参赛者名称或学校">
@@ -76,6 +78,28 @@
           </div>
         </div>
         <p id="result-count" class="result-count" aria-live="polite"></p>
+      </section>
+
+      <section id="preview-view" hidden aria-labelledby="preview-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PREVIEW</p>
+            <h2 id="preview-title"></h2>
+          </div>
+          <p id="preview-summary" class="section-note"></p>
+        </div>
+        <div class="preview-notice" role="note">
+          <strong>静态赛前快照</strong>
+          <span id="preview-note"></span>
+        </div>
+        <p id="preview-sources" class="preview-sources"></p>
+        <div class="table-shell preview-table-shell" id="preview-scroll" tabindex="0"
+             aria-label="赛前队伍数据表，可点击表头排序并悬浮查看成员明细">
+          <table class="data-table preview-table">
+            <thead id="preview-head"></thead>
+            <tbody id="preview-body"></tbody>
+          </table>
+        </div>
       </section>
 
       <div id="status" class="status" role="status">正在加载数据…</div>
@@ -152,6 +176,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20260821-15"></script>
+  <script type="module" src="./js/app.mjs?v=20260904-1"></script>
 </body>
 </html>

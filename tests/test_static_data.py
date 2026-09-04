@@ -99,7 +99,7 @@ def test_projects_exact_index_and_series_structure() -> None:
     assert project_static_data_index(
         ((document, "series/2025-2026.json"),)
     ) == {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "defaultSeriesId": "2025-2026",
         "series": [
             {
@@ -183,9 +183,20 @@ def test_published_index_matches_published_series_documents() -> None:
             entry["path"],
         )
         for entry in index["series"]
+        if "path" in entry
+    )
+    preview_publications = tuple(
+        (
+            json.loads((data_dir / entry["previewPath"]).read_text(encoding="utf-8")),
+            entry["previewPath"],
+        )
+        for entry in index["series"]
+        if "previewPath" in entry
     )
 
-    assert index == project_static_data_index(publications)
+    assert index == project_static_data_index(
+        publications, preview_publications=preview_publications
+    )
 
 
 def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
@@ -206,6 +217,64 @@ def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
         project_static_data_index(
             ((document, "series/a.json"), (duplicate, "series/a.json"))
         )
+
+
+def test_index_accepts_preview_only_series_and_sorts_it_by_event_time() -> None:
+    rating_document = project_fixture()
+    preview_document = {
+        "schemaVersion": 1,
+        "seriesId": "2026-2027",
+        "seriesTitle": "2026–2027 ICPC + CCPC",
+        "sortAt": "2026-09-06T13:00:00+08:00",
+        "teams": [{"id": "team"}],
+    }
+
+    index = project_static_data_index(
+        ((rating_document, "series/2025-2026.json"),),
+        preview_publications=((preview_document, "previews/2026-2027.json"),),
+    )
+
+    assert index == {
+        "schemaVersion": 2,
+        "defaultSeriesId": "2026-2027",
+        "series": [
+            {
+                "id": "2026-2027",
+                "title": "2026–2027 ICPC + CCPC",
+                "previewPath": "previews/2026-2027.json",
+            },
+            {
+                "id": "2025-2026",
+                "title": "2025–2026 ICPC + CCPC",
+                "path": "series/2025-2026.json",
+            },
+        ],
+    }
+
+
+def test_index_combines_rating_and_preview_entries_for_the_same_series() -> None:
+    rating_document = project_fixture()
+    preview_document = {
+        "schemaVersion": 1,
+        "seriesId": rating_document["id"],
+        "seriesTitle": rating_document["title"],
+        "sortAt": "2026-09-06T13:00:00+08:00",
+        "teams": [{"id": "team"}],
+    }
+
+    index = project_static_data_index(
+        ((rating_document, "series/rating.json"),),
+        preview_publications=((preview_document, "previews/preview.json"),),
+    )
+
+    assert index["series"] == [
+        {
+            "id": rating_document["id"],
+            "title": rating_document["title"],
+            "path": "series/rating.json",
+            "previewPath": "previews/preview.json",
+        }
+    ]
 
 
 def test_competition_ranking_skips_positions_after_ties() -> None:
@@ -473,6 +542,7 @@ def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> N
             generate_static_data.SeriesSpec("new", "New", "series/new.json", load_named("new")),
         ),
     )
+    monkeypatch.setattr(generate_static_data, "preview_specs", lambda: ())
     monkeypatch.setattr(generate_static_data, "calculate_series_ratings", lambda contests: result)
     original_write = generate_static_data.write_json_atomic
 

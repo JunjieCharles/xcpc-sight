@@ -1,6 +1,6 @@
 # 静态站点数据
 
-选手 Rating 生成器发布三个 schema v1 系列：`2025-2026` ICPC + CCPC、`2026牛客暑期多校训练营`，以及 `2026“钉耙编程”中国大学生算法设计暑期联赛`。独立的题目 Rating 生成器从本地预测 CSV 发布这三个系列的题目级聚合 JSON。项目不包含后端或数据库，也不生成分块或重复的稠密数组；`static/` 同时包含直接消费这些文件的零依赖前端。
+选手 Rating 生成器发布三个 schema v1 Rating 系列，并把已提交的 2026–2027 schema v1 前瞻快照一并登记到 schema v2 站点索引。独立的题目 Rating 生成器仍只发布三个已有系列的题目级聚合 JSON。项目不包含后端或数据库；`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -14,8 +14,9 @@ python scripts/generate_static_data.py
 - `static/data/series/2025-2026.json`
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
+- `static/data/previews/2026-2027.json`
 
-XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238，且当前均为 rated。各来源进入 Rating 前都过滤无提交队伍，并按 solved 降序、精确 penalty 升序重建含并列的比赛排名。各系列均按开始时间正序计算。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部系列；任一来源失败时不发布任何文件。成功后依次原子发布系列文件，最后发布入口索引。
+XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238。各来源进入 Rating 前都过滤无提交队伍并重建含并列的比赛排名。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部 Rating 系列，同时读取已提交的前瞻文件；成功后依次原子发布系列与前瞻文件，最后发布入口索引。它不会自行请求、刷新或扩展前瞻名单。
 
 题目 Rating 数据在完成 `python -m problem_rating.predict_xcpc` 后离线生成：
 
@@ -30,16 +31,16 @@ JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不�
 ## 索引契约
 
 ```json
-{"schemaVersion":1,"defaultSeriesId":"hdu-summer-2026","series":[{"id":"hdu-summer-2026","title":"2026“钉耙编程”中国大学生算法设计暑期联赛","path":"series/hdu-summer-2026.json"},{"id":"nowcoder-summer-2026","title":"2026牛客暑期多校训练营","path":"series/nowcoder-summer-2026.json"},{"id":"2025-2026","title":"2025–2026 ICPC + CCPC","path":"series/2025-2026.json"}]}
+{"schemaVersion":2,"defaultSeriesId":"2026-2027","series":[{"id":"2026-2027","title":"2026–2027 ICPC + CCPC","previewPath":"previews/2026-2027.json"},{"id":"hdu-summer-2026","title":"2026“钉耙编程”中国大学生算法设计暑期联赛","path":"series/hdu-summer-2026.json"}]}
 ```
 
 字段含义：
 
-- `schemaVersion`：当前为 `1`；
+- `schemaVersion`：当前为 `2`；
 - `defaultSeriesId`：静态站点默认打开的系列；
-- `series[]`：可用系列的 `id`、显示 `title` 和相对索引文件的 `path`。
+- `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向前瞻；未来同一系列可同时具有两者。
 
-索引按每个系列 `contests[].startAt` 的最大值倒序排列，时间相同则按系列 ID 升序；第一项成为默认系列。投影拒绝空输入、无比赛系列、重复 ID 和重复路径。
+索引按每个 Rating 系列 `contests[].startAt` 的最大值或前瞻 `sortAt` 倒序排列，时间相同则按系列 ID 升序；同一系列同时存在两类数据时取两者中较新的时间。第一项成为默认系列。投影拒绝空输入、无内容系列、同类重复 ID 和重复路径；同一 ID 的 Rating 与前瞻会合并为一项，并要求标题一致。
 已发布的 `index.json` 必须由同一批系列 JSON 投影得到；离线回归测试会校验这一一致性，避免单独更新系列数据后目录顺序滞后。
 
 ## 系列契约
@@ -111,9 +112,15 @@ series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和
 
 2025–2026 ICPC + CCPC 的题目特征以正式且有提交活动的队伍为样本。每队 Rating 是全部非教练队员 `finalRating` 的最大值；成员使用与选手 Rating 相同的学校/姓名规范化和稳定 ID。只有全部成员均可映射时才纳入该队，避免把部分成员最大值误当成完整队伍 Rating。RankLand SRK 原始成员和逐题记录仅缓存在被 Git 忽略的本地目录，发布投影只保留题目级计数。
 
+## 前瞻数据契约
+
+`static/data/previews/2026-2027.json` 使用独立 schema v1。顶层包含 `seriesId`、`seriesTitle`、场次 `id`/`title`、用于索引排序的 `sortAt`、`snapshotDate`、`teamSource`、`metricSources[]`、来源快照信息、匹配政策/统计与 `teams[]`。
+
+`teams[]` 每项包含学校、中文队名、来源顺序、稳定 ID、成员明细、四项队伍评分和金银铜牌总数。每位成员有同样四项评分与个人奖牌数。评分允许 `null`，但非空值必须有限；队伍评分必须严格等于已匹配成员最大值，队伍奖牌必须严格等于成员奖牌之和。详细来源、匹配与人工更新边界见 [2026–2027 赛季与前瞻](season-2026-2027-preview.md)。
+
 ## 静态前端
 
-前端入口为 `static/index.html`，样式和原生 ES modules 分别位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；发布前端改动时必须一并更新该标识，使浏览器和 CDN 请求新的资源 URL，而数据 JSON 则继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，部署时保留 `static/` 内的相对目录即可；所有数据 URL 均相对于入口索引或模块解析，因此部署在域名子路径下也能工作。
+前端入口为 `static/index.html`，样式和原生 ES modules 位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs`、`static/js/preview.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；数据 JSON 继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，所有数据 URL 均相对于入口索引或模块解析。
 
 本地必须通过 HTTP 访问，而不是直接打开 `file://`：
 
@@ -131,17 +138,19 @@ python -m http.server 8000 --directory static
 - 三个已发布题目数据的 series 均提供“选手 Rating / 题目难度”切换；题目页默认选择全部场次，图例只显示场次短名，支持点击逐场筛选和快捷全选/全不选；2025–2026 ICPC + CCPC 另有“仅 ICPC”和“仅 CCPC”按钮，用对应组织的全部场次替换当前选择；表头点击完成“场次 + 题号”或 Rating 的正序/逆序切换；通过队伍/有效队伍在同一列分别对齐，界面不展示时间样本；
 - 每场题目按预测 Rating 从易到难排列的多曲线 SVG；Rating 相同按自然题号稳定排序，图表适配页面可用宽度，曲线长度与题目数量成正比，并使用不越过相邻点范围的单调三次插值，圆点和提示保留真实预测值；颜色按场次索引以黄金角色相和交替明度确定性生成，筛选不改变颜色，已发布系列内不重复；曲线宽命中带和题目点悬停均显示正式场次名，题目点另外显示题号、题名和 Rating；
 - `view=problem-rating`、`problemContests`、`problemSort`、`problemOrder` 查询状态。缺少 `problemContests` 表示全选，`none` 表示取消全部，其他值为逗号分隔的场次 ID。
+- 只有前瞻数据的 2026–2027 系列直接打开“前瞻”页，不显示不存在的选手 Rating/题目难度入口。前瞻支持学校、中文队名和成员多词搜索、学校多选，以及学校/队名/成员/四项评分/奖牌全部表头双向排序；评分缺失值始终置后，奖牌依次比较金、银、铜。评分和奖牌单元格悬浮或聚焦时显示全员明细。
+- `view=preview`、`previewSort`、`previewOrder` 查询状态；默认按 `xcpcrating` 降序。
 
 数据层以 URL 为键缓存正在进行和已完成的 JSON Promise；失败会从缓存移除以允许重试。索引和系列对象分别只验证一次，系列验证后只建立一次参赛者 ID 与单场参赛者索引。验证包括 schema 版本、必需字段与类型、唯一 ID、比赛引用范围、参赛顺序、rating 算术与连续性，以及最终 rating/参赛次数一致性。未知 schema 版本或不合法文档会显示错误面板，不静默渲染部分数据。
 
-宽表和单场表仅在 DOM 中保留视口附近的行；筛选仍在已加载数据上执行。两个虚拟表都使用显式 `colgroup`、固定 table layout 和固定 44px 行高，列宽不依赖当前挂载的可见行，因此纵向滚动不会触发表格列宽突变。系列 JSON 当前仍一次性加载和解析，因此内存规模取决于整个系列文件；本版不引入服务端搜索、分块或单场文件。
+宽表、单场表和前瞻表仅在 DOM 中保留视口附近的行；筛选仍在已加载数据上执行。虚拟表使用显式 `colgroup`、固定 table layout 和固定 44px 行高。系列与前瞻 JSON 当前仍一次性加载和解析；本版不引入服务端搜索或分块。
 
 ## 前端测试
 
-`tests/test_frontend_data.mjs` 与 `tests/test_problem_rating_frontend_data.mjs` 使用 Node 内置测试运行器，不需要 `package.json`：
+三个前端测试文件使用 Node 内置测试运行器，不需要 `package.json`：
 
 ```bash
-node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs
 ```
 
-覆盖选手与题目 schema 校验失败和空题名、一次性索引、稀疏记录的 carried rating、关键词与学校精确多选筛选、组合清空控件、零变化量强调、signed delta、含重复学校参数的查询状态、子路径 URL 解析、Promise 缓存失败重试、多系列索引顺序、题目场次筛选、两类双向排序、自然题号、难度曲线顺序/题量比例、单调路径、题目 URL 状态，以及按 ID 独立加载题目数据。DOM 虚拟滚动和浏览器交互继续通过本地 HTTP 与桌面/移动端浏览器检查。
+覆盖选手、题目与前瞻 schema，真实 2535 队快照，索引两类入口，稀疏 rating、搜索/学校筛选、前瞻各列与奖牌复合排序、缺失值、三类页面 URL 状态、子路径解析、Promise 缓存、题目筛选与难度曲线。DOM 虚拟滚动、悬浮详情和浏览器交互继续通过本地 HTTP 与桌面/移动端浏览器检查。

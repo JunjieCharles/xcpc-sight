@@ -11,7 +11,8 @@ from core.models import CompetitorId
 from .models import SeriesRatingResult
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
-_SCHEMA_VERSION = 1
+_SERIES_SCHEMA_VERSION = 1
+_INDEX_SCHEMA_VERSION = 2
 
 
 def _competitor_id(competitor: CompetitorId) -> str:
@@ -163,7 +164,7 @@ def project_series_rating_data(
         competitor["rank"] = current_rank
 
     return {
-        "schemaVersion": _SCHEMA_VERSION,
+        "schemaVersion": _SERIES_SCHEMA_VERSION,
         "id": series_id,
         "title": title,
         "initialRating": initial_rating,
@@ -175,18 +176,23 @@ def project_series_rating_data(
 def project_static_data_index(
     publications: Sequence[tuple[Mapping[str, object], str]] | None = None,
     *,
+    preview_publications: Sequence[tuple[Mapping[str, object], str]] = (),
     series_id: str | None = None,
     title: str | None = None,
     path: str | None = None,
 ) -> Mapping[str, object]:
-    """Build a newest-first index for published rating series documents."""
+    """Build a newest-first index for published rating and preview documents."""
     if publications is None:
         if not series_id or not title or not path:
             raise DataValidationError(
                 "provide publications or the legacy series_id, title, and path"
             )
+        if preview_publications:
+            raise DataValidationError(
+                "preview_publications cannot be combined with the legacy index arguments"
+            )
         return {
-            "schemaVersion": _SCHEMA_VERSION,
+            "schemaVersion": _INDEX_SCHEMA_VERSION,
             "defaultSeriesId": series_id,
             "series": [{"id": series_id, "title": title, "path": path}],
         }
@@ -194,7 +200,7 @@ def project_static_data_index(
         raise DataValidationError(
             "publications cannot be combined with series_id, title, or path"
         )
-    if not publications:
+    if not publications and not preview_publications:
         raise DataValidationError("static data index must contain at least one series")
     seen_ids: set[str] = set()
     seen_paths: set[str] = set()
@@ -243,11 +249,71 @@ def project_static_data_index(
         seen_paths.add(path)
         entries.append((latest, {"id": series_id, "title": title, "path": path}))
 
+    for document, preview_path in preview_publications:
+        series_id = document.get("seriesId")
+        title = document.get("seriesTitle")
+        sort_at = document.get("sortAt")
+        teams = document.get("teams")
+        if not isinstance(series_id, str) or not series_id:
+            raise DataValidationError("preview document seriesId must be a non-empty string")
+        if not isinstance(title, str) or not title:
+            raise DataValidationError(
+                f"preview series {series_id}: seriesTitle must be a non-empty string"
+            )
+        if not isinstance(preview_path, str) or not preview_path:
+            raise DataValidationError(
+                f"preview series {series_id}: path must be a non-empty string"
+            )
+        if preview_path in seen_paths:
+            raise DataValidationError(f"duplicate series path {preview_path!r}")
+        if not isinstance(teams, list) or not teams:
+            raise DataValidationError(
+                f"preview series {series_id}: published preview must contain at least one team"
+            )
+        if not isinstance(sort_at, str):
+            raise DataValidationError(f"preview series {series_id}.sortAt must be a string")
+        try:
+            latest = datetime.fromisoformat(sort_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise DataValidationError(
+                f"preview series {series_id}.sortAt is invalid"
+            ) from error
+        if latest.tzinfo is None:
+            raise DataValidationError(
+                f"preview series {series_id}.sortAt must have an offset"
+            )
+        seen_paths.add(preview_path)
+        if series_id in seen_ids:
+            entry_index = next(
+                index for index, (_, entry) in enumerate(entries) if entry["id"] == series_id
+            )
+            previous_latest, entry = entries[entry_index]
+            if "previewPath" in entry:
+                raise DataValidationError(f"duplicate preview series id {series_id!r}")
+            if entry["title"] != title:
+                raise DataValidationError(
+                    f"series {series_id}: rating and preview titles must match"
+                )
+            entry["previewPath"] = preview_path
+            entries[entry_index] = (max(previous_latest, latest), entry)
+        else:
+            seen_ids.add(series_id)
+            entries.append(
+                (
+                    latest,
+                    {
+                        "id": series_id,
+                        "title": title,
+                        "previewPath": preview_path,
+                    },
+                )
+            )
+
     entries.sort(key=lambda item: item[1]["id"])
     entries.sort(key=lambda item: item[0], reverse=True)
     series = [entry for _, entry in entries]
     return {
-        "schemaVersion": _SCHEMA_VERSION,
+        "schemaVersion": _INDEX_SCHEMA_VERSION,
         "defaultSeriesId": series[0]["id"],
         "series": series,
     }

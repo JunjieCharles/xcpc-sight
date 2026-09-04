@@ -9,12 +9,13 @@
 - 通过登录会话获取 HDU 榜单元数据与 UTF-8 CSV，并按稳定 team token 接入 rating；
 - 对所有来源统一过滤无提交队伍，并按题数、罚时重建含并列的比赛排名；
 - 定义 `icpc2025` + `ccpc2025` 的 2025–2026 赛季；
+- 定义 `icpc2026` + `ccpc2026` 的 2026–2027 赛季，并在正式 Rating 数据产生前提供赛前“前瞻”；
 - 发布 `2026牛客暑期多校训练营` 第一至第十场；
 - 发布固定 CID `1229` 至 `1238` 的 `2026“钉耙编程”中国大学生算法设计暑期联赛`；
 - 从空初始状态按比赛顺序计算个人或报名实体 rating；
 - 以独立的 `problem_rating` 包训练、验证和预测题目难度 rating；
 - 为静态站点生成确定、可复现的稀疏 JSON 数据；
-- 提供零依赖、无需构建的选手 Rating 与题目难度浏览前端；
+- 提供零依赖、无需构建的选手 Rating、题目难度与前瞻浏览前端；
 - 可复用的纯 Python API。
 
 ## 安装
@@ -60,7 +61,7 @@ print(len(document["contests"]), len(document["competitors"]))
 python scripts/generate_static_data.py
 ```
 
-默认写入 `static/data/index.json`、`static/data/series/2025-2026.json`、`static/data/series/nowcoder-summer-2026.json` 和 `static/data/series/hdu-summer-2026.json`；可用 `--output-dir` 覆盖。系列按各自最新比赛时间倒序排列，最新系列成为默认系列。系列 JSON 的稀疏参赛记录可派生系列宽表、单场变化表和参赛者完整 rating 曲线。生成过程访问实时 RankLand、牛客和 HDU，不属于默认离线测试。HDU 默认使用可覆盖的 `guest`/`guest` 登录凭据。
+默认写入 `static/data/index.json`、三个既有 Rating series，并复制已提交的 `static/data/previews/2026-2027.json` 前瞻快照；可用 `--output-dir` 覆盖。系列按最新比赛或前瞻场次时间倒序排列，最新系列成为默认系列。前瞻不会在该命令中联网刷新。Rating 生成过程访问实时 RankLand、牛客和 HDU，不属于默认离线测试。
 
 在完成 2025–2026 ICPC + CCPC、牛客和 HDU 题目预测后，可以从本地预测 CSV 离线发布独立的题目 Rating JSON：
 
@@ -76,10 +77,10 @@ python scripts/generate_problem_rating_static_data.py
 python -m http.server 8000 --directory static
 ```
 
-然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录到任意子路径。页面提供左侧系列目录、搜索与虚拟滚动选手宽表、单场参赛者表，以及上下排列的参赛者 rating 曲线和参赛记录；三个已发布题目数据的 series 还提供独立的题目难度入口、可点击筛选的场次图例、适配页面宽度的难度曲线和可点击表头双向排序的题目表格。当前视图、题目筛选和排序会写入查询参数，链接可以直接分享。前端纯数据工具测试使用 Node 内置测试运行器：
+然后打开 `http://localhost:8000/`。站点没有 npm 依赖、构建步骤或 `package.json`；可直接部署整个 `static/` 目录。2026–2027 系列当前只有 ICPC 网络赛第一场前瞻：2535 支公开报名队伍，展示学校、中文队名、非教练成员、三套外部评分、本仓库上赛季 Rating、CPC Finder 评分及队员奖牌总数。评分列取队内最高值，悬浮或键盘聚焦可查看全员明细，所有表头均可双向排序，奖牌按金、银、铜依次捆绑排序。前瞻名单是外部静态快照，不来自 Pintia 比赛榜单，也不随比赛自动更新；后续只按用户明确指定的场次或名单更新。完整口径见 [2026–2027 赛季与前瞻](doc/season-2026-2027-preview.md)。
 
 ```bash
-node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs
 ```
 
 获取牛客比赛 `133876` 至 `133885` 的完整赛时榜单：
@@ -104,6 +105,7 @@ static/             零构建静态前端
 static/js/          浏览器 ES modules 与数据辅助函数
 static/data/        静态站点发布 JSON
 static/data/problem-rating/  ICPC+CCPC/牛客/HDU 题目 Rating 发布 JSON
+static/data/previews/  人工指定更新的赛前队伍静态快照
 data-cache/        已忽略、可丢弃的上游下载缓存
 doc/               各功能设计文档
 ```
@@ -114,7 +116,7 @@ doc/               各功能设计文档
 
 ## 赛季口径
 
-2025–2026 赛季来自 RankLand official collection 中的 `icpc2025` 和 `ccpc2025`。邀请赛排除，区域赛包含；其余非邀请赛默认保留，但通过显式 ID 例外排除 `ccpc2025ladies` 女生专场。比赛按上海本地日期排序，同日 CCPC 在 ICPC 前。
+2025–2026 赛季来自 `icpc2025` 和 `ccpc2025`；2026–2027 赛季对应 `icpc2026` 和 `ccpc2026`，但当前尚不发布选手 Rating 或题目难度，只发布指定的赛前前瞻。两个正式赛季都按统一规则排除邀请赛、保留区域赛，并按上海本地日期排序。
 
 详细规则见：
 
@@ -126,13 +128,14 @@ doc/               各功能设计文档
 - [牛客榜单数据](doc/nowcoder-data.md)
 - [HDU 榜单数据](doc/hdu-data.md)
 - [2025–2026 赛季](doc/season-2025-2026.md)
+- [2026–2027 赛季与前瞻](doc/season-2026-2027-preview.md)
 
 ## 质量检查
 
 ```bash
 ruff check .
 pytest --cov=core --cov=rating --cov=problem_rating
-node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs
 ```
 
 默认测试不访问公网。RankLand、牛客和 HDU 都是外部数据源，线上结果可能随上游数据更新；计算核心、JSON 投影与网络适配保持分离。

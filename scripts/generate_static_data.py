@@ -31,6 +31,12 @@ class SeriesSpec:
     load: Callable[[], tuple[Contest, ...]]
 
 
+@dataclass(frozen=True, slots=True)
+class PreviewSpec:
+    source: Path
+    path: str
+
+
 XCPC_SERIES_ID = "2025-2026"
 XCPC_SERIES_TITLE = "2025–2026 ICPC + CCPC"
 NOWCODER_SERIES_ID = "nowcoder-summer-2026"
@@ -50,6 +56,7 @@ NOWCODER_CONTESTS = (
 HDU_SERIES_ID = "hdu-summer-2026"
 HDU_SERIES_TITLE = '2026“钉耙编程”中国大学生算法设计暑期联赛'
 HDU_CONTEST_IDS = (1229, 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1238)
+PREVIEW_2026_2027_PATH = "previews/2026-2027.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -126,6 +133,16 @@ def series_specs() -> tuple[SeriesSpec, ...]:
     )
 
 
+def preview_specs() -> tuple[PreviewSpec, ...]:
+    repository_root = Path(__file__).resolve().parents[1]
+    return (
+        PreviewSpec(
+            repository_root / "static" / "data" / PREVIEW_2026_2027_PATH,
+            PREVIEW_2026_2027_PATH,
+        ),
+    )
+
+
 def generate_static_data(output_dir: Path) -> None:
     publications: list[tuple[dict[str, object], str]] = []
     for spec in series_specs():
@@ -138,8 +155,16 @@ def generate_static_data(output_dir: Path) -> None:
         )
         publications.append((document, spec.path))
 
-    index = project_static_data_index(publications)
+    preview_publications = [
+        (json.loads(spec.source.read_text(encoding="utf-8")), spec.path)
+        for spec in preview_specs()
+    ]
+    index = project_static_data_index(
+        publications, preview_publications=preview_publications
+    )
     for document, path in publications:
+        write_json_atomic(output_dir / path, document)
+    for document, path in preview_publications:
         write_json_atomic(output_dir / path, document)
     write_json_atomic(output_dir / "index.json", index)
 

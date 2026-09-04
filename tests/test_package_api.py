@@ -4,6 +4,8 @@ def test_packages_export_their_public_apis() -> None:
     import rating
 
     assert core.Contest.__module__ == "core.models"
+    assert core.SEASON_2026_2027.name == "2026-2027"
+    assert core.load_2026_2027_season.__module__ == "core.seasons"
     assert core.RankLandClient.__module__ == "core.rankland"
     assert core.NowcoderClient.__module__ == "core.nowcoder"
     assert core.nowcoder_leaderboard_to_contest.__module__ == "core.nowcoder"

@@ -3,6 +3,7 @@ from datetime import datetime
 from core import Contest
 from core.seasons import (
     SEASON_2025_2026,
+    SEASON_2026_2027,
     SeasonSpec,
     contest_sort_key,
     select_season,
@@ -64,3 +65,15 @@ def test_sort_key_accepts_aware_and_naive_times() -> None:
     )
     naive = make_contest("naive", "Naive", "icpc2025", datetime(2025, 10, 1, 9))
     assert contest_sort_key(aware) < contest_sort_key(naive)
+
+
+def test_2026_2027_season_uses_new_icpc_and_ccpc_collections() -> None:
+    icpc = make_contest("i", "ICPC Regional", "icpc2026", datetime(2026, 10, 1))
+    ccpc = make_contest("c", "CCPC Regional", "ccpc2026", datetime(2026, 10, 2))
+    old = make_contest("old", "Old Regional", "icpc2025", datetime(2025, 10, 1))
+
+    season = select_season((old, ccpc, icpc), SEASON_2026_2027)
+
+    assert season.name == SEASON_2026_2027.name
+    assert season.contests == (icpc, ccpc)
+    assert season.decisions[0].reason == "not in season collections: icpc2025"

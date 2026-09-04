@@ -1,4 +1,5 @@
-const SCHEMA_VERSION = 1;
+const INDEX_SCHEMA_VERSION = 2;
+const SERIES_SCHEMA_VERSION = 1;
 const jsonPromises = new Map();
 const validatedIndexes = new WeakSet();
 const validatedSeries = new WeakSet();
@@ -61,18 +62,27 @@ export function validateIndex(document) {
   object(document, "index");
   if (validatedIndexes.has(document)) return document;
   integer(document.schemaVersion, "index.schemaVersion", 1);
-  if (document.schemaVersion !== SCHEMA_VERSION) fail("index.schemaVersion", `unsupported version ${document.schemaVersion}`);
+  if (document.schemaVersion !== INDEX_SCHEMA_VERSION) fail("index.schemaVersion", `unsupported version ${document.schemaVersion}`);
   string(document.defaultSeriesId, "index.defaultSeriesId");
   array(document.series, "index.series");
   if (!document.series.length) fail("index.series", "expected at least one series");
   const ids = new Set();
+  const paths = new Set();
   for (const [i, item] of document.series.entries()) {
     object(item, `index.series[${i}]`);
     string(item.id, `index.series[${i}].id`);
     string(item.title, `index.series[${i}].title`);
-    string(item.path, `index.series[${i}].path`);
+    if (item.path !== undefined) string(item.path, `index.series[${i}].path`);
+    if (item.previewPath !== undefined) string(item.previewPath, `index.series[${i}].previewPath`);
+    if (item.path === undefined && item.previewPath === undefined) {
+      fail(`index.series[${i}]`, "expected path or previewPath");
+    }
     if (ids.has(item.id)) fail(`index.series[${i}].id`, "duplicate series id");
     ids.add(item.id);
+    for (const path of [item.path, item.previewPath].filter(Boolean)) {
+      if (paths.has(path)) fail(`index.series[${i}]`, "duplicate data path");
+      paths.add(path);
+    }
   }
   if (!ids.has(document.defaultSeriesId)) fail("index.defaultSeriesId", "does not reference a series");
   validatedIndexes.add(document);
@@ -83,7 +93,7 @@ export function validateSeries(document) {
   object(document, "series");
   if (validatedSeries.has(document)) return document;
   integer(document.schemaVersion, "series.schemaVersion", 1);
-  if (document.schemaVersion !== SCHEMA_VERSION) fail("series.schemaVersion", `unsupported version ${document.schemaVersion}`);
+  if (document.schemaVersion !== SERIES_SCHEMA_VERSION) fail("series.schemaVersion", `unsupported version ${document.schemaVersion}`);
   string(document.id, "series.id");
   string(document.title, "series.title");
   integer(document.initialRating, "series.initialRating");
@@ -252,6 +262,7 @@ export function createDataStore(indexUrl, fetchImpl = globalThis.fetch) {
       const index = await indexPromise;
       const entry = index.series.find((item) => item.id === id);
       if (!entry) throw new Error(`Unknown series: ${id}`);
+      if (!entry.path) throw new Error(`Series has no participant rating data: ${id}`);
       const series = validateSeries(await fetchJson(resolveDataUrl(entry.path, indexUrl), fetchImpl));
       if (series.id !== entry.id) throw new TypeError(`series.id: expected ${entry.id}, received ${series.id}`);
       return { entry, series, index: indexSeries(series) };

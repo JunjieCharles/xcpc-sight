@@ -184,10 +184,15 @@ test("rejects broken rating continuity", () => {
 });
 
 test("validates index references and resolves paths relative to it", () => {
-  const index = { schemaVersion: 1, defaultSeriesId: "season", series: [{ id: "season", title: "Season", path: "series/season.json" }] };
+  const index = { schemaVersion: 2, defaultSeriesId: "season", series: [{ id: "season", title: "Season", path: "series/season.json" }] };
   assert.equal(validateIndex(index), index);
   assert.equal(resolveDataUrl(index.series[0].path, "https://example.test/site/data/index.json"), "https://example.test/site/data/series/season.json");
   assert.throws(() => validateIndex({ ...index, defaultSeriesId: "missing" }), /does not reference/);
+  assert.equal(validateIndex({
+    schemaVersion: 2,
+    defaultSeriesId: "preview",
+    series: [{ id: "preview", title: "Preview", previewPath: "previews/preview.json" }],
+  }).series[0].previewPath, "previews/preview.json");
 });
 
 test("derives initial and carried ratings with participation state", () => {
@@ -297,7 +302,7 @@ test("data store preserves index order and loads any series by ID", async () => 
     title: "2026“钉耙编程”中国大学生算法设计暑期联赛",
   };
   const index = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     defaultSeriesId: "nowcoder-summer-2026",
     series: [
       { id: "nowcoder-summer-2026", title: nowcoder.title, path: "series/nowcoder-summer-2026.json" },

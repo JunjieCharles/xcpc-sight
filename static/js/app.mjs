@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260821-15";
+} from "./data.mjs?v=20260904-1";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,15 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260821-15";
+} from "./problem-rating.mjs?v=20260904-1";
+import {
+  createPreviewStore,
+  listPreviewSchools,
+  readPreviewQuery,
+  searchPreviewTeams,
+  sortPreviewTeams,
+  writePreviewQuery,
+} from "./preview.mjs?v=20260904-1";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -27,12 +35,15 @@ const INDEX_URL = new URL("../data/index.json", import.meta.url).href;
 const PROBLEM_RATING_INDEX_URL = new URL("../data/problem-rating/index.json", import.meta.url).href;
 const store = createDataStore(INDEX_URL);
 const problemRatingStore = createProblemRatingStore(PROBLEM_RATING_INDEX_URL);
+const previewStore = createPreviewStore(INDEX_URL);
 const elements = {
   seriesList: document.querySelector("#series-list"),
   seriesModeSwitch: document.querySelector("#series-mode-switch"),
   participantRatingTab: document.querySelector("#participant-rating-tab"),
   problemRatingTab: document.querySelector("#problem-rating-tab"),
+  previewTab: document.querySelector("#preview-tab"),
   participantControls: document.querySelector("#participant-controls"),
+  searchLabelText: document.querySelector("#search-label-text"),
   searchInput: document.querySelector("#search-input"),
   clearSearchButton: document.querySelector("#clear-search-button"),
   schoolTags: document.querySelector("#school-tags"),
@@ -63,12 +74,21 @@ const elements = {
   problemRatingColumn: document.querySelector("#problem-rating-column"),
   problemRatingSort: document.querySelector("#problem-rating-sort"),
   problemRatingSortIndicator: document.querySelector("#problem-rating-sort-indicator"),
+  previewView: document.querySelector("#preview-view"),
+  previewTitle: document.querySelector("#preview-title"),
+  previewSummary: document.querySelector("#preview-summary"),
+  previewNote: document.querySelector("#preview-note"),
+  previewSources: document.querySelector("#preview-sources"),
+  previewScroll: document.querySelector("#preview-scroll"),
+  previewHead: document.querySelector("#preview-head"),
+  previewBody: document.querySelector("#preview-body"),
   detailView: document.querySelector("#detail-view"),
   errorTemplate: document.querySelector("#error-template"),
 };
 
 const state = {
   seriesId: "",
+  seriesEntry: null,
   view: "participants",
   query: "",
   schools: [],
@@ -77,6 +97,7 @@ const state = {
   competitorId: "",
   series: null,
   index: null,
+  siteIndex: null,
   filtered: [],
   renderFrame: 0,
   problemAvailableSeries: new Set(),
@@ -85,6 +106,10 @@ const state = {
   problemSort: "contest",
   problemOrder: "asc",
   problemChartFrame: 0,
+  preview: null,
+  previewSort: "xcpcrating",
+  previewOrder: "desc",
+  previewRenderFrame: 0,
 };
 
 function node(tag, properties = {}, children = []) {
@@ -154,6 +179,11 @@ function setUrl(mode = "replace") {
     sort: state.problemSort,
     order: state.problemOrder,
   });
+  url = writePreviewQuery(url, {
+    view: state.view,
+    sort: state.previewSort,
+    order: state.previewOrder,
+  });
   history[mode === "push" ? "pushState" : "replaceState"](null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -162,6 +192,7 @@ function showError(error) {
   elements.status.hidden = true;
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.participantControls.hidden = true;
   elements.detailView.hidden = false;
   elements.detailView.replaceChildren();
@@ -335,39 +366,213 @@ function setSchoolMenu(open) {
 
 function applySearch({ resetScroll = true } = {}) {
   state.query = elements.searchInput.value;
-  state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
-  elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
+  if (state.view === "preview") {
+    state.filtered = sortPreviewTeams(
+      searchPreviewTeams(state.preview.teams, state.query, state.schools),
+      state.previewSort,
+      state.previewOrder,
+    );
+    elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
+  } else {
+    state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
+    elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
+  }
   elements.clearSearchButton.disabled = !state.query && !state.schools.length;
-  if (resetScroll) elements.seriesScroll.scrollTop = 0;
-  scheduleSeriesRows();
+  if (state.view === "preview") {
+    if (resetScroll) elements.previewScroll.scrollTop = 0;
+    schedulePreviewRows();
+  } else {
+    if (resetScroll) elements.seriesScroll.scrollTop = 0;
+    scheduleSeriesRows();
+  }
   setUrl();
 }
 
 function updateSeriesMode() {
-  const supported = state.problemAvailableSeries.has(state.seriesId);
-  elements.seriesModeSwitch.hidden = !supported;
+  const participantsSupported = Boolean(state.seriesEntry?.path);
+  const problemSupported = participantsSupported && state.problemAvailableSeries.has(state.seriesId);
+  const previewSupported = Boolean(state.seriesEntry?.previewPath);
+  const supportedCount = [participantsSupported, problemSupported, previewSupported].filter(Boolean).length;
+  elements.seriesModeSwitch.hidden = supportedCount <= 1;
+  elements.participantRatingTab.hidden = !participantsSupported;
+  elements.problemRatingTab.hidden = !problemSupported;
+  elements.previewTab.hidden = !previewSupported;
   elements.participantRatingTab.setAttribute(
     "aria-selected",
-    String(state.view !== "problem-rating"),
+    String(state.view === "participants"),
   );
   elements.problemRatingTab.setAttribute(
     "aria-selected",
     String(state.view === "problem-rating"),
   );
+  elements.previewTab.setAttribute("aria-selected", String(state.view === "preview"));
 }
 
 function showSeries() {
+  if (!state.series) return showPreview();
   state.view = "participants";
   state.contestId = "";
   state.competitorId = "";
   elements.participantControls.hidden = false;
   elements.detailView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.seriesView.hidden = false;
+  state.availableSchools = listSchools(state.series.competitors);
+  state.schools = state.schools.filter((school) => state.availableSchools.includes(school));
+  elements.searchLabelText.textContent = "搜索参赛者或学校";
+  elements.searchInput.placeholder = "输入参赛者名称或学校";
+  renderSchoolControls();
   updateSeriesMode();
   elements.seriesTitle.textContent = state.series.title;
   elements.seriesSummary.textContent = `${state.series.contests.length} 场比赛 · ${state.series.competitors.length.toLocaleString("zh-CN")} 位参赛者`;
   renderSeriesHeader();
+  applySearch({ resetScroll: false });
+}
+
+function formatPreviewRating(value) {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value);
+}
+
+function previewValueControl(team, displayValue, memberValue) {
+  const tooltip = node("span", { className: "preview-member-tooltip", role: "tooltip" });
+  for (const member of team.members) {
+    const value = memberValue(member);
+    tooltip.append(node("span", {}, [
+      node("strong", { text: member.name }),
+      node("span", { text: value }),
+    ]));
+  }
+  return node("button", {
+    className: "preview-value-control",
+    type: "button",
+    "aria-label": `${displayValue}；悬浮或聚焦查看所有成员明细`,
+  }, [node("span", { text: displayValue }), tooltip]);
+}
+
+function previewMedalText(medals) {
+  return `🥇${medals.gold} · 🥈${medals.silver} · 🥉${medals.bronze}`;
+}
+
+function renderPreviewRows() {
+  if (!state.preview) return;
+  const columns = state.preview.metricSources.length + 4;
+  renderVirtualRows({
+    container: elements.previewScroll,
+    body: elements.previewBody,
+    items: state.filtered,
+    columns,
+    createRow(team, index) {
+      const row = node("tr");
+      row.dataset.teamId = team.id;
+      row.setAttribute("aria-rowindex", String(index + 2));
+      row.append(node("td", { text: team.school, title: team.school }));
+      row.append(node("td", { text: team.name, title: team.name }));
+      const memberNames = team.members.map(({ name }) => name).join(" / ");
+      row.append(node("td", { text: memberNames, title: memberNames }));
+      for (const source of state.preview.metricSources) {
+        const value = team.ratings[source.id];
+        row.append(node("td", {
+          className: `preview-metric-cell${value === null ? " preview-missing" : ""}`,
+        }, [previewValueControl(
+          team,
+          formatPreviewRating(value),
+          (member) => formatPreviewRating(member.ratings[source.id]),
+        )]));
+      }
+      row.append(node("td", { className: "preview-metric-cell preview-medals" }, [
+        previewValueControl(
+          team,
+          previewMedalText(team.medals),
+          (member) => previewMedalText(member.medals),
+        ),
+      ]));
+      return row;
+    },
+  });
+  elements.previewBody.closest("table").setAttribute("aria-rowcount", String(state.filtered.length + 1));
+}
+
+function schedulePreviewRows() {
+  cancelAnimationFrame(state.previewRenderFrame);
+  state.previewRenderFrame = requestAnimationFrame(renderPreviewRows);
+}
+
+function setPreviewSort(sort) {
+  const defaultOrder = ["school", "name", "members"].includes(sort) ? "asc" : "desc";
+  state.previewOrder = state.previewSort === sort
+    ? state.previewOrder === "asc" ? "desc" : "asc"
+    : defaultOrder;
+  state.previewSort = sort;
+  renderPreviewHeader();
+  applySearch();
+}
+
+function previewSortHeader(label, sort) {
+  const active = state.previewSort === sort;
+  const indicator = active ? state.previewOrder === "asc" ? "↑" : "↓" : "";
+  const heading = node("th", { scope: "col" }, [
+    node("button", { className: "table-sort-button", type: "button", onclick: () => setPreviewSort(sort) }, [
+      document.createTextNode(`${label} `),
+      node("span", { text: indicator, "aria-hidden": "true" }),
+    ]),
+  ]);
+  if (active) heading.setAttribute("aria-sort", state.previewOrder === "asc" ? "ascending" : "descending");
+  return heading;
+}
+
+function renderPreviewHeader() {
+  const row = node("tr");
+  row.append(
+    previewSortHeader("学校", "school"),
+    previewSortHeader("中文队名", "name"),
+    previewSortHeader("成员", "members"),
+  );
+  for (const source of state.preview.metricSources) row.append(previewSortHeader(source.title, source.id));
+  row.append(previewSortHeader("奖牌（🥇/🥈/🥉）", "medals"));
+  elements.previewHead.replaceChildren(row);
+  const table = elements.previewHead.closest("table");
+  table.querySelector("colgroup")?.remove();
+  table.prepend(columnGroup([210, 220, 250, ...state.preview.metricSources.map(() => 118), 140]));
+}
+
+function renderPreviewSources() {
+  const children = [document.createTextNode("名单来源：")];
+  const sources = [state.preview.teamSource, ...state.preview.metricSources];
+  sources.forEach((source, index) => {
+    if (index) children.push(document.createTextNode(" · "));
+    children.push(node("a", {
+      text: source.title,
+      href: source.url,
+      target: source.url.startsWith("http") ? "_blank" : "",
+      rel: source.url.startsWith("http") ? "noopener noreferrer" : "",
+    }));
+  });
+  elements.previewSources.replaceChildren(...children);
+}
+
+function showPreview() {
+  if (!state.preview) return showSeries();
+  state.view = "preview";
+  state.contestId = "";
+  state.competitorId = "";
+  state.availableSchools = listPreviewSchools(state.preview.teams);
+  state.schools = state.schools.filter((school) => state.availableSchools.includes(school));
+  elements.searchLabelText.textContent = "搜索学校、队伍或成员";
+  elements.searchInput.placeholder = "输入学校、中文队名或成员姓名";
+  renderSchoolControls();
+  elements.participantControls.hidden = false;
+  elements.detailView.hidden = true;
+  elements.seriesView.hidden = true;
+  elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = false;
+  updateSeriesMode();
+  elements.previewTitle.textContent = state.preview.title;
+  elements.previewSummary.textContent = `${state.preview.teams.length.toLocaleString("zh-CN")} 支队伍 · 快照 ${state.preview.snapshotDate}`;
+  elements.previewNote.textContent = `${state.preview.teamSource.note} 后续仅按用户指定更新。${state.preview.matchingPolicy}`;
+  renderPreviewSources();
+  renderPreviewHeader();
   applySearch({ resetScroll: false });
 }
 
@@ -382,9 +587,15 @@ function openSeriesHome() {
       && !elements.seriesView.hidden) return;
   state.contestId = "";
   state.competitorId = "";
-  state.view = "participants";
-  setUrl("push");
-  showSeries();
+  if (state.seriesEntry?.path) {
+    state.view = "participants";
+    setUrl("push");
+    showSeries();
+  } else {
+    state.view = "preview";
+    setUrl("push");
+    showPreview();
+  }
 }
 
 function openContest(contestId, updateUrl = true) {
@@ -398,6 +609,7 @@ function openContest(contestId, updateUrl = true) {
   if (updateUrl) setUrl("push");
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
   updateSeriesMode();
@@ -785,6 +997,7 @@ async function showProblemRating(query = {}, updateUrl = true) {
   elements.seriesView.hidden = true;
   elements.detailView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.status.hidden = false;
   elements.status.textContent = "正在加载题目 Rating…";
   const loaded = await problemRatingStore.getSeries(state.seriesId);
@@ -923,6 +1136,7 @@ function openCompetitor(competitorId, updateUrl = true) {
   if (updateUrl) setUrl("push");
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
   updateSeriesMode();
@@ -957,23 +1171,43 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.status.textContent = "正在加载数据…";
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
+  elements.previewView.hidden = true;
   elements.detailView.hidden = true;
-  const loaded = await store.getSeries(seriesId);
-  state.seriesId = loaded.series.id;
-  state.series = loaded.series;
-  state.index = loaded.index;
+  const entry = state.siteIndex.series.find((item) => item.id === seriesId);
+  if (!entry) throw new Error(`Unknown series: ${seriesId}`);
+  const [loaded, preview] = await Promise.all([
+    entry.path ? store.getSeries(seriesId) : null,
+    entry.previewPath ? previewStore.getSeries(entry) : null,
+  ]);
+  state.seriesId = entry.id;
+  state.seriesEntry = entry;
+  state.series = loaded?.series ?? null;
+  state.index = loaded?.index ?? null;
+  state.preview = preview;
   state.problemSeries = null;
   state.problemSelectedContestIds = new Set();
-  state.availableSchools = listSchools(state.series.competitors);
   updateSeriesNavigation();
   state.query = queryState.query ?? state.query;
   const requestedSchools = queryState.schools ?? state.schools;
+  const showRequestedPreview = queryState.view === "preview" && state.preview;
+  state.availableSchools = showRequestedPreview || !state.series
+    ? listPreviewSchools(state.preview.teams)
+    : listSchools(state.series.competitors);
   const available = new Set(state.availableSchools);
   state.schools = requestedSchools.filter((school) => available.has(school));
+  const previewSorts = new Set([
+    "school", "name", "members", "medals",
+    ...(state.preview?.metricSources.map(({ id }) => id) ?? []),
+  ]);
+  state.previewSort = previewSorts.has(queryState.previewSort) ? queryState.previewSort : "xcpcrating";
+  state.previewOrder = queryState.previewOrder === "asc" ? "asc" : "desc";
   elements.searchInput.value = state.query;
   renderSchoolControls();
   updateSeriesMode();
-  if (queryState.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
+  if (showRequestedPreview || !state.series) {
+    elements.status.hidden = true;
+    showPreview();
+  } else if (queryState.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
     await showProblemRating(queryState, false);
   } else {
     elements.status.hidden = true;
@@ -991,6 +1225,7 @@ async function loadSeries(seriesId, queryState = {}) {
 
 async function initialize() {
   const index = await store.getIndex();
+  state.siteIndex = index;
   try {
     const problemIndex = await problemRatingStore.getIndex();
     state.problemAvailableSeries = new Set(problemIndex.series.map(({ id }) => id));
@@ -1001,7 +1236,9 @@ async function initialize() {
   const query = {
     ...readQueryState(location.href),
     ...readProblemRatingQuery(location.href),
+    ...readPreviewQuery(location.href),
   };
+  if (new URL(location.href).searchParams.get("view") === "preview") query.view = "preview";
   for (const entry of index.series) {
     const button = node("button", {
       type: "button",
@@ -1012,10 +1249,12 @@ async function initialize() {
     button.addEventListener("click", () => {
       if (entry.id === state.seriesId) openSeriesHome();
       else {
-        const queryState = state.view === "problem-rating"
-          && state.problemAvailableSeries.has(entry.id)
-          ? { view: "problem-rating", selectedContestIds: null }
-          : {};
+        let queryState = {};
+        if (state.view === "problem-rating" && state.problemAvailableSeries.has(entry.id)) {
+          queryState = { view: "problem-rating", selectedContestIds: null };
+        } else if (!entry.path && entry.previewPath) {
+          queryState = { view: "preview" };
+        }
         loadSeries(entry.id, queryState).catch(showError);
       }
     });
@@ -1053,21 +1292,37 @@ elements.participantRatingTab.addEventListener("click", openSeriesHome);
 elements.problemRatingTab.addEventListener("click", () => {
   showProblemRating({ selectedContestIds: null }, true).catch(showError);
 });
+elements.previewTab.addEventListener("click", () => {
+  if (state.view === "preview") return;
+  showPreview();
+  setUrl("push");
+});
 elements.problemContestSort.addEventListener("click", () => setProblemSort("contest"));
 elements.problemRatingSort.addEventListener("click", () => setProblemSort("rating"));
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
+elements.previewScroll.addEventListener("scroll", schedulePreviewRows, { passive: true });
 window.addEventListener("resize", () => {
   scheduleSeriesRows();
   scheduleProblemChart();
+  schedulePreviewRows();
 });
 window.addEventListener("popstate", () => {
   const query = {
     ...readQueryState(location.href),
     ...readProblemRatingQuery(location.href),
+    ...readPreviewQuery(location.href),
   };
+  if (new URL(location.href).searchParams.get("view") === "preview") query.view = "preview";
   if (query.series && query.series !== state.seriesId) loadSeries(query.series, query).catch(showError);
   else if (query.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
     showProblemRating(query, false).catch(showError);
+  } else if (query.view === "preview" && state.preview) {
+    state.query = query.query;
+    state.previewSort = query.previewSort;
+    state.previewOrder = query.previewOrder;
+    state.schools = query.schools.filter((school) => state.availableSchools.includes(school));
+    elements.searchInput.value = query.query;
+    showPreview();
   } else {
     state.query = query.query;
     state.schools = query.schools.filter((school) => state.availableSchools.includes(school));

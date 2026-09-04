@@ -27,6 +27,11 @@ SEASON_2025_2026 = SeasonSpec(
     exclude_ids=frozenset({"ccpc2025ladies"}),
 )
 
+SEASON_2026_2027 = SeasonSpec(
+    name="2026-2027",
+    collection_ids=("icpc2026", "ccpc2026"),
+)
+
 
 def _searchable_title(contest: Contest) -> str:
     return unicodedata.normalize("NFKC", contest.title).casefold()
@@ -91,3 +96,7 @@ def load_season(client: RankLandClient, spec: SeasonSpec) -> SeasonData:
 
 def load_2025_2026_season(client: RankLandClient) -> SeasonData:
     return load_season(client, SEASON_2025_2026)
+
+
+def load_2026_2027_season(client: RankLandClient) -> SeasonData:
+    return load_season(client, SEASON_2026_2027)

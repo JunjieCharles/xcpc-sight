@@ -42,14 +42,17 @@ from .ranking import rebuild_competition_ranks
 from .rankland import RankLandClient, normalize_srk_contest
 from .seasons import (
     SEASON_2025_2026,
+    SEASON_2026_2027,
     SeasonSpec,
     load_2025_2026_season,
+    load_2026_2027_season,
     load_season,
     select_season,
 )
 
 __all__ = [
     "SEASON_2025_2026",
+    "SEASON_2026_2027",
     "CompetitorId",
     "Contest",
     "ContestProvenance",
@@ -78,6 +81,7 @@ __all__ = [
     "TeamResult",
     "XcpcSightError",
     "load_2025_2026_season",
+    "load_2026_2027_season",
     "load_season",
     "hdu_leaderboard_to_contest",
     "normalize_nowcoder_page",
