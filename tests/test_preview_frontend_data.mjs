@@ -90,7 +90,10 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(stylesheet, /\.preview-table\s*\{[^}]*width:\s*1214px/);
   assert.match(stylesheet, /\.preview-table td:nth-child\(3\)[^{]*\{[^}]*position:\s*sticky/);
   assert.match(stylesheet, /\.preview-table \.table-sort-button\s*\{[^}]*justify-content:\s*center/);
-  assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*112px/);
+  assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*--preview-school-width:\s*min\(112px, 23vw\)/);
+  assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*--preview-team-width:\s*min\(128px, 27vw\)/);
+  assert.match(stylesheet, /width:\s*calc\(884px \+ var\(--preview-school-width\) \+ var\(--preview-team-width\)\)/);
+  assert.match(stylesheet, /\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*var\(--preview-school-width\)/);
   assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*\.preview-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
   assert.match(stylesheet, /\.preview-rating-xcpcrating\s*\{[^}]*color:/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo\.rating-orange\s*\{[^}]*#ff8c00/);
