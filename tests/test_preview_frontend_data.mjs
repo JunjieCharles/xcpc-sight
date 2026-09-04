@@ -89,6 +89,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.doesNotMatch(stylesheet, /ⓘ|cursor:\s*help/);
   assert.match(stylesheet, /\.preview-table\s*\{[^}]*width:\s*1214px/);
   assert.match(stylesheet, /\.preview-table td:nth-child\(3\)[^{]*\{[^}]*position:\s*sticky/);
+  assert.match(stylesheet, /\.preview-table \.table-sort-button\s*\{[^}]*justify-content:\s*center/);
   assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*112px/);
   assert.match(stylesheet, /@media \(max-width:\s*700px\)[\s\S]*\.preview-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
   assert.match(stylesheet, /\.preview-rating-xcpcrating\s*\{[^}]*color:/);
