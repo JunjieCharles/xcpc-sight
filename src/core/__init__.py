@@ -16,6 +16,7 @@ from .hdu import (
     parse_hdu_csv,
     parse_hdu_metadata,
 )
+from .ioi import IoiResult, parse_ioi_results
 from .models import (
     CompetitorId,
     Contest,
@@ -24,6 +25,7 @@ from .models import (
     SeasonDecision,
     TeamResult,
 )
+from .noi import NoiAward, parse_noi_awards
 from .normalization import DefaultNormalizer
 from .nowcoder import (
     NOWCODER_SUMMER_2026_SERIES,
@@ -64,6 +66,7 @@ __all__ = [
     "HduError",
     "HduLeaderboard",
     "HduStanding",
+    "IoiResult",
     "IdentityConflictError",
     "NOWCODER_SUMMER_2026_SERIES",
     "NowcoderClient",
@@ -73,6 +76,7 @@ __all__ = [
     "NowcoderProblem",
     "NowcoderProblemScore",
     "NowcoderStanding",
+    "NoiAward",
     "RankLandClient",
     "RankLandError",
     "SeasonData",
@@ -85,12 +89,14 @@ __all__ = [
     "load_season",
     "hdu_leaderboard_to_contest",
     "normalize_nowcoder_page",
+    "parse_noi_awards",
     "normalize_srk_contest",
     "nowcoder_csv_fieldnames",
     "nowcoder_csv_rows",
     "nowcoder_leaderboard_to_contest",
     "parse_hdu_csv",
     "parse_hdu_metadata",
+    "parse_ioi_results",
     "rebuild_competition_ranks",
     "select_season",
 ]

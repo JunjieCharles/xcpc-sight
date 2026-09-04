@@ -24,6 +24,11 @@ METRIC_SOURCES = (
     ("previousSeason", "上赛季 Rating", "./?series=2025-2026"),
     ("cpcfinder", "CPC Finder", "https://cpcfinder.com/"),
 )
+SPECIAL_ACHIEVEMENTS = {
+    "沈吉滪": [
+        {"competition": "ioi", "year": 2024, "medal": "participant"},
+    ],
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +77,22 @@ class PersonIndex:
         return max(matched, key=lambda item: (item.rating, item.medals, item.school, item.name))
 
 
+class AchievementIndex:
+    def __init__(self, records: list[dict[str, object]]) -> None:
+        self.by_name: dict[str, list[dict[str, object]]] = {}
+        for record in records:
+            name = str(record["name"])
+            achievement = {key: value for key, value in record.items() if key != "name"}
+            self.by_name.setdefault(name, []).append(achievement)
+        for achievements in self.by_name.values():
+            achievements.sort(
+                key=lambda item: (int(item["year"]), item["competition"] == "ioi")
+            )
+
+    def match(self, name: str) -> list[dict[str, object]]:
+        return [dict(item) for item in self.by_name.get(name, ())]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build the manually requested ICPC 网络赛 1 preview snapshot"
@@ -82,6 +103,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--previous-series", type=Path, required=True)
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
     parser.add_argument("--school-aliases", type=Path, required=True)
+    parser.add_argument("--noi-data", type=Path, default=Path("data-cache/noi/normalized"))
+    parser.add_argument("--ioi-data", type=Path, default=Path("data-cache/ioi"))
     parser.add_argument("--snapshot-date", required=True)
     parser.add_argument(
         "--output",
@@ -172,6 +195,55 @@ def load_cpcfinder(root: Path) -> list[PersonRecord]:
     return records
 
 
+def competition_ranks(scores: list[int | float]) -> list[int]:
+    rank_by_score: dict[int | float, int] = {}
+    for rank, score in enumerate(sorted(scores, reverse=True), start=1):
+        rank_by_score.setdefault(score, rank)
+    return [rank_by_score[score] for score in scores]
+
+
+def load_achievements(noi_root: Path, ioi_root: Path) -> AchievementIndex:
+    records: list[dict[str, object]] = []
+    noi_index = load_json(noi_root / "index.json")
+    for entry in noi_index["years"]:
+        document = load_json(noi_root / entry["path"])
+        awards = document["awards"]
+        ranks = competition_ranks([award["score"] for award in awards])
+        records.extend(
+            {
+                "name": award["name"],
+                "competition": "noi",
+                "year": document["year"],
+                "medal": award["medal"],
+                "rank": rank,
+                "score": award["score"],
+                "maxScore": 705,
+            }
+            for award, rank in zip(awards, ranks, strict=True)
+        )
+    ioi_index = load_json(ioi_root / "index.json")
+    for entry in ioi_index["years"]:
+        document = load_json(ioi_root / entry["path"])
+        records.extend(
+            {
+                "name": result["name"],
+                "competition": "ioi",
+                "year": document["year"],
+                "medal": result["medal"],
+                "rank": result["rank"],
+                "score": result["score"],
+                "maxScore": document["max_score"],
+            }
+            for result in document["results"]
+        )
+    records.extend(
+        {"name": name, **achievement}
+        for name, achievements in SPECIAL_ACHIEVEMENTS.items()
+        for achievement in achievements
+    )
+    return AchievementIndex(records)
+
+
 def stable_team_id(school: str, name: str, members: list[str]) -> str:
     identity = "\0".join((school, name, *members)).encode()
     return f"t_{hashlib.sha256(identity).hexdigest()[:20]}"
@@ -197,6 +269,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
     xcpc_elo, xcpc_elo_at = load_xcpc_elo(args.xcpc_elo_data)
     previous, previous_at = load_previous_series(args.previous_series)
     cpcfinder = load_cpcfinder(args.cpcfinder_pages)
+    achievements = load_achievements(args.noi_data, args.ioi_data)
     indexes = {
         "xcpcrating": PersonIndex(xcpcrating, normalizer),
         "xcpcElo": PersonIndex(xcpc_elo, normalizer),
@@ -230,6 +303,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
             member_documents.append(
                 {
                     "name": name,
+                    "achievements": achievements.match(name),
                     "ratings": ratings,
                     "medals": {
                         "gold": medals[0],

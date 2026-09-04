@@ -91,8 +91,20 @@ python scripts/fetch_nowcoder_leaderboards.py
 
 结果写入已忽略的 `data-cache/nowcoder/nowcoder-<contest-id>-leaderboard.csv`，属于可丢弃上游下载缓存，不是静态站点发布数据。脚本接受自定义比赛 ID 和 `--output-dir`；可复用代码可通过 `NowcoderClient.fetch_leaderboard` 获取不可变模型。静态系列不伪造成个人身份，而以命名空间化的榜单 standing UID 作为报名实体身份，显示名称通常为队伍名。
 
+将已缓存的官方 NOI 获奖名单标准化为逐年离线数据集：
+
+```bash
+python scripts/normalize_noi_awards.py
+```
+
+该命令从 `data-cache/noi/` 的官方表格缓存读取数据，输出 `data-cache/noi/normalized/index.json` 和逐年文件。每条记录只包含年份、姓名、省份、学校、年级、加分后的总分和金/银/铜牌；不会发布至静态站点。完整字段和校验规则见 [NOI 获奖名单数据](doc/noi-data.md)。
+
+用户提供的 IOI 中国选手成绩快照位于 `data-cache/ioi/`，按年份保存排名、姓名、年级、得分、奖牌和学校；它不声称覆盖当届完整成绩。字段契约和校验 API 见 [IOI 成绩数据](doc/ioi-data.md)。
+
 - 牛客比赛列表与榜单数据契约见 [牛客榜单数据](doc/nowcoder-data.md)
 - HDU 榜单数据与认证契约见 [HDU 榜单数据](doc/hdu-data.md)
+- IOI 中国选手成绩快照与校验见 [IOI 成绩数据](doc/ioi-data.md)
+- NOI 获奖名单缓存与标准化数据集见 [NOI 获奖名单数据](doc/noi-data.md)
 
 ## 目录结构
 
@@ -127,6 +139,8 @@ doc/               各功能设计文档
 - [RankLand 数据](doc/rankland-data.md)
 - [牛客榜单数据](doc/nowcoder-data.md)
 - [HDU 榜单数据](doc/hdu-data.md)
+- [IOI 成绩数据](doc/ioi-data.md)
+- [NOI 获奖名单数据](doc/noi-data.md)
 - [2025–2026 赛季](doc/season-2025-2026.md)
 - [2026–2027 赛季与前瞻](doc/season-2026-2027-preview.md)
 

@@ -6,6 +6,8 @@ import {
   buildPreviewPower,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
+  bestAchievementMedal,
+  achievementDisplayParts,
   createPreviewStore,
   previewRatingValue,
   readPreviewQuery,
@@ -24,6 +26,7 @@ function fixture() {
   ];
   const member = (name, xcpcrating, xcpcElo, gold = 0, silver = 0, bronze = 0) => ({
     name,
+    achievements: [],
     ratings: {
       xcpcrating,
       xcpcElo,
@@ -86,6 +89,8 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(indexHtml, /id="preview-team-source"/);
   assert.match(indexHtml, /id="preview-metric-sources"/);
   assert.match(indexHtml, /id="preview-contest-select"/);
+  assert.doesNotMatch(indexHtml, /id="achievement-filter"/);
+  assert.doesNotMatch(indexHtml, /id="achievement-options"/);
   assert.match(indexHtml, /学校排名随表格当前排序方式变化。/);
   assert.doesNotMatch(indexHtml, /id="preview-(?:summary|note)"/);
   assert.doesNotMatch(stylesheet, /ⓘ|cursor:\s*help/);
@@ -108,7 +113,14 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(stylesheet, /\.preview-rating-xcpc-elo\.rating-orange\s*\{[^}]*#ff8c00/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo-legendary\s*\{[^}]*#ff0000/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo-first\s*\{[^}]*#000000/);
-  assert.match(stylesheet, /\.preview-member-tooltip > span\s*\{/);
+  assert.match(stylesheet, /\.preview-achievement-list\s*\{[^}]*grid-template-columns:/);
+  assert.match(stylesheet, /\.preview-member-name\.has-noi::after/);
+  assert.match(stylesheet, /\.preview-member-name\.has-ioi::before/);
+  assert.match(stylesheet, /\.preview-member-name::before[^}]*height:\s*3px/);
+  assert.match(stylesheet, /\.preview-member-name\.has-noi::after[^}]*bottom:\s*-5px/);
+  assert.match(stylesheet, /\.preview-member-name\.has-ioi::before[^}]*bottom:\s*-10px/);
+  assert.match(stylesheet, /\.preview-member-name\.noi-gold[^}]*#d6a800/);
+  assert.match(stylesheet, /\.preview-member-name\.ioi-participant[^}]*#111111/);
   assert.match(stylesheet, /\.preview-ranked-value\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 1\.9rem/);
   assert.match(stylesheet, /\.preview-global-rank\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
   assert.match(stylesheet, /\.preview-member-tooltip\s*\{[^}]*position:\s*fixed/);
@@ -130,6 +142,8 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /`#\$\{schoolRank\} `.*\$\{team\.school\}/);
   assert.doesNotMatch(appModule, /校排 #\$\{schoolRank\}/);
   assert.match(appModule, /attachPreviewTooltip\(identityControl, identityTooltip\)/);
+  assert.match(appModule, /function previewMemberControl\(member\)/);
+  assert.match(appModule, /memberChildren\.push\(previewMemberControl\(member\)\)/);
   assert.match(appModule, /previewSortHeader\("奖牌", "medals"\)/);
   assert.doesNotMatch(appModule, /奖牌（🥇\/🥈\/🥉）/);
   assert.match(appModule, /function positionPreviewTooltip\(/);
@@ -156,6 +170,29 @@ test("validates member maxima and team medal totals", () => {
   const brokenMedals = structuredClone(document);
   brokenMedals.teams[0].medals.bronze = 1;
   assert.throws(() => validatePreview(brokenMedals), /member total/);
+});
+
+test("validates achievement history and selects each competition's best medal", () => {
+  const document = fixture();
+  const achievements = [
+    { competition: "noi", year: 2024, medal: "silver", rank: 20, score: 500, maxScore: 705 },
+    { competition: "noi", year: 2025, medal: "gold", rank: 1, score: 600, maxScore: 705 },
+    { competition: "ioi", year: 2025, medal: "bronze", rank: 100, score: 200, maxScore: 600 },
+    { competition: "ioi", year: 2026, medal: "participant" },
+  ];
+  document.teams[0].members[0].achievements = achievements;
+
+  assert.equal(validatePreview(document), document);
+  assert.equal(bestAchievementMedal(achievements, "noi"), "gold");
+  assert.equal(bestAchievementMedal(achievements, "ioi"), "bronze");
+  assert.equal(bestAchievementMedal([], "noi"), null);
+  assert.deepEqual(achievementDisplayParts(achievements[0]), ["2024 NOI", "银牌#20", "500 / 705"]);
+  assert.deepEqual(achievementDisplayParts(achievements[2]), ["2025 IOI", "铜牌#100", "200 / 600"]);
+  assert.deepEqual(achievementDisplayParts(achievements[3]), ["2026 IOI", "参与#—", "未获奖"]);
+
+  const wrongOrder = fixture();
+  wrongOrder.teams[0].members[0].achievements = [achievements[2], achievements[0]];
+  assert.throws(() => validatePreview(wrongOrder), /must be chronological/);
 });
 
 test("searches school, team and all member names", () => {
@@ -311,11 +348,19 @@ test("round trips preview sorting through URL state", () => {
     order: "asc",
   });
   assert.equal(next.searchParams.get("view"), "preview");
-  assert.deepEqual(readPreviewQuery(next), { previewSort: "medals", previewOrder: "asc" });
+  assert.deepEqual(readPreviewQuery(next), {
+    previewSort: "medals",
+    previewOrder: "asc",
+  });
   assert.deepEqual(readPreviewQuery("https://example.test/"), {
     previewSort: "power",
     previewOrder: "desc",
   });
+  assert.equal(
+    writePreviewQuery("https://example.test/?achievement=noi:gold", { view: "preview" })
+      .searchParams.has("achievement"),
+    false,
+  );
 });
 
 test("loads preview relative to the site index", async () => {

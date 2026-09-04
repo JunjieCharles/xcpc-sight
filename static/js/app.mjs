@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260904-20";
+} from "./data.mjs?v=20260904-26";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,11 +19,13 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260904-20";
+} from "./problem-rating.mjs?v=20260904-26";
 import {
+  achievementDisplayParts,
   buildPreviewPower,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
+  bestAchievementMedal,
   createPreviewStore,
   listPreviewSchools,
   previewRatingValue,
@@ -31,7 +33,7 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260904-20";
+} from "./preview.mjs?v=20260904-26";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -364,7 +366,8 @@ function renderSchoolControls() {
   elements.schoolFilterButton.textContent = state.schools.length
     ? `已选 ${state.schools.length} 所学校`
     : "选择学校";
-  elements.clearSearchButton.disabled = !elements.searchInput.value && !state.schools.length;
+  elements.clearSearchButton.disabled = !elements.searchInput.value
+    && !state.schools.length;
 }
 
 function setSchoolMenu(open) {
@@ -387,13 +390,18 @@ function applySearch({ resetScroll = true } = {}) {
       state.previewPower,
     );
     state.previewSchoolRanks = buildPreviewSchoolRanks(sortedTeams, state.previewSort);
-    state.filtered = searchPreviewTeams(sortedTeams, state.query, state.schools);
+    state.filtered = searchPreviewTeams(
+      sortedTeams,
+      state.query,
+      state.schools,
+    );
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
   } else {
     state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
   }
-  elements.clearSearchButton.disabled = !state.query && !state.schools.length;
+  elements.clearSearchButton.disabled = !state.query
+    && !state.schools.length;
   if (state.view === "preview") {
     if (resetScroll) elements.previewScroll.scrollTop = 0;
     schedulePreviewRows();
@@ -569,6 +577,50 @@ function previewMedalText(medals) {
   return `🥇${medals.gold}  🥈${medals.silver}  🥉${medals.bronze}`;
 }
 
+function achievementLabel(achievement) {
+  return achievementDisplayParts(achievement).join(" · ");
+}
+
+function achievementRow(achievement) {
+  const parts = achievementDisplayParts(achievement);
+  return node("span", { className: "preview-achievement-row" }, [
+    node("span", { className: "preview-achievement-competition", text: parts[0] }),
+    node("span", { className: "preview-achievement-separator", text: "·" }),
+    node("span", { className: "preview-achievement-result", text: parts[1] }),
+    node("span", { className: "preview-achievement-separator", text: "·" }),
+    node("span", { className: "preview-achievement-score", text: parts[2] }),
+  ]);
+}
+
+function previewMemberControl(member) {
+  const noiMedal = bestAchievementMedal(member.achievements, "noi");
+  const ioiMedal = bestAchievementMedal(member.achievements, "ioi");
+  const classes = [
+    "preview-member-name",
+    noiMedal ? `has-noi noi-${noiMedal}` : "",
+    ioiMedal ? `has-ioi ioi-${ioiMedal}` : "",
+  ].filter(Boolean).join(" ");
+  const name = node("span", { className: classes, text: member.name });
+  if (!member.achievements.length) return name;
+
+  const tooltip = node("span", {
+    className: "preview-member-tooltip preview-achievement-tooltip",
+    role: "tooltip",
+  }, [
+    node("strong", { text: member.name }),
+    node("span", { className: "preview-achievement-list" }, [
+      ...member.achievements.map(achievementRow),
+    ]),
+  ]);
+  const control = node("span", {
+    className: "preview-member-control",
+    tabIndex: 0,
+    "aria-label": `${member.name}；${member.achievements.map(achievementLabel).join("；")}`,
+  }, [name, tooltip]);
+  attachPreviewTooltip(control, tooltip);
+  return control;
+}
+
 function radarPoint(index, count, dimensionCount, maximum, radius, centerX, centerY) {
   const angle = -Math.PI / 2 + index * Math.PI * 2 / dimensionCount;
   const distance = radius * count / maximum;
@@ -694,7 +746,15 @@ function renderPreviewRows() {
       ]);
       attachPreviewTooltip(identityControl, identityTooltip);
       row.append(node("td", { className: "preview-team-cell", title: team.name }, [identityControl]));
-      row.append(node("td", { text: memberNames, title: memberNames }));
+      const memberChildren = [];
+      team.members.forEach((member, memberIndex) => {
+        if (memberIndex) memberChildren.push(document.createTextNode(" / "));
+        memberChildren.push(previewMemberControl(member));
+      });
+      row.append(node("td", {
+        className: "preview-members-cell",
+        title: memberNames,
+      }, memberChildren));
       row.append(node("td", { className: "preview-metric-cell preview-power-cell" }, [
         previewPowerControl(team),
       ]));

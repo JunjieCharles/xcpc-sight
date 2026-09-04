@@ -8,6 +8,8 @@
 | RankLand 数据获取与 SRK 转换 | [rankland-data.md](rankland-data.md) |
 | 牛客榜单数据获取、报名实体 Rating 与 CSV 导出 | [nowcoder-data.md](nowcoder-data.md) |
 | HDU 认证榜单、CSV 契约与 team token Rating | [hdu-data.md](hdu-data.md) |
+| IOI 中国选手成绩快照与校验 | [ioi-data.md](ioi-data.md) |
+| NOI 获奖名单缓存与标准化数据集 | [noi-data.md](noi-data.md) |
 | 2025–2026 赛季范围与排序 | [season-2025-2026.md](season-2025-2026.md) |
 | 2026–2027 赛季范围、外部名单前瞻与匹配口径 | [season-2026-2027-preview.md](season-2026-2027-preview.md) |
 

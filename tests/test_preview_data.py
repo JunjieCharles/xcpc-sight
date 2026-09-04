@@ -4,11 +4,38 @@ import pytest
 
 from core import DefaultNormalizer
 from scripts.generate_preview_data import (
+    AchievementIndex,
     PersonIndex,
     PersonRecord,
+    competition_ranks,
     parse_registered_team,
     stable_team_id,
 )
+
+
+def test_competition_ranks_preserve_ties_and_skip_following_places() -> None:
+    assert competition_ranks([600, 580, 600, 550, 580]) == [1, 3, 1, 5, 3]
+
+
+def test_achievement_matching_uses_only_name_and_orders_noi_before_ioi() -> None:
+    records = [
+        {"name": "张三", "competition": "ioi", "year": 2025, "medal": "silver"},
+        {"name": "张三", "competition": "noi", "year": 2025, "medal": "gold"},
+        {"name": "张三", "competition": "noi", "year": 2024, "medal": "bronze"},
+    ]
+    index = AchievementIndex(records)
+
+    matched = index.match("张三")
+
+    assert records[0]["name"] == "张三"
+    assert [(item["year"], item["competition"]) for item in matched] == [
+        (2024, "noi"),
+        (2025, "noi"),
+        (2025, "ioi"),
+    ]
+    matched[0]["medal"] = "gold"
+    assert index.match("张三")[0]["medal"] == "bronze"
+    assert index.match("李四") == []
 
 
 def test_person_matching_uses_name_first_and_requires_matching_school() -> None:

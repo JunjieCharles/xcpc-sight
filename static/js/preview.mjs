@@ -1,7 +1,8 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-20";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-26";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
+const ACHIEVEMENT_PRIORITY = { participant: 0, bronze: 1, silver: 2, gold: 3 };
 
 function fail(path, message) {
   throw new TypeError(`${path}: ${message}`);
@@ -27,6 +28,72 @@ function rating(value, path) {
   if (value !== null && (typeof value !== "number" || !Number.isFinite(value))) {
     fail(path, "expected a finite number or null");
   }
+}
+
+function finiteNumber(value, path, minimum = Number.NEGATIVE_INFINITY) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < minimum) {
+    fail(path, `expected a finite number >= ${minimum}`);
+  }
+}
+
+function validateAchievements(achievements, path) {
+  array(achievements, path);
+  let previousOrder = null;
+  achievements.forEach((achievement, index) => {
+    const achievementPath = `${path}[${index}]`;
+    object(achievement, achievementPath);
+    if (!["noi", "ioi"].includes(achievement.competition)) {
+      fail(`${achievementPath}.competition`, "expected noi or ioi");
+    }
+    integer(achievement.year, `${achievementPath}.year`, 1984);
+    string(achievement.medal, `${achievementPath}.medal`);
+    if (!(achievement.medal in ACHIEVEMENT_PRIORITY)) {
+      fail(`${achievementPath}.medal`, "expected gold, silver, bronze, or participant");
+    }
+    if (achievement.competition === "noi") {
+      if (achievement.medal === "participant") fail(`${achievementPath}.medal`, "NOI requires a medal");
+      integer(achievement.rank, `${achievementPath}.rank`, 1);
+      finiteNumber(achievement.score, `${achievementPath}.score`, 0);
+      finiteNumber(achievement.maxScore, `${achievementPath}.maxScore`, 1);
+      if (achievement.score > achievement.maxScore) fail(`${achievementPath}.score`, "exceeds maxScore");
+    } else if (achievement.medal === "participant") {
+      if (achievement.rank !== undefined || achievement.score !== undefined || achievement.maxScore !== undefined) {
+        fail(achievementPath, "unawarded IOI participation must not contain result fields");
+      }
+    } else {
+      integer(achievement.rank, `${achievementPath}.rank`, 1);
+      finiteNumber(achievement.score, `${achievementPath}.score`, 0);
+      finiteNumber(achievement.maxScore, `${achievementPath}.maxScore`, 1);
+      if (achievement.score > achievement.maxScore) fail(`${achievementPath}.score`, "exceeds maxScore");
+    }
+    const order = achievement.year * 2 + (achievement.competition === "ioi" ? 1 : 0);
+    if (previousOrder !== null && order < previousOrder) fail(achievementPath, "must be chronological");
+    previousOrder = order;
+  });
+}
+
+export function bestAchievementMedal(achievements, competition) {
+  let best = null;
+  for (const achievement of achievements) {
+    if (achievement.competition !== competition) continue;
+    if (best === null || ACHIEVEMENT_PRIORITY[achievement.medal] > ACHIEVEMENT_PRIORITY[best]) {
+      best = achievement.medal;
+    }
+  }
+  return best;
+}
+
+export function achievementDisplayParts(achievement) {
+  const competition = `${achievement.year} ${achievement.competition.toUpperCase()}`;
+  if (achievement.medal === "participant") {
+    return [competition, "参与#—", "未获奖"];
+  }
+  const medal = { gold: "金牌", silver: "银牌", bronze: "铜牌" }[achievement.medal];
+  return [
+    competition,
+    `${medal}#${achievement.rank}`,
+    `${achievement.score} / ${achievement.maxScore}`,
+  ];
 }
 
 function validateMedals(medals, path) {
@@ -74,6 +141,7 @@ export function validatePreview(document) {
       const memberPath = `${path}.members[${memberIndex}]`;
       object(member, memberPath);
       string(member.name, `${memberPath}.name`);
+      validateAchievements(member.achievements, `${memberPath}.achievements`);
       object(member.ratings, `${memberPath}.ratings`);
       for (const id of metricIds) {
         rating(member.ratings[id], `${memberPath}.ratings.${id}`);
@@ -273,7 +341,7 @@ export function readPreviewQuery(url) {
 export function writePreviewQuery(url, query) {
   const next = new URL(url, "http://localhost/");
   if (query.view !== "preview") {
-    for (const key of ["previewSort", "previewOrder"]) next.searchParams.delete(key);
+    for (const key of ["previewSort", "previewOrder", "achievement"]) next.searchParams.delete(key);
     return next;
   }
   next.searchParams.set("view", "preview");
@@ -281,6 +349,7 @@ export function writePreviewQuery(url, query) {
   else next.searchParams.delete("previewSort");
   if (query.order === "asc") next.searchParams.set("previewOrder", "asc");
   else next.searchParams.delete("previewOrder");
+  next.searchParams.delete("achievement");
   return next;
 }
 
