@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260904-26";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260905-27";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -288,44 +288,53 @@ function compareNullableNumber(left, right, order) {
 export function sortPreviewTeams(teams, sort, order = "desc", previewPower = null) {
   const direction = order === "asc" ? 1 : -1;
   const power = sort === "power" && !previewPower ? buildPreviewPower(teams) : previewPower;
-  return [...teams].sort((left, right) => {
-    let compared = 0;
-    if (sort === "school" || sort === "name") {
-      compared = left[sort].localeCompare(right[sort], "zh-CN") * direction;
-    } else if (sort === "members") {
-      compared = left.members.map(({ name }) => name).join("/").localeCompare(
-        right.members.map(({ name }) => name).join("/"), "zh-CN",
-      ) * direction;
-    } else if (sort === "medals") {
-      for (const medal of ["gold", "silver", "bronze"]) {
-        compared = (left.medals[medal] - right.medals[medal]) * direction;
-        if (compared) break;
-      }
-    } else if (sort === "power") {
-      compared = comparePowerVectors(
-        power.get(left.id).vector,
-        power.get(right.id).vector,
-        order,
-      );
-    } else {
-      compared = compareNullableNumber(
-        previewRatingValue(sort, left.ratings[sort] ?? null),
-        previewRatingValue(sort, right.ratings[sort] ?? null),
-        order,
-      );
-    }
-    return compared || left.sourceIndex - right.sourceIndex;
-  });
+  return [...teams].sort((left, right) => (
+    comparePreviewSortKeys(left, right, sort, order, power)
+    || left.school.localeCompare(right.school, "zh-CN")
+    || left.sourceIndex - right.sourceIndex
+  ));
 }
 
-export function buildPreviewSchoolRanks(sortedTeams, sort) {
+function comparePreviewSortKeys(left, right, sort, order, previewPower) {
+  const direction = order === "asc" ? 1 : -1;
+  if (sort === "school" || sort === "name") {
+    return left[sort].localeCompare(right[sort], "zh-CN") * direction;
+  }
+  if (sort === "members") {
+    return left.members.map(({ name }) => name).join("/").localeCompare(
+      right.members.map(({ name }) => name).join("/"), "zh-CN",
+    ) * direction;
+  }
+  if (sort === "medals") return compareMedals(left.medals, right.medals) * direction;
+  if (sort === "power") {
+    return comparePowerVectors(
+      previewPower.get(left.id).vector,
+      previewPower.get(right.id).vector,
+      order,
+    );
+  }
+  return compareNullableNumber(
+    previewRatingValue(sort, left.ratings[sort] ?? null),
+    previewRatingValue(sort, right.ratings[sort] ?? null),
+    order,
+  );
+}
+
+export function buildPreviewSchoolRanks(sortedTeams, sort, previewPower = null) {
   if (["school", "name", "members"].includes(sort)) return new Map();
+  const power = sort === "power" && !previewPower ? buildPreviewPower(sortedTeams) : previewPower;
   const rankedSchools = new Set();
   const ranks = new Map();
+  let previousBest = null;
+  let rank = 0;
   for (const team of sortedTeams) {
     if (rankedSchools.has(team.school)) continue;
     rankedSchools.add(team.school);
-    ranks.set(team.id, rankedSchools.size);
+    if (previousBest === null || comparePreviewSortKeys(team, previousBest, sort, "desc", power)) {
+      rank = rankedSchools.size;
+    }
+    ranks.set(team.id, rank);
+    previousBest = team;
   }
   return ranks;
 }

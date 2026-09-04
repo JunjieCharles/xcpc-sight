@@ -91,7 +91,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(indexHtml, /id="preview-contest-select"/);
   assert.doesNotMatch(indexHtml, /id="achievement-filter"/);
   assert.doesNotMatch(indexHtml, /id="achievement-options"/);
-  assert.match(indexHtml, /学校排名随表格当前排序方式变化。/);
+  assert.match(indexHtml, /学校排名随表格当前排序方式变化。NOI\/IOI成绩仅按姓名匹配，可能存在重名情况。/);
   assert.doesNotMatch(indexHtml, /id="preview-(?:summary|note)"/);
   assert.doesNotMatch(stylesheet, /ⓘ|cursor:\s*help/);
   assert.match(stylesheet, /\.table-shell\s*\{[^}]*container-type:\s*inline-size/);
@@ -208,7 +208,34 @@ test("sorts nullable ratings last and medals by gold, silver, bronze", () => {
   assert.deepEqual(sortPreviewTeams(teams, "medals", "desc").map(({ id }) => id), ["a", "b"]);
 });
 
-test("ranks schools from the unfiltered current preview order", () => {
+test("breaks equal sort keys by school ascending", () => {
+  const teams = fixture().teams.map((team, index) => ({
+    ...team,
+    id: index ? "school-a" : "school-b",
+    sourceIndex: index,
+    school: index ? "A大学" : "B大学",
+    name: "同名队伍",
+    members: [{ name: "同名成员" }],
+    ratings: Object.fromEntries(Object.keys(team.ratings).map((metricId) => [metricId, 2000])),
+    medals: { gold: 1, silver: 1, bronze: 1 },
+  }));
+
+  assert.deepEqual(sortPreviewTeams(teams, "xcpcrating", "desc").map(({ id }) => id), ["school-a", "school-b"]);
+  assert.deepEqual(sortPreviewTeams(teams, "xcpcrating", "asc").map(({ id }) => id), ["school-a", "school-b"]);
+  assert.deepEqual(sortPreviewTeams(teams, "medals", "desc").map(({ id }) => id), ["school-a", "school-b"]);
+  assert.deepEqual(sortPreviewTeams(teams, "name", "desc").map(({ id }) => id), ["school-a", "school-b"]);
+  assert.deepEqual(sortPreviewTeams(teams, "members", "desc").map(({ id }) => id), ["school-a", "school-b"]);
+  const power = buildPreviewPower(teams);
+  const powerSorted = sortPreviewTeams(teams, "power", "desc", power);
+  assert.deepEqual(powerSorted.map(({ id }) => id), ["school-a", "school-b"]);
+  assert.deepEqual([...buildPreviewSchoolRanks(powerSorted, "power", power)], [["school-a", 1], ["school-b", 1]]);
+  assert.deepEqual(
+    [...buildPreviewSchoolRanks(sortPreviewTeams(teams, "medals"), "medals")],
+    [["school-a", 1], ["school-b", 1]],
+  );
+});
+
+test("ranks tied schools from the unfiltered current preview order", () => {
   const makeTeam = (id, sourceIndex, school, score) => ({
     id,
     sourceIndex,
@@ -219,14 +246,18 @@ test("ranks schools from the unfiltered current preview order", () => {
     medals: { gold: 0, silver: 0, bronze: 0 },
   });
   const teams = [
-    makeTeam("a-low", 0, "甲大学", 10),
-    makeTeam("b-best", 1, "乙大学", 30),
-    makeTeam("a-best", 2, "甲大学", 20),
+    makeTeam("a-low", 0, "A大学", 10),
+    makeTeam("c-best", 1, "C大学", 30),
+    makeTeam("b-best", 2, "B大学", 30),
+    makeTeam("b-also-tied", 3, "B大学", 30),
+    makeTeam("a-best", 4, "A大学", 20),
   ];
   const sorted = sortPreviewTeams(teams, "score", "desc");
   const ranks = buildPreviewSchoolRanks(sorted, "score");
 
-  assert.deepEqual([...ranks], [["b-best", 1], ["a-best", 2]]);
+  assert.deepEqual(sorted.map(({ id }) => id), ["b-best", "b-also-tied", "c-best", "a-best", "a-low"]);
+  assert.deepEqual([...ranks], [["b-best", 1], ["c-best", 1], ["a-best", 3]]);
+  assert.equal(ranks.has("b-also-tied"), false);
   assert.equal(ranks.has("a-low"), false);
   assert.deepEqual(
     searchPreviewTeams(sorted, "a-low").map((team) => [team.id, ranks.get(team.id) ?? null]),
@@ -288,18 +319,21 @@ test("treats a zero CPC Finder score as missing for display and ranking", () => 
     {
       id: "scored",
       sourceIndex: 0,
+      school: "A大学",
       ratings: { cpcfinder: 100 },
       medals: { gold: 0, silver: 0, bronze: 0 },
     },
     {
       id: "zero",
       sourceIndex: 1,
+      school: "B大学",
       ratings: { cpcfinder: 0 },
       medals: { gold: 0, silver: 0, bronze: 0 },
     },
     {
       id: "missing",
       sourceIndex: 2,
+      school: "C大学",
       ratings: { cpcfinder: null },
       medals: { gold: 0, silver: 0, bronze: 0 },
     },
