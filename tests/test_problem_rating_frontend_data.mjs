@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -174,4 +175,21 @@ test("loads only a requested problem-rating series from its independent index", 
   assert.equal((await store.getIndex()).series.length, 1);
   assert.equal((await store.getSeries(document.seriesId)).series, document);
   await assert.rejects(store.getSeries("hdu-summer-2026"), /Unknown problem rating series/);
+});
+
+test("uses a composite sticky problem identity on narrow tables", async () => {
+  const [indexHtml, stylesheet, appModule] = await Promise.all([
+    readFile(new URL("../static/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(indexHtml, /class="mobile-column-label">题目<\/span>/);
+  assert.match(stylesheet, /\.problem-table-shell\s*\{[^}]*container-type:\s*inline-size/);
+  assert.match(stylesheet, /@container \(max-width:\s*600px\)[\s\S]*\.problem-table col\.problem-contest-col[^{]*\{[^}]*display:\s*none/);
+  assert.match(stylesheet, /\.problem-table #problem-contest-column, \.problem-table \.problem-identity-cell\s*\{[^}]*position:\s*sticky/);
+  assert.match(stylesheet, /\.problem-identity-content\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/);
+  assert.match(appModule, /className: "problem-identity-cell"/);
+  assert.match(appModule, /className: "problem-identity-name"/);
+  assert.match(appModule, /className: "identity-secondary", text: contest\.title/);
 });

@@ -100,6 +100,10 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(stylesheet, /width:\s*calc\(var\(--preview-non-frozen-width\) \+ var\(--preview-school-width\) \+ var\(--preview-team-width\)\)/);
   assert.match(stylesheet, /\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*var\(--preview-school-width\)/);
   assert.match(stylesheet, /@container \(max-width:\s*1120px\)[\s\S]*\.preview-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
+  assert.match(stylesheet, /@container \(max-width:\s*600px\)[\s\S]*\.preview-table col:nth-child\(1\)[^{]*\{[^}]*display:\s*none/);
+  assert.doesNotMatch(stylesheet, /@container \(max-width:\s*600px\)[\s\S]*\.preview-table col:nth-child\(3\)[^{]*\{[^}]*display:\s*none/);
+  assert.match(stylesheet, /\.preview-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*0/);
+  assert.match(stylesheet, /\.preview-team-identity\s*,\s*\.identity-primary\s*\{[^}]*text-overflow:\s*ellipsis/);
   assert.match(stylesheet, /\.preview-rating-xcpcrating\s*\{[^}]*color:/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo\.rating-orange\s*\{[^}]*#ff8c00/);
   assert.match(stylesheet, /\.preview-rating-xcpc-elo-legendary\s*\{[^}]*#ff0000/);
@@ -120,6 +124,12 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /const widths = \[200, 170, 190, 96,/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-table-width"/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-non-frozen-width"/);
+  assert.doesNotMatch(appModule, /table\.style\.setProperty\("--preview-data-width"/);
+  assert.match(appModule, /className: "preview-team-identity"/);
+  assert.match(appModule, /className: "identity-secondary"/);
+  assert.match(appModule, /`#\$\{schoolRank\} `.*\$\{team\.school\}/);
+  assert.doesNotMatch(appModule, /校排 #\$\{schoolRank\}/);
+  assert.match(appModule, /attachPreviewTooltip\(identityControl, identityTooltip\)/);
   assert.match(appModule, /previewSortHeader\("奖牌", "medals"\)/);
   assert.doesNotMatch(appModule, /奖牌（🥇\/🥈\/🥉）/);
   assert.match(appModule, /function positionPreviewTooltip\(/);

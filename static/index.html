@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
-  <link rel="stylesheet" href="./styles.css?v=20260904-19">
+  <link rel="stylesheet" href="./styles.css?v=20260904-20">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -156,7 +156,9 @@
                 <tr>
                   <th id="problem-contest-column" scope="colgroup" colspan="2">
                     <button id="problem-contest-sort" class="table-sort-button" type="button">
-                      场次 + 题号 <span id="problem-contest-sort-indicator" aria-hidden="true"></span>
+                      <span class="desktop-column-label">场次 + 题号</span>
+                      <span class="mobile-column-label">题目</span>
+                      <span id="problem-contest-sort-indicator" aria-hidden="true"></span>
                     </button>
                   </th>
                   <th id="problem-name-column" class="problem-name-column" scope="col">题名</th>
@@ -179,6 +181,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20260904-19"></script>
+  <script type="module" src="./js/app.mjs?v=20260904-20"></script>
 </body>
 </html>

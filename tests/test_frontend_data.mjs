@@ -102,7 +102,7 @@ test("provides a combined clear control and emphasizes zero deltas", async () =>
   assert.match(stylesheet, /\.delta-zero\s*\{[^}]*font-weight:\s*650/);
 });
 
-test("keeps frozen rating columns within half of their scroll container", async () => {
+test("uses one composite identity column for narrow rating tables", async () => {
   const [stylesheet, appModule] = await Promise.all([
     readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
@@ -114,6 +114,18 @@ test("keeps frozen rating columns within half of their scroll container", async 
   assert.match(stylesheet, /--series-person-width:\s*min\(220px,\s*30cqw\)/);
   assert.match(stylesheet, /\.wide-table tbody td:nth-child\(3\)[^{]*\{[^}]*position:\s*static/);
   assert.match(stylesheet, /\.wide-table thead th:nth-child\(3\)[^{]*\{[^}]*left:\s*auto/);
+  assert.match(stylesheet, /@container \(max-width:\s*600px\)/);
+  assert.match(stylesheet, /--mobile-identity-width:\s*clamp\(150px,\s*42cqw,\s*176px\)/);
+  assert.match(stylesheet, /\.wide-table col:nth-child\(1\)[^{]*\{[^}]*display:\s*none/);
+  assert.match(stylesheet, /\.wide-table th:nth-child\(2\)[^{]*\{[^}]*left:\s*0/);
+  assert.match(stylesheet, /\.contest-table col:nth-child\(1\)[^{]*\{[^}]*display:\s*none/);
+  assert.match(stylesheet, /\.contest-table th:nth-child\(2\)[^{]*\{[^}]*position:\s*sticky/);
+  assert.match(stylesheet, /\.mobile-rank\s*\{[^}]*display:\s*inline/);
+  assert.match(stylesheet, /\.person-context\s*\{[^}]*gap:\s*\.3rem/);
+  assert.match(appModule, /function personButton\(competitor, rank\)/);
+  assert.match(appModule, /className: "mobile-rank", text: `#\$\{rank\}`[\s\S]*className: "person-school"/);
+  assert.match(appModule, /personButton\(competitor, competitor\.rank\)/);
+  assert.match(appModule, /personButton\(competitor, participation\.contestRank\)/);
   assert.match(appModule, /--series-contest-width/);
 });
 

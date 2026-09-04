@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260904-19";
+} from "./data.mjs?v=20260904-20";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260904-19";
+} from "./problem-rating.mjs?v=20260904-20";
 import {
   buildPreviewPower,
   buildPreviewRanks,
@@ -31,7 +31,7 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260904-19";
+} from "./preview.mjs?v=20260904-20";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -233,9 +233,14 @@ function scheduleSeriesRows() {
   state.renderFrame = requestAnimationFrame(renderSeriesRows);
 }
 
-function personButton(competitor) {
+function personButton(competitor, rank) {
   const children = [node("span", { text: competitor.member })];
-  if (competitor.school) children.push(node("small", { text: competitor.school }));
+  children.push(node("small", {
+    className: `person-context${competitor.school ? "" : " person-context-rank-only"}`,
+  }, [
+    node("span", { className: "mobile-rank", text: `#${rank}` }),
+    ...(competitor.school ? [node("span", { className: "person-school", text: competitor.school })] : []),
+  ]));
   const button = node("button", { className: "link-button person", type: "button" }, children);
   button.addEventListener("click", () => openCompetitor(competitor.id));
   return button;
@@ -254,7 +259,7 @@ function renderSeriesRows() {
       row.dataset.competitorId = competitor.id;
       row.setAttribute("aria-rowindex", String(index + 2));
       row.append(node("td", { text: String(competitor.rank) }));
-      row.append(node("td", {}, [personButton(competitor)]));
+      row.append(node("td", {}, [personButton(competitor, competitor.rank)]));
       row.append(node("td", {}, [ratingNode(competitor.finalRating)]));
       row.append(node("td", { text: String(competitor.contestsParticipated) }));
       const participationByContest = new Map(competitor.participations.map((item) => [item.contestIndex, item]));
@@ -670,8 +675,25 @@ function renderPreviewRows() {
           node("span", { text: team.school }),
         ]),
       ]));
-      row.append(node("td", { text: team.name, title: team.name }));
       const memberNames = team.members.map(({ name }) => name).join(" / ");
+      const identityTooltip = node("span", { className: "preview-member-tooltip", role: "tooltip" }, [
+        node("strong", { text: "成员" }),
+        ...team.members.map(({ name }) => node("span", {}, [node("strong", { text: name })])),
+      ]);
+      const identityControl = node("span", {
+        className: "preview-team-identity",
+        tabIndex: 0,
+        "aria-label": `${team.name}，${team.school}，成员：${memberNames}`,
+      }, [
+        node("span", { className: "identity-primary", text: team.name }),
+        node("small", {
+          className: "identity-secondary",
+          text: `${schoolRank ? `#${schoolRank} ` : ""}${team.school}`,
+        }),
+        identityTooltip,
+      ]);
+      attachPreviewTooltip(identityControl, identityTooltip);
+      row.append(node("td", { className: "preview-team-cell", title: team.name }, [identityControl]));
       row.append(node("td", { text: memberNames, title: memberNames }));
       row.append(node("td", { className: "preview-metric-cell preview-power-cell" }, [
         previewPowerControl(team),
@@ -719,12 +741,13 @@ function setPreviewSort(sort) {
   applySearch();
 }
 
-function previewSortHeader(label, sort) {
+function previewSortHeader(label, sort, mobileLabel = label) {
   const active = state.previewSort === sort;
   const indicator = active ? state.previewOrder === "asc" ? "↑" : "↓" : "";
   const heading = node("th", { scope: "col" }, [
     node("button", { className: "table-sort-button", type: "button", onclick: () => setPreviewSort(sort) }, [
-      document.createTextNode(`${label} `),
+      node("span", { className: "desktop-column-label", text: label }),
+      node("span", { className: "mobile-column-label", text: mobileLabel }),
       node("span", { text: indicator, "aria-hidden": "true" }),
     ]),
   ]);
@@ -736,7 +759,7 @@ function renderPreviewHeader() {
   const row = node("tr");
   row.append(
     previewSortHeader("学校", "school"),
-    previewSortHeader("中文队名", "name"),
+    previewSortHeader("中文队名", "name", "队伍"),
     previewSortHeader("成员", "members"),
     previewSortHeader("综合战力", "power"),
   );
@@ -856,7 +879,6 @@ function openContest(contestId, updateUrl = true) {
     node("thead", {}, [headRow]),
     body,
   ]);
-  table.style.minWidth = "616px";
   shell.append(table);
   const draw = () => renderVirtualRows({
     container: shell, body, items: participants, columns: 5,
@@ -864,7 +886,7 @@ function openContest(contestId, updateUrl = true) {
       const row = node("tr");
       row.setAttribute("aria-rowindex", String(index + 2));
       row.append(node("td", { text: String(participation.contestRank) }));
-      row.append(node("td", {}, [personButton(competitor)]));
+      row.append(node("td", {}, [personButton(competitor, participation.contestRank)]));
       row.append(node("td", {}, [ratingNode(participation.before)]));
       row.append(node("td", {}, [ratingNode(participation.after)]));
       row.append(node("td", { className: deltaClass(participation.delta), text: formatDelta(participation.delta) }));
@@ -899,7 +921,17 @@ function renderProblemTable(rows, showProblemNames) {
   for (const { contest, problem } of rows) {
     const row = node("tr");
     row.append(node("td", { text: contest.title, title: contest.title }));
-    row.append(node("td", { text: problem.index }));
+    row.append(node("td", {
+      className: "problem-identity-cell",
+      title: [problem.index, problem.name, contest.title].filter(Boolean).join(" · "),
+      "aria-label": [problem.index, problem.name, contest.title].filter(Boolean).join("，"),
+    }, [
+      node("span", { className: "problem-identity-content" }, [
+        node("span", { className: "problem-identity-index", text: problem.index }),
+        ...(problem.name ? [node("span", { className: "problem-identity-name", text: problem.name })] : []),
+        node("small", { className: "identity-secondary", text: contest.title }),
+      ]),
+    ]));
     if (showProblemNames) {
       row.append(node("td", {
         className: "problem-name-cell",
