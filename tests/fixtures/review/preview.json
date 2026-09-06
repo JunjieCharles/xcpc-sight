@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "test-series",
+  "seriesTitle": "Test series",
+  "id": "preview-one",
+  "title": "First contest",
+  "sortAt": "2026-09-06T13:00:00+08:00",
+  "snapshotDate": "2026-09-04",
+  "matchingPolicy": "school and name",
+  "teamSource": {
+    "title": "Roster",
+    "url": "https://example.test/roster",
+    "note": "Reduced fixture"
+  },
+  "metricSources": [
+    {
+      "id": "xcpcrating",
+      "title": "xcpcrating",
+      "url": "https://example.test/xcpcrating"
+    },
+    {
+      "id": "xcpcElo",
+      "title": "xcpcElo",
+      "url": "https://example.test/xcpcElo"
+    },
+    {
+      "id": "previousSeason",
+      "title": "previousSeason",
+      "url": "https://example.test/previousSeason"
+    },
+    {
+      "id": "cpcfinder",
+      "title": "cpcfinder",
+      "url": "https://example.test/cpcfinder"
+    }
+  ],
+  "teams": [
+    {
+      "id": "a",
+      "sourceIndex": 0,
+      "school": "University",
+      "name": "a",
+      "members": [
+        {
+          "name": "Member a",
+          "ratings": {
+            "xcpcrating": 100,
+            "xcpcElo": 100,
+            "previousSeason": 100,
+            "cpcfinder": 10
+          },
+          "medals": {
+            "gold": 1,
+            "silver": 0,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": 100,
+        "xcpcElo": 100,
+        "previousSeason": 100,
+        "cpcfinder": 10
+      },
+      "medals": {
+        "gold": 1,
+        "silver": 0,
+        "bronze": 0
+      }
+    },
+    {
+      "id": "b",
+      "sourceIndex": 1,
+      "school": "University",
+      "name": "b",
+      "members": [
+        {
+          "name": "Member b",
+          "ratings": {
+            "xcpcrating": 90,
+            "xcpcElo": 90,
+            "previousSeason": 90,
+            "cpcfinder": 9
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 2,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": 90,
+        "xcpcElo": 90,
+        "previousSeason": 90,
+        "cpcfinder": 9
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 2,
+        "bronze": 0
+      }
+    },
+    {
+      "id": "c",
+      "sourceIndex": 2,
+      "school": "University",
+      "name": "c",
+      "members": [
+        {
+          "name": "Member c",
+          "ratings": {
+            "xcpcrating": 80,
+            "xcpcElo": 80,
+            "previousSeason": 80,
+            "cpcfinder": 8
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 1,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": 80,
+        "xcpcElo": 80,
+        "previousSeason": 80,
+        "cpcfinder": 8
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 1,
+        "bronze": 0
+      }
+    },
+    {
+      "id": "d",
+      "sourceIndex": 3,
+      "school": "University",
+      "name": "d",
+      "members": [
+        {
+          "name": "Member d",
+          "ratings": {
+            "xcpcrating": 70,
+            "xcpcElo": 70,
+            "previousSeason": 70,
+            "cpcfinder": 7
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 0,
+            "bronze": 1
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": 70,
+        "xcpcElo": 70,
+        "previousSeason": 70,
+        "cpcfinder": 7
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 0,
+        "bronze": 1
+      }
+    },
+    {
+      "id": "e",
+      "sourceIndex": 4,
+      "school": "University",
+      "name": "e",
+      "members": [
+        {
+          "name": "Member e",
+          "ratings": {
+            "xcpcrating": null,
+            "xcpcElo": null,
+            "previousSeason": null,
+            "cpcfinder": 0
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 0,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": null,
+        "xcpcElo": null,
+        "previousSeason": null,
+        "cpcfinder": 0
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 0,
+        "bronze": 0
+      }
+    },
+    {
+      "id": "f",
+      "sourceIndex": 5,
+      "school": "University",
+      "name": "f",
+      "members": [
+        {
+          "name": "Member f",
+          "ratings": {
+            "xcpcrating": null,
+            "xcpcElo": null,
+            "previousSeason": null,
+            "cpcfinder": 0
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 0,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": null,
+        "xcpcElo": null,
+        "previousSeason": null,
+        "cpcfinder": 0
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 0,
+        "bronze": 0
+      }
+    },
+    {
+      "id": "g",
+      "sourceIndex": 6,
+      "school": "University",
+      "name": "g",
+      "members": [
+        {
+          "name": "Member g",
+          "ratings": {
+            "xcpcrating": null,
+            "xcpcElo": null,
+            "previousSeason": null,
+            "cpcfinder": null
+          },
+          "medals": {
+            "gold": 0,
+            "silver": 0,
+            "bronze": 0
+          },
+          "achievements": []
+        }
+      ],
+      "ratings": {
+        "xcpcrating": null,
+        "xcpcElo": null,
+        "previousSeason": null,
+        "cpcfinder": null
+      },
+      "medals": {
+        "gold": 0,
+        "silver": 0,
+        "bronze": 0
+      }
+    }
+  ]
+}

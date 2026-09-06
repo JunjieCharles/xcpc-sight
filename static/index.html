@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
-  <link rel="stylesheet" href="./styles.css?v=20260906-31">
+  <link rel="stylesheet" href="./styles.css?v=20260906-37">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -51,7 +51,9 @@
         <button id="problem-rating-tab" type="button" role="tab"
                 aria-controls="problem-rating-view" aria-selected="false">题目难度</button>
         <button id="preview-tab" type="button" role="tab" hidden
-                aria-controls="preview-view" aria-selected="false">前瞻</button>
+                aria-controls="preview-view" aria-selected="false">赛前前瞻</button>
+        <button id="review-tab" type="button" role="tab" hidden
+                aria-controls="review-view" aria-selected="false">赛后复盘</button>
       </div>
 
       <section id="participant-controls" class="controls" aria-label="搜索">
@@ -85,7 +87,7 @@
           <div>
             <p class="eyebrow">PREVIEW</p>
             <h2 id="preview-title"></h2>
-            <p class="section-note">比赛时间：2026年9月6日 13:00-18:00</p>
+            <p class="section-note" id="preview-time"></p>
           </div>
           <label class="preview-contest-picker">
             <span>选择比赛</span>
@@ -102,6 +104,33 @@
           <table class="data-table preview-table">
             <thead id="preview-head"></thead>
             <tbody id="preview-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="review-view" hidden aria-labelledby="review-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">REVIEW</p><h2 id="review-title"></h2></div>
+          <div class="review-pickers">
+            <label><span>选择比赛</span><select id="review-contest-select" aria-label="选择复盘比赛"></select></label>
+          </div>
+        </div>
+        <div class="review-summary">
+          <h3>各指标排名符合度 <small>Spearman ρ</small></h3>
+          <p class="section-note">越接近 1，赛前与赛后的先后顺序越一致。点击指标查看队伍对比；不同指标的有效队伍集合可能不同。</p>
+          <div id="review-metrics" class="review-metrics" role="group" aria-label="对比所有指标符合度，选择队伍排名指标"></div>
+          <p id="review-agreement" aria-live="polite"></p>
+          <p id="review-coverage"></p>
+        </div>
+        <div class="preview-sources">
+          <p id="review-sources"></p>
+          <p><strong class="review-ranking-note">前瞻排名与实际排名均仅统计已参赛且存在当前指标的队伍。</strong></p>
+          <p>名次变化 = 前瞻排名 − 实际排名；上涨程度 = log₁₀(前瞻排名 / 实际排名)，正值表示上涨。</p>
+        </div>
+        <p id="review-empty" class="section-note" hidden></p>
+        <div class="table-shell preview-table-shell" id="review-scroll" tabindex="0" aria-label="赛后复盘队伍对比表，可点击表头排序">
+          <table class="data-table preview-table review-table">
+            <thead id="review-head"></thead><tbody id="review-body"></tbody>
           </table>
         </div>
       </section>
@@ -182,6 +211,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20260906-31"></script>
+  <script type="module" src="./js/app.mjs?v=20260906-37"></script>
 </body>
 </html>

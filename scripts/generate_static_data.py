@@ -155,6 +155,14 @@ def preview_specs() -> tuple[PreviewSpec, ...]:
     )
 
 
+def review_specs() -> tuple[PreviewSpec, ...]:
+    root = Path(__file__).resolve().parents[1] / "static" / "data"
+    return tuple(
+        PreviewSpec(source, source.relative_to(root).as_posix())
+        for source in sorted((root / "reviews").glob("*.json"))
+    )
+
+
 def generate_static_data(output_dir: Path) -> None:
     publications: list[tuple[dict[str, object], str]] = []
     for spec in series_specs():
@@ -168,15 +176,25 @@ def generate_static_data(output_dir: Path) -> None:
         publications.append((document, spec.path))
 
     preview_publications = [
-        (json.loads(spec.source.read_text(encoding="utf-8")), spec.path)
-        for spec in preview_specs()
+        (json.loads(spec.source.read_text(encoding="utf-8")), spec.path) for spec in preview_specs()
+    ]
+    published_preview_series = {document["seriesId"] for document, _ in preview_publications}
+    review_publications = [
+        (document, spec.path)
+        for spec in review_specs()
+        if (document := json.loads(spec.source.read_text(encoding="utf-8")))["seriesId"]
+        in published_preview_series
     ]
     index = project_static_data_index(
-        publications, preview_publications=preview_publications
+        publications,
+        preview_publications=preview_publications,
+        review_publications=review_publications,
     )
     for document, path in publications:
         write_json_atomic(output_dir / path, document)
     for document, path in preview_publications:
+        write_json_atomic(output_dir / path, document)
+    for document, path in review_publications:
         write_json_atomic(output_dir / path, document)
     write_json_atomic(output_dir / "index.json", index)
 

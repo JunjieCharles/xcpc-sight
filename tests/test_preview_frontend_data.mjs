@@ -416,10 +416,12 @@ test("round trips preview sorting through URL state", () => {
   assert.deepEqual(readPreviewQuery(next), {
     previewSort: "medals",
     previewOrder: "asc",
+    previewContest: "",
   });
   assert.deepEqual(readPreviewQuery("https://example.test/"), {
     previewSort: "power",
     previewOrder: "desc",
+    previewContest: "",
   });
   assert.equal(
     writePreviewQuery("https://example.test/?achievement=noi:gold", { view: "preview" })

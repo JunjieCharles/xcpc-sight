@@ -1,6 +1,6 @@
 # 静态站点数据
 
-选手 Rating 生成器发布四个 schema v1 Rating 系列（含 2026–2027），并把已提交的 2026–2027 schema v1 前瞻快照一并登记到 schema v2 站点索引。独立的题目 Rating 生成器仍只发布三个已有系列的题目级聚合 JSON。项目不包含后端或数据库；`static/` 同时包含直接消费这些文件的零依赖前端。
+选手 Rating 生成器发布四个 schema v1 Rating 系列（含 2026–2027），并把已提交的 2026–2027 schema v1 前瞻快照及对应赛后复盘一并登记到 schema v2 站点索引。独立的题目 Rating 生成器仍只发布三个已有系列的题目级聚合 JSON。项目不包含后端或数据库；`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -16,8 +16,9 @@ python scripts/generate_static_data.py
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 - `static/data/previews/2026-2027.json`
+- `static/data/reviews/2026-2027.json`
 
-XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238。各来源进入 Rating 前都过滤无提交队伍并重建含并列的比赛排名。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部 Rating 系列，同时读取已提交的前瞻文件；成功后依次原子发布系列与前瞻文件，最后发布入口索引。它不会自行请求、刷新或扩展前瞻名单。
+XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238。各来源进入 Rating 前都过滤无提交队伍并重建含并列的比赛排名。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部 Rating 系列，同时读取已提交的前瞻和对应复盘文件；成功后依次原子发布系列、前瞻与复盘文件，最后发布入口索引。它不会自行请求、刷新或扩展前瞻名单。
 
 题目 Rating 数据在完成 `python -m problem_rating.predict_xcpc` 后离线生成：
 
@@ -39,9 +40,9 @@ JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不�
 
 - `schemaVersion`：当前为 `2`；
 - `defaultSeriesId`：静态站点默认打开的系列；
-- `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向前瞻；2026–2027 系列同时具有两者。
+- `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向首个前瞻，可选 `previews: [{id, path}]` 提供完整多场次目录；可选 `reviewPath` 指向赛后复盘，2026–2027 同时提供选手榜、前瞻和复盘。
 
-索引按每个 Rating 系列 `contests[].startAt` 的最大值或前瞻 `sortAt` 倒序排列，时间相同则按系列 ID 升序；同一系列同时存在两类数据时取两者中较新的时间。第一项成为默认系列。投影拒绝空输入、无内容系列、同类重复 ID 和重复路径；同一 ID 的 Rating 与前瞻会合并为一项，并要求标题一致。
+索引按每个 Rating 系列 `contests[].startAt` 的最大值或前瞻 `sortAt` 倒序排列，时间相同则按系列 ID 升序；同一系列同时存在两类数据时取两者中较新的时间。第一项成为默认系列。投影拒绝空输入、无内容系列、重复场次 ID 和重复路径；同一系列 ID 的 Rating 与前瞻合并为一项，并要求标题一致；多份前瞻通过 `previews` 登记且首项保留 `previewPath`。`project_static_data_index` 接受 `review_publications` 并验证复盘引用已发布前瞻。
 已发布的 `index.json` 必须由同一批系列 JSON 投影得到；离线回归测试会校验这一一致性，避免单独更新系列数据后目录顺序滞后。
 
 ## 系列契约
@@ -119,9 +120,13 @@ series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和
 
 `teams[]` 每项包含学校、中文队名、来源顺序、稳定 ID、成员明细、四项队伍评分和金银铜牌总数。每位成员有同样四项评分与个人奖牌数。评分允许 `null`，但非空值必须有限；队伍评分必须严格等于已匹配成员最大值，队伍奖牌必须严格等于成员奖牌之和。详细来源、匹配与人工更新边界见 [2026–2027 赛季与前瞻](season-2026-2027-preview.md)。
 
+## 赛后复盘数据契约
+
+`reviewPath` 指向 schema v1 复盘系列，含 `seriesId` 和 `contests[]`。每场以实际 `id` 及 `previewId` 明确关联前瞻，包含标题、时间、结果来源和所有前瞻队伍的 `previewTeamId/resultTeamId/hasActivity/actualRank`。无活动名次为 `null`，有活动名次为正整数。浏览器验证完整一对一关联、唯一 ID 及活动/名次一致性。首场固定来源版本，不从个人 Rating 反推队伍成绩。完整字段、生成命令、纯 API、匹配政策和测试见 [赛后复盘](post-contest-review.md)。
+
 ## 静态前端
 
-前端入口为 `static/index.html`，样式和原生 ES modules 位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs`、`static/js/preview.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；数据 JSON 继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，所有数据 URL 均相对于入口索引或模块解析。
+前端入口为 `static/index.html`，样式和原生 ES modules 位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs`、`static/js/preview.mjs` 和 `static/js/review.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；数据 JSON 继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，所有数据 URL 均相对于入口索引或模块解析。
 
 本地必须通过 HTTP 访问，而不是直接打开 `file://`：
 
@@ -139,8 +144,10 @@ python -m http.server 8000 --directory static
 - 三个已发布题目数据的 series 均提供“选手 Rating / 题目难度”切换；题目页默认选择全部场次，图例只显示场次短名，支持点击逐场筛选和快捷全选/全不选；2025–2026 ICPC + CCPC 另有“仅 ICPC”和“仅 CCPC”按钮，用对应组织的全部场次替换当前选择；表头点击完成“场次 + 题号”或 Rating 的正序/逆序切换；通过队伍/有效队伍在同一列分别对齐，界面不展示时间样本；
 - 每场题目按预测 Rating 从易到难排列的多曲线 SVG；Rating 相同按自然题号稳定排序，图表适配页面可用宽度，曲线长度与题目数量成正比，并使用不越过相邻点范围的单调三次插值，圆点和提示保留真实预测值；颜色按场次索引以黄金角色相和交替明度确定性生成，筛选不改变颜色，已发布系列内不重复；曲线宽命中带和题目点悬停均显示正式场次名，题目点另外显示题号、题名和 Rating；
 - `view=problem-rating`、`problemContests`、`problemSort`、`problemOrder` 查询状态。缺少 `problemContests` 表示全选，`none` 表示取消全部，其他值为逗号分隔的场次 ID。
-- 只有前瞻数据的系列直接打开“前瞻”页；2026–2027 已有选手 Rating，默认打开选手榜；“前瞻”作为独立 tab 始终显示，不显示不存在的选手 Rating/题目难度 tab。标题区保留比赛选择下拉框，当前只有网络赛第一场。页面不展示静态说明、匹配政策和快照日期，名单来源与数据来源分行显示，并批注校排随当前排序方式变化。前瞻支持学校、中文队名和成员多词搜索、学校多选，以及学校/队名/成员/综合战力/四项评分/奖牌全部居中表头双向排序；除学校、队名、成员排序外，每种当前排序均基于未筛选结果按学校首次出现顺序独立生成校排，只在该校排名最高的队伍校名前以预留槽显示 `#x`，筛选不重算校排。评分缺失值始终置后，CPC Finder 的 `0` 在队伍单元格及队员明细中显示为 `0.00`，缺失评分显示 `—`；零分参与该列排名和数值排序，同分并列，缺失值无名次且始终置后；仅综合战力中两者同为该维度最弱值且互不超过，奖牌依次比较金、银、铜。Rating 不显示千分位，XCPC Rating 与 CPC Finder 固定两位小数（队伍值与队员明细一致）；除 CPC Finder 外分别使用对应来源的颜色体系。除综合战力外，每个数据单元格在主值后以 `#x` 单行显示该项在全部队伍中的竞赛名次，排名使用小号等宽数字并占用固定的 `1.9rem` 左对齐窄槽；同值并列且缺失评分不显示名次，筛选不改变这些全局名次。奖牌表头只显示“奖牌”，展示省略点号分隔，以避免窄列溢出。评分和奖牌单元格无需提示图标，正常悬浮或聚焦即显示全员明细；综合战力单元格悬浮或聚焦只显示五维雷达图。两类悬浮窗按视口空间显示在单元格上方或下方，不被表格滚动容器裁切。
-- `view=preview`、`previewSort`、`previewOrder` 查询状态；默认按 `power` 综合战力降序。
+- 只有前瞻数据的系列直接打开“赛前前瞻”页；2026–2027 已有选手 Rating，默认打开选手榜；“赛前前瞻”作为独立 tab 始终显示，不显示不存在的选手 Rating/题目难度 tab。标题区保留比赛选择下拉框，当前只有网络赛第一场。页面不展示静态说明、匹配政策和快照日期，名单来源与数据来源分行显示，并批注校排随当前排序方式变化。前瞻支持学校、中文队名和成员多词搜索、学校多选，以及学校/队名/成员/综合战力/四项评分/奖牌全部居中表头双向排序；除学校、队名、成员排序外，每种当前排序均基于未筛选结果按学校首次出现顺序独立生成校排，只在该校排名最高的队伍校名前以预留槽显示 `#x`，筛选不重算校排。评分缺失值始终置后，CPC Finder 的 `0` 在队伍单元格及队员明细中显示为 `0.00`，缺失评分显示 `—`；零分参与该列排名和数值排序，同分并列，缺失值无名次且始终置后；仅综合战力中两者同为该维度最弱值且互不超过，奖牌依次比较金、银、铜。Rating 不显示千分位，XCPC Rating 与 CPC Finder 固定两位小数（队伍值与队员明细一致）；除 CPC Finder 外分别使用对应来源的颜色体系。除综合战力外，每个数据单元格在主值后以 `#x` 单行显示该项在全部队伍中的竞赛名次，排名使用小号等宽数字并占用固定的 `1.9rem` 左对齐窄槽；同值并列且缺失评分不显示名次，筛选不改变这些全局名次。奖牌表头只显示“奖牌”，展示省略点号分隔，以避免窄列溢出。评分和奖牌单元格无需提示图标，正常悬浮或聚焦即显示全员明细；综合战力单元格悬浮或聚焦只显示五维雷达图。两类悬浮窗按视口空间显示在单元格上方或下方，不被表格滚动容器裁切。
+- `view=preview`、`previewContest`、`previewSort`、`previewOrder` 查询状态；默认按 `power` 综合战力降序。
+
+“赛后复盘”通过比赛下拉框选择场次，并同时显示六项指标的符合度卡片；点击卡片选择表格指标，默认综合战力。显示筛选后的两侧排名、箭头涨跌和对数上涨程度。搜索不重算统计，虚拟表在宽屏铺满容器、窄屏横向滚动。`view=review`、`reviewContest`、`reviewMetric`、`reviewSort`、`reviewOrder` 支持 URL 恢复与前进后退。
 
 数据层以 URL 为键缓存正在进行和已完成的 JSON Promise；失败会从缓存移除以允许重试。索引和系列对象分别只验证一次，系列验证后只建立一次参赛者 ID 与单场参赛者索引。验证包括 schema 版本、必需字段与类型、唯一 ID、比赛引用范围、参赛顺序、rating 算术与连续性，以及最终 rating/参赛次数一致性。未知 schema 版本或不合法文档会显示错误面板，不静默渲染部分数据。
 
@@ -148,10 +155,10 @@ python -m http.server 8000 --directory static
 
 ## 前端测试
 
-三个前端测试文件使用 Node 内置测试运行器，不需要 `package.json`：
+四个前端测试文件使用 Node 内置测试运行器，不需要 `package.json`：
 
 ```bash
-node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs
+node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs tests/test_review_frontend_data.mjs
 ```
 
 覆盖选手、题目与前瞻 schema，真实 2535 队快照，索引两类入口，稀疏 rating、搜索/学校筛选、前瞻各列与奖牌复合排序、缺失值、三类页面 URL 状态、子路径解析、Promise 缓存、题目筛选与难度曲线。DOM 虚拟滚动、悬浮详情和浏览器交互继续通过本地 HTTP 与桌面/移动端浏览器检查。

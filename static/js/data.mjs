@@ -74,12 +74,32 @@ export function validateIndex(document) {
     string(item.title, `index.series[${i}].title`);
     if (item.path !== undefined) string(item.path, `index.series[${i}].path`);
     if (item.previewPath !== undefined) string(item.previewPath, `index.series[${i}].previewPath`);
-    if (item.path === undefined && item.previewPath === undefined) {
+    if (item.reviewPath !== undefined) string(item.reviewPath, `index.series[${i}].reviewPath`);
+    if (item.previews !== undefined) {
+      array(item.previews, `index.series[${i}].previews`);
+      if (!item.previews.length) fail(`index.series[${i}].previews`, "expected nonempty list");
+      const previewIds = new Set();
+      item.previews.forEach((preview, j) => {
+        object(preview, `index.series[${i}].previews[${j}]`);
+        string(preview.id, `index.series[${i}].previews[${j}].id`);
+        string(preview.path, `index.series[${i}].previews[${j}].path`);
+        if (previewIds.has(preview.id)) fail(`index.series[${i}].previews`, "duplicate preview ID");
+        previewIds.add(preview.id);
+      });
+      if (new Set(item.previews.map(p => p.path)).size !== item.previews.length) {
+        fail(`index.series[${i}].previews`, "duplicate preview path");
+      }
+      if (item.previewPath && item.previewPath !== item.previews[0].path) {
+        fail(`index.series[${i}].previewPath`, "must match first preview entry");
+      }
+    }
+    if (item.reviewPath && !item.previewPath && !item.previews) fail(`index.series[${i}].reviewPath`, "requires previews");
+    if (item.path === undefined && item.previewPath === undefined && item.previews === undefined) {
       fail(`index.series[${i}]`, "expected path or previewPath");
     }
     if (ids.has(item.id)) fail(`index.series[${i}].id`, "duplicate series id");
     ids.add(item.id);
-    for (const path of [item.path, item.previewPath].filter(Boolean)) {
+    for (const path of [item.path, item.reviewPath, ...(item.previews?.map(p => p.path) ?? [item.previewPath])].filter(Boolean)) {
       if (paths.has(path)) fail(`index.series[${i}]`, "duplicate data path");
       paths.add(path);
     }

@@ -1,0 +1,192 @@
+{
+  "contest": {
+    "title": "First contest",
+    "startAt": "2026-09-06T13:00:00+08:00"
+  },
+  "rows": [
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-a",
+        "name": "a",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member a"
+          }
+        ]
+      },
+      "score": {
+        "value": 2,
+        "time": [
+          100,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-b",
+        "name": "b",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member b"
+          }
+        ]
+      },
+      "score": {
+        "value": 0,
+        "time": [
+          0,
+          "min"
+        ]
+      },
+      "statuses": []
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-c",
+        "name": "c",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member c"
+          }
+        ]
+      },
+      "score": {
+        "value": 1,
+        "time": [
+          200,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-d",
+        "name": "d",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member d"
+          }
+        ]
+      },
+      "score": {
+        "value": 2,
+        "time": [
+          100,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-e",
+        "name": "e",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member e"
+          }
+        ]
+      },
+      "score": {
+        "value": 0,
+        "time": [
+          0,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-f",
+        "name": "f",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member f"
+          }
+        ]
+      },
+      "score": {
+        "value": 1,
+        "time": [
+          100,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    },
+    {
+      "rank": 999,
+      "user": {
+        "id": "result-g",
+        "name": "g",
+        "organization": "University",
+        "official": true,
+        "teamMembers": [
+          {
+            "name": "Member g"
+          }
+        ]
+      },
+      "score": {
+        "value": 3,
+        "time": [
+          10,
+          "min"
+        ]
+      },
+      "statuses": [
+        {
+          "result": "WA",
+          "tries": 1
+        }
+      ]
+    }
+  ]
+}

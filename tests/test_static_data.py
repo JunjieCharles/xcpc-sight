@@ -194,8 +194,18 @@ def test_published_index_matches_published_series_documents() -> None:
         if "previewPath" in entry
     )
 
+    review_publications = tuple(
+        (
+            json.loads((data_dir / entry["reviewPath"]).read_text(encoding="utf-8")),
+            entry["reviewPath"],
+        )
+        for entry in index["series"]
+        if "reviewPath" in entry
+    )
     assert index == project_static_data_index(
-        publications, preview_publications=preview_publications
+        publications,
+        preview_publications=preview_publications,
+        review_publications=review_publications,
     )
 
 
@@ -222,6 +232,7 @@ def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
 def test_index_accepts_preview_only_series_and_sorts_it_by_event_time() -> None:
     rating_document = project_fixture()
     preview_document = {
+        "id": "preview-contest",
         "schemaVersion": 1,
         "seriesId": "2026-2027",
         "seriesTitle": "2026–2027 ICPC + CCPC",
@@ -255,6 +266,7 @@ def test_index_accepts_preview_only_series_and_sorts_it_by_event_time() -> None:
 def test_index_combines_rating_and_preview_entries_for_the_same_series() -> None:
     rating_document = project_fixture()
     preview_document = {
+        "id": "preview-contest",
         "schemaVersion": 1,
         "seriesId": rating_document["id"],
         "seriesTitle": rating_document["title"],

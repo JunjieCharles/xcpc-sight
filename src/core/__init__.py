@@ -42,6 +42,7 @@ from .nowcoder import (
 )
 from .ranking import rebuild_competition_ranks
 from .rankland import RankLandClient, normalize_srk_contest
+from .review import project_review_contest
 from .seasons import (
     SEASON_2025_2026,
     SEASON_2026_2027,
@@ -98,5 +99,6 @@ __all__ = [
     "parse_hdu_metadata",
     "parse_ioi_results",
     "rebuild_competition_ranks",
+    "project_review_contest",
     "select_season",
 ]

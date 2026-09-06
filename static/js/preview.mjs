@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-31";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-37";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -345,16 +345,19 @@ export function readPreviewQuery(url) {
   return {
     previewSort: params.get("previewSort") || "power",
     previewOrder: params.get("previewOrder") === "asc" ? "asc" : "desc",
+    previewContest: params.get("previewContest") || "",
   };
 }
 
 export function writePreviewQuery(url, query) {
   const next = new URL(url, "http://localhost/");
   if (query.view !== "preview") {
-    for (const key of ["previewSort", "previewOrder", "achievement"]) next.searchParams.delete(key);
+    for (const key of ["previewSort", "previewOrder", "previewContest", "achievement"]) next.searchParams.delete(key);
     return next;
   }
   next.searchParams.set("view", "preview");
+  if (query.contest) next.searchParams.set("previewContest", query.contest);
+  else next.searchParams.delete("previewContest");
   if (query.sort && query.sort !== "power") next.searchParams.set("previewSort", query.sort);
   else next.searchParams.delete("previewSort");
   if (query.order === "asc") next.searchParams.set("previewOrder", "asc");
@@ -365,11 +368,20 @@ export function writePreviewQuery(url, query) {
 
 export function createPreviewStore(indexUrl, fetchImpl = globalThis.fetch) {
   return {
+    async getPreviews(entry) {
+      const entries = entry.previews ?? (entry.previewPath ? [{ path: entry.previewPath }] : []);
+      if (!entries.length) throw new Error(`Series has no preview data: ${entry.id}`);
+      const previews = await Promise.all(entries.map(async item => {
+        const preview = validatePreview(await fetchJson(resolveDataUrl(item.path, indexUrl), fetchImpl));
+        if (preview.seriesId !== entry.id) fail("preview.seriesId", `expected ${entry.id}, received ${preview.seriesId}`);
+        if (item.id && preview.id !== item.id) fail("preview.id", `expected ${item.id}`);
+        return preview;
+      }));
+      if (new Set(previews.map(p => p.id)).size !== previews.length) fail("preview.id", "duplicate contest ID");
+      return previews;
+    },
     async getSeries(entry) {
-      if (!entry.previewPath) throw new Error(`Series has no preview data: ${entry.id}`);
-      const preview = validatePreview(await fetchJson(resolveDataUrl(entry.previewPath, indexUrl), fetchImpl));
-      if (preview.seriesId !== entry.id) fail("preview.seriesId", `expected ${entry.id}, received ${preview.seriesId}`);
-      return preview;
+      return (await this.getPreviews(entry))[0];
     },
   };
 }

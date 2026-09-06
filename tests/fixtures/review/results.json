@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "test-series",
+  "contests": [
+    {
+      "id": "actual-one",
+      "previewId": "preview-one",
+      "title": "First contest",
+      "startAt": "2026-09-06T13:00:00+08:00",
+      "source": {
+        "title": "RankLand",
+        "url": "https://rl.algoux.cn/ranklist/actual-one"
+      },
+      "teams": [
+        {
+          "previewTeamId": "a",
+          "resultTeamId": "result-a",
+          "hasActivity": true,
+          "actualRank": 2
+        },
+        {
+          "previewTeamId": "b",
+          "resultTeamId": "result-b",
+          "hasActivity": false,
+          "actualRank": null
+        },
+        {
+          "previewTeamId": "c",
+          "resultTeamId": "result-c",
+          "hasActivity": true,
+          "actualRank": 5
+        },
+        {
+          "previewTeamId": "d",
+          "resultTeamId": "result-d",
+          "hasActivity": true,
+          "actualRank": 2
+        },
+        {
+          "previewTeamId": "e",
+          "resultTeamId": "result-e",
+          "hasActivity": true,
+          "actualRank": 6
+        },
+        {
+          "previewTeamId": "f",
+          "resultTeamId": "result-f",
+          "hasActivity": true,
+          "actualRank": 4
+        },
+        {
+          "previewTeamId": "g",
+          "resultTeamId": "result-g",
+          "hasActivity": true,
+          "actualRank": 1
+        }
+      ]
+    }
+  ]
+}

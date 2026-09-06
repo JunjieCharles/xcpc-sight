@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-31";
+} from "./data.mjs?v=20260906-37";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-31";
+} from "./problem-rating.mjs?v=20260906-37";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -32,7 +32,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-31";
+} from "./preview.mjs?v=20260906-37";
+
+import {
+  createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
+} from "./review.mjs?v=20260906-37";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -41,12 +45,25 @@ const PROBLEM_RATING_INDEX_URL = new URL("../data/problem-rating/index.json", im
 const store = createDataStore(INDEX_URL);
 const problemRatingStore = createProblemRatingStore(PROBLEM_RATING_INDEX_URL);
 const previewStore = createPreviewStore(INDEX_URL);
+const reviewStore = createReviewStore(INDEX_URL);
 const elements = {
   seriesList: document.querySelector("#series-list"),
   seriesModeSwitch: document.querySelector("#series-mode-switch"),
   participantRatingTab: document.querySelector("#participant-rating-tab"),
   problemRatingTab: document.querySelector("#problem-rating-tab"),
   previewTab: document.querySelector("#preview-tab"),
+  reviewTab: document.querySelector("#review-tab"),
+  reviewView: document.querySelector("#review-view"),
+  reviewTitle: document.querySelector("#review-title"),
+  reviewContestSelect: document.querySelector("#review-contest-select"),
+  reviewMetrics: document.querySelector("#review-metrics"),
+  reviewAgreement: document.querySelector("#review-agreement"),
+  reviewCoverage: document.querySelector("#review-coverage"),
+  reviewSources: document.querySelector("#review-sources"),
+  reviewEmpty: document.querySelector("#review-empty"),
+  reviewScroll: document.querySelector("#review-scroll"),
+  reviewHead: document.querySelector("#review-head"),
+  reviewBody: document.querySelector("#review-body"),
   participantControls: document.querySelector("#participant-controls"),
   searchLabelText: document.querySelector("#search-label-text"),
   searchInput: document.querySelector("#search-input"),
@@ -111,6 +128,14 @@ const state = {
   problemSort: "contest",
   problemOrder: "asc",
   problemChartFrame: 0,
+  previews: [],
+  review: null,
+  reviewContest: null,
+  reviewAnalysis: null,
+  reviewMetric: "power",
+  reviewSort: "actualRank",
+  reviewOrder: "asc",
+  reviewRenderFrame: 0,
   preview: null,
   previewPower: new Map(),
   previewRanks: new Map(),
@@ -120,6 +145,7 @@ const state = {
   previewRenderFrame: 0,
 };
 let activePreviewTooltip = null;
+let seriesLoadVersion = 0;
 
 function node(tag, properties = {}, children = []) {
   const element = document.createElement(tag);
@@ -192,6 +218,11 @@ function setUrl(mode = "replace") {
     view: state.view,
     sort: state.previewSort,
     order: state.previewOrder,
+    contest: state.preview?.id,
+  });
+  url = writeReviewQuery(url, {
+    view: state.view, contest: state.reviewContest?.id, metric: state.reviewMetric,
+    sort: state.reviewSort, order: state.reviewOrder,
   });
   history[mode === "push" ? "pushState" : "replaceState"](null, "", `${url.pathname}${url.search}${url.hash}`);
 }
@@ -202,6 +233,7 @@ function showError(error) {
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.participantControls.hidden = true;
   elements.detailView.hidden = false;
   elements.detailView.replaceChildren();
@@ -248,7 +280,7 @@ function personButton(competitor, rank) {
 }
 
 function renderSeriesRows() {
-  if (!state.series) return;
+  if (!state.series || state.view !== "participants" || elements.seriesView.hidden) return;
   const columns = state.series.contests.length * 2 + 4;
   renderVirtualRows({
     container: elements.seriesScroll,
@@ -379,8 +411,26 @@ function setSchoolMenu(open) {
   }
 }
 
-function applySearch({ resetScroll = true } = {}) {
+function applySearch({ resetScroll = true, updateUrl = true } = {}) {
   state.query = elements.searchInput.value;
+  if (state.view === "review") {
+    state.filtered = selectReviewRows(state.reviewAnalysis, {
+      sort: state.reviewSort, order: state.reviewOrder, query: state.query, schools: state.schools,
+    });
+    elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
+    elements.clearSearchButton.disabled = !state.query && !state.schools.length;
+    elements.reviewEmpty.hidden = Boolean(state.filtered.length);
+    elements.reviewEmpty.textContent = state.reviewAnalysis.rows.length ? "没有符合搜索条件的队伍。" : "没有实际参赛且当前指标有效的队伍。";
+    if (resetScroll) elements.reviewScroll.scrollTop = 0;
+    else {
+      const maximum = Math.max(0, state.filtered.length * ROW_HEIGHT
+        + elements.reviewHead.offsetHeight - elements.reviewScroll.clientHeight);
+      elements.reviewScroll.scrollTop = Math.min(elements.reviewScroll.scrollTop, maximum);
+    }
+    scheduleReviewRows();
+    if (updateUrl) setUrl();
+    return;
+  }
   if (state.view === "preview") {
     const sortedTeams = sortPreviewTeams(
       state.preview.teams,
@@ -412,18 +462,21 @@ function applySearch({ resetScroll = true } = {}) {
     if (resetScroll) elements.seriesScroll.scrollTop = 0;
     scheduleSeriesRows();
   }
-  setUrl();
+  if (updateUrl) setUrl();
 }
 
 function updateSeriesMode() {
   const participantsSupported = Boolean(state.seriesEntry?.path);
   const problemSupported = participantsSupported && state.problemAvailableSeries.has(state.seriesId);
-  const previewSupported = Boolean(state.seriesEntry?.previewPath);
-  const supportedCount = [participantsSupported, problemSupported, previewSupported].filter(Boolean).length;
+  const previewSupported = Boolean(state.previews.length);
+  const reviewSupported = Boolean(state.seriesEntry?.reviewPath);
+  const supportedCount = [participantsSupported, problemSupported, previewSupported, reviewSupported].filter(Boolean).length;
   elements.seriesModeSwitch.hidden = supportedCount === 0;
   elements.participantRatingTab.hidden = !participantsSupported;
   elements.problemRatingTab.hidden = !problemSupported;
   elements.previewTab.hidden = !previewSupported;
+  elements.reviewTab.hidden = !reviewSupported;
+  elements.reviewTab.setAttribute("aria-selected", String(state.view === "review"));
   elements.participantRatingTab.setAttribute(
     "aria-selected",
     String(state.view === "participants"),
@@ -444,6 +497,7 @@ function showSeries() {
   elements.detailView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.seriesView.hidden = false;
   state.availableSchools = listSchools(state.series.competitors);
   state.schools = state.schools.filter((school) => state.availableSchools.includes(school));
@@ -707,7 +761,7 @@ function previewPowerControl(team) {
 }
 
 function renderPreviewRows() {
-  if (!state.preview) return;
+  if (!state.preview || state.view !== "preview") return;
   if (activePreviewTooltip) {
     activePreviewTooltip.classList.remove("preview-tooltip-visible");
     activePreviewTooltip.remove();
@@ -856,7 +910,7 @@ function renderPreviewSources() {
   renderSourceLinks(elements.previewMetricSources, "数据来源：", state.preview.metricSources);
 }
 
-function showPreview() {
+function showPreview(updateUrl = false) {
   if (!state.preview) return showSeries();
   state.view = "preview";
   state.contestId = "";
@@ -871,15 +925,215 @@ function showPreview() {
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = false;
+  elements.reviewView.hidden = true;
   updateSeriesMode();
   elements.previewTitle.textContent = state.preview.title;
-  elements.previewContestSelect.replaceChildren(node("option", {
-    value: state.preview.id,
-    text: state.preview.title,
-  }));
+  elements.previewContestSelect.replaceChildren(...state.previews.map(p => node("option", { value: p.id, text: p.title })));
+  elements.previewContestSelect.value = state.preview.id;
+  document.querySelector("#preview-time").textContent = state.preview.id === "icpc-2026-preliminary-1"
+    ? "比赛时间：2026年9月6日 13:00-18:00"
+    : `比赛时间：${new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "long", timeStyle: "short" }).format(new Date(state.preview.sortAt))}`;
   renderPreviewSources();
   renderPreviewHeader();
-  applySearch({ resetScroll: false });
+  applySearch({ resetScroll: false, updateUrl: false });
+  setUrl(updateUrl ? "push" : "replace");
+}
+
+function choosePreview(id) {
+  state.preview = state.previews.find(p => p.id === id) ?? state.previews[0];
+  const metrics = state.preview.metricSources.map(s => s.id);
+  state.previewPower = buildPreviewPower(state.preview.teams, metrics);
+  state.previewRanks = buildPreviewRanks(state.preview.teams, metrics);
+}
+
+function renderReviewHeader() {
+  const metricTitle = state.reviewMetric === "power" ? "综合战力"
+    : state.reviewMetric === "medals" ? "奖牌"
+      : state.preview.metricSources.find(s => s.id === state.reviewMetric).title;
+  const columns = [["学校", "school"], ["队伍", "name"], ["成员", "members"],
+    [metricTitle, "metric"], ["前瞻排名", "previewRank"], ["实际排名", "actualRank"],
+    ["名次变化", "change"], ["上涨程度", "growth"]];
+  const row = node("tr");
+  for (const [label, sort] of columns) {
+    const active = state.reviewSort === sort;
+    const isRank = sort === "previewRank" || sort === "actualRank";
+    const heading = node("th", { scope: "col" });
+    if (active) heading.setAttribute("aria-sort", state.reviewOrder === "asc" ? "ascending" : "descending");
+    heading.append(node("button", {
+      type: "button", className: `table-sort-button${isRank ? " review-rank-sort" : ""}`,
+      onclick: () => {
+        const order = active ? state.reviewOrder === "asc" ? "desc" : "asc"
+          : ["change", "growth", "metric"].includes(sort) ? "desc" : "asc";
+        state.reviewSort = sort;
+        state.reviewOrder = order;
+        renderReviewHeader();
+        applySearch({ updateUrl: false });
+        setUrl("push");
+      },
+    }, [
+      node("span", { text: `${label}${active ? state.reviewOrder === "asc" ? " ↑" : " ↓" : ""}` }),
+      ...(isRank ? [node("small", { className: "review-original-rank", text: "（过滤前）" })] : []),
+    ]));
+    row.append(heading);
+  }
+  elements.reviewHead.replaceChildren(row);
+  const table = elements.reviewHead.closest("table");
+  const widths = [200, 170, 190, 150, 110, 110, 110, 110];
+  table.style.setProperty("--preview-table-width", `${widths.reduce((a, b) => a + b)}px`);
+  table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((a, b) => a + b)}px`);
+  table.querySelector("colgroup")?.remove();
+  table.prepend(columnGroup(widths));
+}
+
+function renderReviewRows() {
+  if (state.view !== "review" || !state.reviewAnalysis) return;
+  // clientWidth excludes the vertical scrollbar; cqw can include its gutter.
+  elements.reviewBody.closest("table").style.setProperty(
+    "--review-column-extra", `${Math.max(0, (elements.reviewScroll.clientWidth - 1150) / 5)}px`,
+  );
+  if (activePreviewTooltip) {
+    activePreviewTooltip.remove();
+    activePreviewTooltip = null;
+  }
+  renderVirtualRows({
+    container: elements.reviewScroll, body: elements.reviewBody, items: state.filtered, columns: 8,
+    createRow: (team, index) => {
+      const row = node("tr", { "aria-rowindex": String(index + 2) });
+      row.dataset.teamId = team.id;
+      row.append(node("td", { className: "preview-school-cell", text: team.school, title: team.school }));
+      const memberNames = team.members.map(m => m.name).join(" / ");
+      const tooltip = node("span", { className: "preview-member-tooltip", role: "tooltip" }, [
+        node("strong", { text: "成员" }), node("span", { text: memberNames }),
+      ]);
+      const identity = node("span", {
+        className: "preview-team-identity", tabIndex: 0,
+        "aria-label": `${team.name}，${team.school}，成员：${memberNames}`,
+      }, [node("span", { className: "identity-primary", text: team.name }),
+        node("small", { className: "identity-secondary", text: team.school }), tooltip]);
+      attachPreviewTooltip(identity, tooltip);
+      row.append(node("td", { className: "preview-team-cell", title: team.name }, [identity]));
+      row.append(node("td", { className: "preview-members-cell", text: memberNames, title: memberNames }));
+      const metricValue = state.reviewMetric === "power"
+        ? node("span", { text: `#${team.originalPowerRank}`, title: "全体报名队伍中的原赛前综合战力名次" })
+        : state.reviewMetric === "medals"
+          ? previewValueControl(team, team.medals, null, m => m.medals, medals => node("span", { text: previewMedalText(medals) }))
+          : previewValueControl(team, team.ratings[state.reviewMetric], null,
+            m => m.ratings[state.reviewMetric], value => previewRatingNode(state.reviewMetric, value));
+      row.append(node("td", { className: "preview-metric-cell" }, [metricValue]));
+      for (const [rank, original] of [[team.previewRank, team.originalPreviewRank], [team.actualRank, team.originalActualRank]]) {
+        row.append(node("td", {}, [node("span", {
+          className: "review-rank-pair", "aria-label": `筛选后第 ${rank} 名，过滤前第 ${original} 名`,
+        }, [
+          node("span", { text: `#${rank}` }),
+          node("small", { className: "review-original-rank", text: `(#${original})`, title: `过滤前第 ${original} 名` }),
+        ])]));
+      }
+      row.append(node("td", {}, [node("span", {
+        className: `review-rank-change ${deltaClass(team.change)}`,
+        "aria-label": team.change ? `${team.change > 0 ? "上涨" : "下降"} ${Math.abs(team.change)} 名` : "名次不变",
+      }, [
+        node("span", { className: "review-change-arrow", text: team.change > 0 ? "↑" : team.change < 0 ? "↓" : "", "aria-hidden": "true" }),
+        node("span", { className: "review-change-number", text: team.change ? String(Math.abs(team.change)) : "—", "aria-hidden": "true" }),
+      ])]));
+      const growth = team.growth.toFixed(3);
+      row.append(node("td", {}, [node("span", {
+        className: deltaClass(team.change), text: `${team.growth > 0 ? "+" : ""}${growth}`,
+      })]));
+      return row;
+    },
+  });
+  elements.reviewBody.closest("table").setAttribute("aria-rowcount", String(state.filtered.length + 1));
+}
+
+function scheduleReviewRows() {
+  cancelAnimationFrame(state.reviewRenderFrame);
+  state.reviewRenderFrame = requestAnimationFrame(renderReviewRows);
+}
+
+function renderReviewMetrics(metrics) {
+  elements.reviewMetrics.replaceChildren(...metrics.map(metric => {
+    const analysis = buildReviewAnalysis(state.preview, state.reviewContest, metric.id);
+    const value = analysis.agreement.value;
+    const selected = state.reviewMetric === metric.id;
+    const coefficient = value === null ? "无法计算" : value.toFixed(3);
+    const coverage = analysis.coverage === null ? "—" : `${(analysis.coverage * 100).toFixed(1)}%`;
+    const bar = node("span", { className: "review-metric-bar", "aria-hidden": "true" }, [
+      node("span", { className: value < 0 ? "review-metric-fill negative-fill" : "review-metric-fill" }),
+    ]);
+    bar.style.setProperty("--agreement-start", `${value < 0 ? 50 + value * 50 : 50}%`);
+    bar.style.setProperty("--agreement-width", `${Math.abs(value ?? 0) * 50}%`);
+    const button = node("button", {
+      type: "button", className: "review-metric-card", "aria-pressed": String(selected),
+      "aria-controls": "review-scroll", title: value === null ? analysis.agreement.reason : `${metric.title}：点击查看队伍排名对比`,
+      onclick: () => {
+        if (state.reviewMetric === metric.id) return;
+        showReview({ reviewMetric: metric.id }, true).then(() => {
+          [...elements.reviewMetrics.children].find(el => el.dataset.metric === metric.id)?.focus({ preventScroll: true });
+        }).catch(showError);
+      },
+    }, [
+      node("span", { className: "review-metric-title", text: metric.title }),
+      node("strong", { className: "review-metric-coefficient", text: coefficient }),
+      bar,
+      node("small", { text: `${analysis.rows.length} 队 · 覆盖 ${coverage}` }),
+    ]);
+    button.dataset.metric = metric.id;
+    return button;
+  }));
+}
+
+async function showReview(query = {}, updateUrl = false) {
+  const entry = state.seriesEntry;
+  if (!entry.reviewPath) return showSeries();
+  const updatingVisibleReview = state.view === "review" && !elements.reviewView.hidden && state.review;
+  // Set the view before loading so navigation away cannot be overwritten by a late response.
+  state.view = "review";
+  updateSeriesMode();
+  if (!updatingVisibleReview) {
+    elements.status.hidden = false;
+    elements.status.textContent = "正在加载复盘数据…";
+    for (const view of [elements.seriesView, elements.previewView, elements.problemRatingView, elements.detailView, elements.reviewView]) view.hidden = true;
+    elements.participantControls.hidden = true;
+  }
+  const review = state.review ?? await reviewStore.getSeries(entry, state.previews);
+  if (state.seriesEntry !== entry || state.view !== "review") return;
+  state.review = review;
+  state.reviewContest = review.contests.find(c => c.id === query.reviewContest)
+    ?? state.reviewContest ?? review.contests.at(-1);
+  choosePreview(state.reviewContest.previewId);
+  const metrics = [{ id: "power", title: "综合战力" }, ...state.preview.metricSources, { id: "medals", title: "奖牌" }];
+  const requestedMetric = query.reviewMetric ?? state.reviewMetric;
+  state.reviewMetric = metrics.some(m => m.id === requestedMetric) ? requestedMetric : "power";
+  state.reviewSort = query.reviewSort ?? state.reviewSort;
+  state.reviewOrder = query.reviewOrder ?? state.reviewOrder;
+  state.reviewAnalysis = buildReviewAnalysis(state.preview, state.reviewContest, state.reviewMetric);
+  state.contestId = "";
+  state.competitorId = "";
+  const activeTeamIds = new Set(state.reviewContest.teams.filter(t => t.hasActivity).map(t => t.previewTeamId));
+  state.availableSchools = listPreviewSchools(state.preview.teams.filter(t => activeTeamIds.has(t.id)));
+  state.schools = (query.schools ?? state.schools).filter(s => state.availableSchools.includes(s));
+  state.query = query.query ?? state.query;
+  elements.searchInput.value = state.query;
+  elements.searchLabelText.textContent = "搜索学校、队伍或成员";
+  elements.searchInput.placeholder = "输入学校、中文队名或成员姓名";
+  renderSchoolControls();
+  elements.reviewTitle.textContent = state.reviewContest.title;
+  elements.reviewContestSelect.replaceChildren(...review.contests.map(c => node("option", { value: c.id, text: c.title })));
+  elements.reviewContestSelect.value = state.reviewContest.id;
+  renderReviewMetrics(metrics);
+  const analysis = state.reviewAnalysis;
+  const coefficient = analysis.agreement.value === null
+    ? `无法计算（${analysis.agreement.reason}）` : analysis.agreement.value.toFixed(3);
+  const metricTitle = metrics.find(m => m.id === state.reviewMetric).title;
+  elements.reviewAgreement.replaceChildren(node("strong", { text: `当前指标：${metricTitle} · 符合度 ${coefficient}` }));
+  elements.reviewCoverage.textContent = `有效队伍：${analysis.rows.length} / ${analysis.activeCount} 支实际参赛前瞻队伍 · 覆盖率：${analysis.coverage === null ? "—" : `${(analysis.coverage * 100).toFixed(1)}%`}`;
+  renderSourceLinks(elements.reviewSources, "数据来源：", [state.reviewContest.source, ...state.preview.metricSources]);
+  renderReviewHeader();
+  elements.status.hidden = true;
+  elements.participantControls.hidden = false;
+  elements.reviewView.hidden = false;
+  applySearch({ updateUrl: false, resetScroll: !updatingVisibleReview });
+  setUrl(updateUrl ? "push" : "replace");
 }
 
 function backButton() {
@@ -916,6 +1170,7 @@ function openContest(contestId, updateUrl = true) {
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
   updateSeriesMode();
@@ -1313,6 +1568,7 @@ async function showProblemRating(query = {}, updateUrl = true) {
   elements.detailView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.status.hidden = false;
   elements.status.textContent = "正在加载题目 Rating…";
   const loaded = await problemRatingStore.getSeries(state.seriesId);
@@ -1452,6 +1708,7 @@ function openCompetitor(competitorId, updateUrl = true) {
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.participantControls.hidden = false;
   elements.detailView.hidden = false;
   updateSeriesMode();
@@ -1482,22 +1739,34 @@ function updateSeriesNavigation() {
 }
 
 async function loadSeries(seriesId, queryState = {}) {
+  const loadVersion = ++seriesLoadVersion;
+  state.view = "loading";
   elements.status.hidden = false;
   elements.status.textContent = "正在加载数据…";
   elements.seriesView.hidden = true;
   elements.problemRatingView.hidden = true;
   elements.previewView.hidden = true;
+  elements.reviewView.hidden = true;
   elements.detailView.hidden = true;
   const entry = state.siteIndex.series.find((item) => item.id === seriesId);
   if (!entry) throw new Error(`Unknown series: ${seriesId}`);
-  const [loaded, preview] = await Promise.all([
+  const [loaded, previews] = await Promise.all([
     entry.path ? store.getSeries(seriesId) : null,
-    entry.previewPath ? previewStore.getSeries(entry) : null,
+    entry.previewPath || entry.previews ? previewStore.getPreviews(entry) : [],
   ]);
+  if (loadVersion !== seriesLoadVersion) return;
   state.seriesId = entry.id;
   state.seriesEntry = entry;
   state.series = loaded?.series ?? null;
   state.index = loaded?.index ?? null;
+  state.previews = previews;
+  state.review = null;
+  state.reviewContest = null;
+  state.reviewAnalysis = null;
+  state.reviewMetric = queryState.reviewMetric ?? "power";
+  state.reviewSort = queryState.reviewSort ?? "actualRank";
+  state.reviewOrder = queryState.reviewOrder ?? "asc";
+  const preview = previews.find(p => p.id === queryState.previewContest) ?? previews[0] ?? null;
   state.preview = preview;
   state.previewPower = preview
     ? buildPreviewPower(preview.teams, preview.metricSources.map(({ id }) => id))
@@ -1511,7 +1780,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.query = queryState.query ?? state.query;
   const requestedSchools = queryState.schools ?? state.schools;
   const showRequestedPreview = queryState.view === "preview" && state.preview;
-  state.availableSchools = showRequestedPreview || !state.series
+  state.availableSchools = showRequestedPreview || (queryState.view === "review" && state.preview) || !state.series
     ? listPreviewSchools(state.preview.teams)
     : listSchools(state.series.competitors);
   const available = new Set(state.availableSchools);
@@ -1525,7 +1794,9 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.searchInput.value = state.query;
   renderSchoolControls();
   updateSeriesMode();
-  if (showRequestedPreview || !state.series) {
+  if (queryState.view === "review" && entry.reviewPath) {
+    await showReview(queryState);
+  } else if (showRequestedPreview || !state.series) {
     elements.status.hidden = true;
     showPreview();
   } else if (queryState.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
@@ -1558,8 +1829,9 @@ async function initialize() {
     ...readQueryState(location.href),
     ...readProblemRatingQuery(location.href),
     ...readPreviewQuery(location.href),
+    ...readReviewQuery(location.href),
   };
-  if (new URL(location.href).searchParams.get("view") === "preview") query.view = "preview";
+  if (["preview", "review"].includes(new URL(location.href).searchParams.get("view"))) query.view = new URL(location.href).searchParams.get("view");
   for (const entry of index.series) {
     const button = node("button", {
       type: "button",
@@ -1573,7 +1845,7 @@ async function initialize() {
         let queryState = {};
         if (state.view === "problem-rating" && state.problemAvailableSeries.has(entry.id)) {
           queryState = { view: "problem-rating", selectedContestIds: null };
-        } else if (!entry.path && entry.previewPath) {
+        } else if (!entry.path && (entry.previewPath || entry.previews)) {
           queryState = { view: "preview" };
         }
         loadSeries(entry.id, queryState).catch(showError);
@@ -1615,9 +1887,21 @@ elements.problemRatingTab.addEventListener("click", () => {
 });
 elements.previewTab.addEventListener("click", () => {
   if (state.view === "preview") return;
-  showPreview();
-  setUrl("push");
+  showPreview(true);
 });
+elements.previewContestSelect.addEventListener("change", () => {
+  choosePreview(elements.previewContestSelect.value);
+  elements.previewScroll.scrollTop = 0;
+  showPreview(true);
+});
+elements.reviewTab.addEventListener("click", () => {
+  if (state.view !== "review") showReview({}, true).catch(showError);
+});
+elements.reviewContestSelect.addEventListener("change", () => {
+  showReview({ reviewContest: elements.reviewContestSelect.value }, true).catch(showError);
+});
+elements.reviewScroll.addEventListener("scroll", scheduleReviewRows, { passive: true });
+new ResizeObserver(scheduleReviewRows).observe(elements.reviewScroll);
 elements.problemContestSort.addEventListener("click", () => setProblemSort("contest"));
 elements.problemRatingSort.addEventListener("click", () => setProblemSort("rating"));
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
@@ -1626,33 +1910,18 @@ window.addEventListener("resize", () => {
   scheduleSeriesRows();
   scheduleProblemChart();
   schedulePreviewRows();
+  scheduleReviewRows();
 });
 window.addEventListener("popstate", () => {
   const query = {
-    ...readQueryState(location.href),
-    ...readProblemRatingQuery(location.href),
-    ...readPreviewQuery(location.href),
+    ...readQueryState(location.href), ...readProblemRatingQuery(location.href),
+    ...readPreviewQuery(location.href), ...readReviewQuery(location.href),
   };
-  if (new URL(location.href).searchParams.get("view") === "preview") query.view = "preview";
-  if (query.series && query.series !== state.seriesId) loadSeries(query.series, query).catch(showError);
-  else if (query.view === "problem-rating" && state.problemAvailableSeries.has(state.seriesId)) {
-    showProblemRating(query, false).catch(showError);
-  } else if (query.view === "preview" && state.preview) {
-    state.query = query.query;
-    state.previewSort = query.previewSort;
-    state.previewOrder = query.previewOrder;
-    state.schools = query.schools.filter((school) => state.availableSchools.includes(school));
-    elements.searchInput.value = query.query;
-    showPreview();
-  } else {
-    state.query = query.query;
-    state.schools = query.schools.filter((school) => state.availableSchools.includes(school));
-    elements.searchInput.value = query.query;
-    renderSchoolControls();
-    if (query.competitor) openCompetitor(query.competitor, false);
-    else if (query.contest) openContest(query.contest, false);
-    else showSeries();
-  }
+  const view = new URL(location.href).searchParams.get("view");
+  if (["preview", "review"].includes(view)) query.view = view;
+  const seriesId = state.siteIndex.series.some(entry => entry.id === query.series)
+    ? query.series : state.siteIndex.defaultSeriesId;
+  loadSeries(seriesId, query).catch(showError);
 });
 
 initialize().catch(showError);

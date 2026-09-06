@@ -177,19 +177,20 @@ def project_static_data_index(
     publications: Sequence[tuple[Mapping[str, object], str]] | None = None,
     *,
     preview_publications: Sequence[tuple[Mapping[str, object], str]] = (),
+    review_publications: Sequence[tuple[Mapping[str, object], str]] = (),
     series_id: str | None = None,
     title: str | None = None,
     path: str | None = None,
 ) -> Mapping[str, object]:
-    """Build a newest-first index for published rating and preview documents."""
+    """Build a newest-first index with preview catalogs and optional result reviews."""
     if publications is None:
         if not series_id or not title or not path:
             raise DataValidationError(
                 "provide publications or the legacy series_id, title, and path"
             )
-        if preview_publications:
+        if preview_publications or review_publications:
             raise DataValidationError(
-                "preview_publications cannot be combined with the legacy index arguments"
+                "preview/review publications cannot be combined with the legacy index arguments"
             )
         return {
             "schemaVersion": _INDEX_SCHEMA_VERSION,
@@ -197,14 +198,13 @@ def project_static_data_index(
             "series": [{"id": series_id, "title": title, "path": path}],
         }
     if any(value is not None for value in (series_id, title, path)):
-        raise DataValidationError(
-            "publications cannot be combined with series_id, title, or path"
-        )
+        raise DataValidationError("publications cannot be combined with series_id, title, or path")
     if not publications and not preview_publications:
         raise DataValidationError("static data index must contain at least one series")
     seen_ids: set[str] = set()
     seen_paths: set[str] = set()
-    entries: list[tuple[datetime, dict[str, str]]] = []
+    entries: list[tuple[datetime, dict]] = []
+    preview_entries: dict[str, list[dict[str, str]]] = {}
     for document, path in publications:
         series_id = document.get("id")
         title = document.get("title")
@@ -275,26 +275,31 @@ def project_static_data_index(
         try:
             latest = datetime.fromisoformat(sort_at.replace("Z", "+00:00"))
         except ValueError as error:
-            raise DataValidationError(
-                f"preview series {series_id}.sortAt is invalid"
-            ) from error
+            raise DataValidationError(f"preview series {series_id}.sortAt is invalid") from error
         if latest.tzinfo is None:
-            raise DataValidationError(
-                f"preview series {series_id}.sortAt must have an offset"
-            )
+            raise DataValidationError(f"preview series {series_id}.sortAt must have an offset")
         seen_paths.add(preview_path)
+        preview_id = document.get("id")
+        if not isinstance(preview_id, str) or not preview_id:
+            raise DataValidationError(f"preview series {series_id}: id must be a non-empty string")
+        registered = preview_entries.setdefault(series_id, [])
+        if any(item["id"] == preview_id for item in registered):
+            raise DataValidationError(
+                f"duplicate preview series id {series_id!r}, contest {preview_id!r}"
+            )
+        registered.append({"id": preview_id, "path": preview_path})
         if series_id in seen_ids:
             entry_index = next(
                 index for index, (_, entry) in enumerate(entries) if entry["id"] == series_id
             )
             previous_latest, entry = entries[entry_index]
-            if "previewPath" in entry:
-                raise DataValidationError(f"duplicate preview series id {series_id!r}")
             if entry["title"] != title:
                 raise DataValidationError(
                     f"series {series_id}: rating and preview titles must match"
                 )
-            entry["previewPath"] = preview_path
+            entry.setdefault("previewPath", preview_path)
+            if len(registered) > 1:
+                entry["previews"] = list(registered)
             entries[entry_index] = (max(previous_latest, latest), entry)
         else:
             seen_ids.add(series_id)
@@ -308,6 +313,35 @@ def project_static_data_index(
                     },
                 )
             )
+
+    for document, review_path in review_publications:
+        series_id = document.get("seriesId")
+        entry = next((entry for _, entry in entries if entry["id"] == series_id), None)
+        if entry is None or series_id not in preview_entries:
+            raise DataValidationError(f"review series {series_id}: requires published previews")
+        if not isinstance(review_path, str) or not review_path or review_path in seen_paths:
+            raise DataValidationError(f"review series {series_id}: invalid or duplicate path")
+        if "reviewPath" in entry:
+            raise DataValidationError(f"duplicate review series id {series_id!r}")
+        contests = document.get("contests")
+        if document.get("schemaVersion") != 1 or not isinstance(contests, list) or not contests:
+            raise DataValidationError(
+                f"review series {series_id}: invalid schema or empty contests"
+            )
+        known = {item["id"] for item in preview_entries[series_id]}
+        contest_ids = set()
+        for contest in contests:
+            if not isinstance(contest, Mapping) or contest.get("previewId") not in known:
+                raise DataValidationError(f"review series {series_id}: unknown preview reference")
+            contest_id = contest.get("id")
+            if not isinstance(contest_id, str) or not contest_id or contest_id in contest_ids:
+                raise DataValidationError(
+                    f"review series {series_id}: invalid or duplicate contest ID"
+                )
+            contest_ids.add(contest_id)
+            known.remove(contest["previewId"])
+        entry["reviewPath"] = review_path
+        seen_paths.add(review_path)
 
     entries.sort(key=lambda item: item[1]["id"])
     entries.sort(key=lambda item: item[0], reverse=True)

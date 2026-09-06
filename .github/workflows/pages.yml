@@ -6,7 +6,8 @@ on:
       - main
     paths:
       - "static/**"
-      - "tests/test_frontend_data.mjs"
+      - "tests/*frontend_data.mjs"
+      - "tests/fixtures/review/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -32,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Test frontend data utilities
-        run: node --test tests/test_frontend_data.mjs
+        run: node --test tests/test_frontend_data.mjs tests/test_problem_rating_frontend_data.mjs tests/test_preview_frontend_data.mjs tests/test_review_frontend_data.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
