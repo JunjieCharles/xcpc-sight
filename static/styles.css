@@ -23,6 +23,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .site-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem 2rem; padding: 2rem clamp(1rem, 4vw, 4rem) 1.4rem; color: white; background: var(--ink); }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: .15rem; font-size: clamp(2.2rem, 5vw, 3.8rem); letter-spacing: -.045em; }
+.site-brand { display: flex; align-items: center; gap: .25em; }
+.site-logo { display: block; flex: 0 0 auto; width: 1.15em; height: 1.15em; }
 .site-subtitle { margin: 0; color: #c8d0d8; font-size: .9rem; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
 .site-rating-note { margin: 1rem 0 0; color: #aebcc8; font-size: .82rem; text-align: right; white-space: nowrap; }
 .site-links { display: grid; justify-items: end; gap: .35rem; margin-top: .2rem; }

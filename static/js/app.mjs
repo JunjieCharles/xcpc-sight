@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-40";
+} from "./data.mjs?v=20260906-41";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-40";
+} from "./problem-rating.mjs?v=20260906-41";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -32,11 +32,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-40";
+} from "./preview.mjs?v=20260906-41";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260906-40";
+} from "./review.mjs?v=20260906-41";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;

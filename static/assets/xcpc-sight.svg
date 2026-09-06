@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">XCPC Sight</title>
+  <desc id="desc">青色立方体，顶部是思考气泡，左侧是气球，右侧是灯泡。</desc>
+  <!-- Match the site-header ink background; keep an opaque fill for browser tabs. -->
+  <path id="cube" fill="#17202a" stroke="#fff" stroke-width="3" stroke-linejoin="round" d="M64 4 118 35v58l-54 31L10 93V35Z"/>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path id="edges" d="m10 35 54 31 54-31M64 66v58"/>
+    <!-- Face-local coordinates make each motif independently editable. -->
+    <g id="thought-bubble" stroke-width="5" transform="matrix(.54 -.31 .54 .31 10 35)">
+      <path d="M28 61C17 62 12 51 18 43C10 34 17 23 28 25C29 13 43 10 51 18C60 10 74 16 74 27C87 27 92 40 83 48C86 59 74 66 64 61C54 70 40 68 36 61Z"/>
+      <circle cx="57" cy="78" r="5" fill="#fff" stroke="none"/>
+      <circle cx="65" cy="91" r="3" fill="#fff" stroke="none"/>
+    </g>
+    <g id="balloon" stroke-width="5" transform="matrix(.54 .31 0 .58 10 35)">
+      <ellipse cx="50" cy="39" rx="23" ry="27"/>
+      <path d="m50 66-5 7h10Zm0 7c-12 9 12 13 0 22"/>
+    </g>
+    <g id="lightbulb" stroke-width="5" transform="matrix(.54 -.31 0 .58 64 66)">
+      <path d="M38 65v-5c0-9-12-13-12-27a24 24 0 0 1 48 0c0 14-12 18-12 27v5ZM50 64V44m-8-7 8 7 8-7M39 77h22m-17 11h12"/>
+    </g>
+  </g>
+</svg>

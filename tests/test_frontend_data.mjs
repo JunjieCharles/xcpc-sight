@@ -41,6 +41,28 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.ok(participants.some((participation) => participation.delta !== 0));
 });
 
+test("header and favicon share an outlined SVG with the header background color", async () => {
+  const base = new URL("../static/index.html", import.meta.url);
+  const [html, css] = await Promise.all([
+    readFile(base, "utf8"),
+    readFile(new URL("./styles.css", base), "utf8"),
+  ]);
+  const favicon = html.match(/<link rel="icon"[^>]*href="([^"]+)"/)?.[1];
+  const logo = html.match(/<img class="site-logo"[^>]*src="([^"]+)"/)?.[1];
+  assert.ok(favicon);
+  assert.equal(logo, favicon);
+  const svg = await readFile(new URL(logo, base), "utf8");
+  const headerColor = css.match(/--ink:\s*(#[\da-f]+)/i)?.[1];
+  assert.match(css, /\.site-header\s*\{[^}]*background:\s*var\(--ink\)/);
+  assert.ok(svg.includes(`id="cube" fill="${headerColor}" stroke="#fff"`));
+  assert.match(svg, /viewBox="0 0 128 128"/);
+  for (const motif of ["thought-bubble", "balloon", "lightbulb"]) {
+    assert.ok(svg.includes(`id="${motif}"`));
+  }
+  // Fixed screen-space strokes would obscure the motifs at favicon sizes.
+  assert.doesNotMatch(svg, /non-scaling-stroke/);
+});
+
 test("versions cache-sensitive frontend assets consistently", async () => {
   const [indexHtml, appModule, problemRatingModule, previewModule] = await Promise.all([
     readFile(new URL("../static/index.html", import.meta.url), "utf8"),
