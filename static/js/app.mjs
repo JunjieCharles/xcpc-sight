@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-39";
+} from "./data.mjs?v=20260906-40";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-39";
+} from "./problem-rating.mjs?v=20260906-40";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -32,11 +32,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-39";
+} from "./preview.mjs?v=20260906-40";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260906-39";
+} from "./review.mjs?v=20260906-40";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1024,7 +1024,7 @@ function renderReviewRows() {
       row.append(node("td", { className: "preview-team-cell", title: team.name }, [identity]));
       row.append(node("td", { className: "preview-members-cell", text: memberNames, title: memberNames }));
       const metricValue = state.reviewMetric === "power"
-        ? node("span", { text: `#${team.originalPowerRank}`, title: "全体报名队伍中的原赛前综合战力名次" })
+        ? previewPowerControl(team)
         : state.reviewMetric === "medals"
           ? previewValueControl(team, team.medals, null, m => m.medals, previewMedalNode)
           : previewValueControl(team, team.ratings[state.reviewMetric], null,

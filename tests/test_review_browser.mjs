@@ -41,6 +41,30 @@ test("changing review metrics preserves page and table scroll, clamping only at 
   };
   const settle = () => evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   const position = () => evaluate("({ page: scrollY, table: document.querySelector('#review-scroll').scrollTop })");
+  const powerPresentation = async (container) => {
+    const rect = await evaluate(`(() => {
+      const control = document.querySelector('${container} .preview-power-control');
+      control.scrollIntoView({ block: 'center', inline: 'center' });
+      const r = control.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", ...rect });
+    await waitFor("Boolean(document.querySelector('.preview-power-tooltip.preview-tooltip-visible .preview-power-radar'))");
+    const presentation = await evaluate(`(() => {
+      const control = document.querySelector('${container} .preview-power-control');
+      const style = getComputedStyle(control);
+      const tooltip = document.querySelector('.preview-power-tooltip.preview-tooltip-visible');
+      return { font: [style.fontFamily, style.fontSize, style.fontWeight, style.color],
+        points: tooltip.querySelector('.preview-power-shape').getAttribute('points'),
+        axes: tooltip.querySelectorAll('.preview-power-axis').length };
+    })()`);
+    assert.equal(presentation.axes, 5);
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });
+    await evaluate(`document.querySelector('${container} .preview-power-control').focus({ preventScroll: true })`);
+    await waitFor("Boolean(document.querySelector('.preview-power-tooltip.preview-tooltip-visible'))");
+    await evaluate("document.activeElement.blur()");
+    return presentation;
+  };
   const checkMedalAlignment = async (container) => {
     const rows = await evaluate(`Array.from(document.querySelectorAll('${container} .preview-value-control > .medal-values, ${container} .preview-ranked-value > .medal-values'), el => ({
       icons: Array.from(el.querySelectorAll('.medal-icon'), n => n.getBoundingClientRect().left),
@@ -68,6 +92,8 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       assert.equal(await evaluate("document.querySelector('.review-summary h3 small').textContent"), "Spearman ρ");
       assert.equal(await evaluate("document.querySelector('[data-metric=\"power\"] strong').textContent"), "0.736");
       await settle();
+      const teamName = await evaluate("document.querySelector('#review-body tr:first-child .identity-primary').textContent");
+      const reviewPower = await powerPresentation("#review-body");
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('#review-head .review-original-rank'), el => el.textContent)`), ["（过滤前）", "（过滤前）"]);
       const rankPairs = await evaluate(`Array.from(document.querySelectorAll('#review-body tr:first-child .review-rank-pair'), el => ({
         text: el.textContent, label: el.getAttribute('aria-label'),
@@ -137,6 +163,13 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       await evaluate("document.querySelector('#preview-tab').click()");
       await settle();
       await checkMedalAlignment("#preview-body");
+      await evaluate(`(() => {
+        const input = document.querySelector('#search-input');
+        input.value = ${JSON.stringify(teamName)};
+        input.dispatchEvent(new Event('input'));
+      })()`);
+      await settle();
+      assert.deepEqual(await powerPresentation("#preview-body"), reviewPower, "review and preview must share fonts and original radar data");
     }
     assert.deepEqual(errors, []);
   } finally {
