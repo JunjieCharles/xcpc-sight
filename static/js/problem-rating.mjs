@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260905-27";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-28";
 
 const SCHEMA_VERSION = 1;
 const validatedIndexes = new WeakSet();

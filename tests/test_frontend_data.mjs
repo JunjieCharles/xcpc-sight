@@ -150,6 +150,21 @@ test("uses one composite identity column for narrow rating tables", async () => 
   assert.match(appModule, /--series-contest-width/);
 });
 
+test("mobile hidden columns preserve virtual scroll spacer cells in every virtual table", async () => {
+  const stylesheet = await readFile(new URL("../static/styles.css", import.meta.url), "utf8");
+  const mobileRules = stylesheet.split("@container (max-width: 600px)")[1];
+  // A spacer has only one td, so hiding every first td collapses the scroll extent.
+  for (const table of ["wide-table", "contest-table", "preview-table"]) {
+    const hiddenRules = [...mobileRules.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+      .filter(([, , declarations]) => /display:\s*none/.test(declarations))
+      .flatMap(([, selectors]) => selectors.split(",").map((selector) => selector.trim()))
+      .filter((selector) => selector.startsWith(`.${table} `) && selector.includes("td"));
+    assert.ok(hiddenRules.length > 0, `${table} hides its data column`);
+    assert.ok(hiddenRules.every((selector) => selector.includes("tr:not(.virtual-spacer)")),
+      `${table} must keep the virtual spacer cell visible`);
+  }
+});
+
 function fixture() {
   return {
     schemaVersion: 1,
