@@ -13,6 +13,7 @@ from core import (
     NowcoderClient,
     RankLandClient,
     load_2025_2026_season,
+    load_2026_2027_season,
     nowcoder_leaderboard_to_contest,
 )
 from core.models import Contest
@@ -91,6 +92,11 @@ def load_xcpc_series() -> tuple[Contest, ...]:
         return load_2025_2026_season(client).contests
 
 
+def load_xcpc_2026_2027_series() -> tuple[Contest, ...]:
+    with RankLandClient() as client:
+        return load_2026_2027_season(client).contests
+
+
 def load_nowcoder_series() -> tuple[Contest, ...]:
     with NowcoderClient() as client:
         contests = tuple(
@@ -112,6 +118,12 @@ def load_hdu_series() -> tuple[Contest, ...]:
 
 def series_specs() -> tuple[SeriesSpec, ...]:
     return (
+        SeriesSpec(
+            "2026-2027",
+            "2026–2027 ICPC + CCPC",
+            "series/2026-2027.json",
+            load_xcpc_2026_2027_series,
+        ),
         SeriesSpec(
             XCPC_SERIES_ID,
             XCPC_SERIES_TITLE,

@@ -20,6 +20,27 @@ import {
   writeQueryState,
 } from "../static/js/data.mjs";
 
+test("published 2026-2027 ratings start a new season alongside its preview", async () => {
+  const index = validateIndex(JSON.parse(await readFile(
+    new URL("../static/data/index.json", import.meta.url), "utf8",
+  )));
+  const entry = index.series.find((series) => series.id === "2026-2027");
+  assert.equal(index.defaultSeriesId, entry.id);
+  assert.equal(entry.path, "series/2026-2027.json");
+  assert.equal(entry.previewPath, "previews/2026-2027.json");
+  const series = validateSeries(JSON.parse(await readFile(
+    new URL(`../static/data/${entry.path}`, import.meta.url), "utf8",
+  )));
+  assert.equal(series.contests[0].id, "icpc2026preliminary-1");
+  assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
+  assert.ok(series.competitors.length > 0);
+  const participants = series.competitors.flatMap((person) => person.participations)
+    .filter((participation) => participation.contestIndex === 0);
+  assert.ok(participants.length > 0);
+  assert.ok(participants.every((participation) => participation.before === 1400));
+  assert.ok(participants.some((participation) => participation.delta !== 0));
+});
+
 test("versions cache-sensitive frontend assets consistently", async () => {
   const [indexHtml, appModule, problemRatingModule, previewModule] = await Promise.all([
     readFile(new URL("../static/index.html", import.meta.url), "utf8"),

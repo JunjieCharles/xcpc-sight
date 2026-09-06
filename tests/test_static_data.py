@@ -8,7 +8,7 @@ from types import MappingProxyType
 
 import pytest
 
-from core import CompetitorId, Contest, DataValidationError
+from core import CompetitorId, Contest, DataValidationError, SeasonData
 from rating import (
     CompetitorRatingChange,
     ContestRatingResult,
@@ -562,3 +562,28 @@ def test_generator_publishes_all_series_before_index(monkeypatch, tmp_path) -> N
     ]
     index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
     assert index["defaultSeriesId"] == "middle"
+
+
+def test_generator_loads_2026_2027_season(monkeypatch) -> None:
+    contest = Contest(
+        "icpc2026preliminary-1", "First preliminary", "icpc2026",
+        datetime(2026, 9, 6, 5, tzinfo=UTC), (),
+    )
+
+    class FakeRankLandClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+    def load_season(client):
+        assert isinstance(client, FakeRankLandClient)
+        return SeasonData("2026-2027", (contest,))
+
+    monkeypatch.setattr(generate_static_data, "RankLandClient", FakeRankLandClient)
+    monkeypatch.setattr(generate_static_data, "load_2026_2027_season", load_season)
+    spec = next(s for s in generate_static_data.series_specs() if s.series_id == "2026-2027")
+    assert spec.path == "series/2026-2027.json"
+    assert spec.title == "2026–2027 ICPC + CCPC"
+    assert spec.load() == (contest,)

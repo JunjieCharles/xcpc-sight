@@ -1,6 +1,6 @@
 # 静态站点数据
 
-选手 Rating 生成器发布三个 schema v1 Rating 系列，并把已提交的 2026–2027 schema v1 前瞻快照一并登记到 schema v2 站点索引。独立的题目 Rating 生成器仍只发布三个已有系列的题目级聚合 JSON。项目不包含后端或数据库；`static/` 同时包含直接消费这些文件的零依赖前端。
+选手 Rating 生成器发布四个 schema v1 Rating 系列（含 2026–2027），并把已提交的 2026–2027 schema v1 前瞻快照一并登记到 schema v2 站点索引。独立的题目 Rating 生成器仍只发布三个已有系列的题目级聚合 JSON。项目不包含后端或数据库；`static/` 同时包含直接消费这些文件的零依赖前端。
 
 ## 文件与生成
 
@@ -12,6 +12,7 @@ python scripts/generate_static_data.py
 
 - `static/data/index.json`
 - `static/data/series/2025-2026.json`
+- `static/data/series/2026-2027.json`
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 - `static/data/previews/2026-2027.json`
@@ -31,14 +32,14 @@ JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不�
 ## 索引契约
 
 ```json
-{"schemaVersion":2,"defaultSeriesId":"2026-2027","series":[{"id":"2026-2027","title":"2026–2027 ICPC + CCPC","previewPath":"previews/2026-2027.json"},{"id":"hdu-summer-2026","title":"2026“钉耙编程”中国大学生算法设计暑期联赛","path":"series/hdu-summer-2026.json"}]}
+{"schemaVersion":2,"defaultSeriesId":"2026-2027","series":[{"id":"2026-2027","title":"2026–2027 ICPC + CCPC","path":"series/2026-2027.json","previewPath":"previews/2026-2027.json"},{"id":"hdu-summer-2026","title":"2026“钉耙编程”中国大学生算法设计暑期联赛","path":"series/hdu-summer-2026.json"}]}
 ```
 
 字段含义：
 
 - `schemaVersion`：当前为 `2`；
 - `defaultSeriesId`：静态站点默认打开的系列；
-- `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向前瞻；未来同一系列可同时具有两者。
+- `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向前瞻；2026–2027 系列同时具有两者。
 
 索引按每个 Rating 系列 `contests[].startAt` 的最大值或前瞻 `sortAt` 倒序排列，时间相同则按系列 ID 升序；同一系列同时存在两类数据时取两者中较新的时间。第一项成为默认系列。投影拒绝空输入、无内容系列、同类重复 ID 和重复路径；同一 ID 的 Rating 与前瞻会合并为一项，并要求标题一致。
 已发布的 `index.json` 必须由同一批系列 JSON 投影得到；离线回归测试会校验这一一致性，避免单独更新系列数据后目录顺序滞后。
