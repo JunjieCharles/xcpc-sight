@@ -41,6 +41,22 @@ test("changing review metrics preserves page and table scroll, clamping only at 
   };
   const settle = () => evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   const position = () => evaluate("({ page: scrollY, table: document.querySelector('#review-scroll').scrollTop })");
+  const checkMedalAlignment = async (container) => {
+    const rows = await evaluate(`Array.from(document.querySelectorAll('${container} .preview-value-control > .medal-values, ${container} .preview-ranked-value > .medal-values'), el => ({
+      icons: Array.from(el.querySelectorAll('.medal-icon'), n => n.getBoundingClientRect().left),
+      counts: Array.from(el.querySelectorAll('.medal-count'), n => n.getBoundingClientRect().right),
+      inside: el.getBoundingClientRect().left >= el.closest('td').getBoundingClientRect().left
+        && el.getBoundingClientRect().right <= el.closest('td').getBoundingClientRect().right,
+    }))`);
+    assert.ok(rows.length > 1, "check multiple medal rows");
+    for (const row of rows) {
+      assert.ok(row.inside, "medals must fit their table cell");
+      for (let medal = 0; medal < 3; medal++) {
+        assert.ok(Math.abs(row.icons[medal] - rows[0].icons[medal]) < .5, "medal icons must align");
+        assert.ok(Math.abs(row.counts[medal] - rows[0].counts[medal]) < .5, "medal counts must align");
+      }
+    }
+  };
   try {
     await send("Runtime.enable");
     await send("Network.enable");
@@ -114,6 +130,13 @@ test("changing review metrics preserves page and table scroll, clamping only at 
           rowCount: Number(shell.querySelector('table').getAttribute('aria-rowcount')) };
       })()`);
       assert.equal(last.lastRow, last.rowCount, "shrinking the cohort should still show its final row");
+      await evaluate("document.querySelector('[data-metric=\"medals\"]').click()");
+      await evaluate("document.querySelector('#review-scroll').scrollTop = 0");
+      await settle();
+      await checkMedalAlignment("#review-body");
+      await evaluate("document.querySelector('#preview-tab').click()");
+      await settle();
+      await checkMedalAlignment("#preview-body");
     }
     assert.deepEqual(errors, []);
   } finally {

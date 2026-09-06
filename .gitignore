@@ -11,5 +11,6 @@ build/
 dist/
 .cache/
 data-cache/
+video-scripts/
 *.log
 .env

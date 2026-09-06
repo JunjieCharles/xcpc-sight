@@ -263,6 +263,11 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-power-label { fill: var(--muted); font-size: 9px; font-weight: 600; }
 .preview-power-tooltip.preview-tooltip-visible { visibility: visible; opacity: 1; }
 .preview-medals { font-variant-numeric: tabular-nums; }
+.medal-values { display: inline-grid; grid-template-columns: repeat(3, 1em 2ch); column-gap: .15em; align-items: center; font-variant-numeric: tabular-nums; }
+.medal-icon { text-align: center; }
+.medal-count { text-align: right; }
+.review-table .medal-values { grid-template-columns: 1em 2ch 1.6em 2ch 1.6em 2ch; column-gap: .2em; }
+.review-table .medal-icon:not(:first-child) { text-align: right; }
 .preview-missing { color: var(--muted); }
 .problem-table #problem-contest-column { text-align: left; }
 .problem-table #problem-contest-column .table-sort-button { justify-content: flex-start; }

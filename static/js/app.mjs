@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-37";
+} from "./data.mjs?v=20260906-39";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-37";
+} from "./problem-rating.mjs?v=20260906-39";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -32,11 +32,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-37";
+} from "./preview.mjs?v=20260906-39";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260906-37";
+} from "./review.mjs?v=20260906-39";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -630,8 +630,18 @@ function attachPreviewTooltip(control, tooltip) {
   });
 }
 
-function previewMedalText(medals) {
-  return `🥇${medals.gold}  🥈${medals.silver}  🥉${medals.bronze}`;
+function previewMedalNode(medals) {
+  const display = node("span", {
+    className: "medal-values",
+    "aria-label": `金牌 ${medals.gold}，银牌 ${medals.silver}，铜牌 ${medals.bronze}`,
+  });
+  for (const [medal, icon] of [["gold", "🥇"], ["silver", "🥈"], ["bronze", "🥉"]]) {
+    display.append(
+      node("span", { className: "medal-icon", text: icon, "aria-hidden": "true" }),
+      node("span", { className: "medal-count", text: String(medals[medal]), "aria-hidden": "true" }),
+    );
+  }
+  return display;
 }
 
 function achievementLabel(achievement) {
@@ -834,7 +844,7 @@ function renderPreviewRows() {
           team.medals,
           state.previewRanks.get(team.id).medals,
           (member) => member.medals,
-          (medals) => node("span", { text: previewMedalText(medals) }),
+          previewMedalNode,
         ),
       ]));
       return row;
@@ -1016,7 +1026,7 @@ function renderReviewRows() {
       const metricValue = state.reviewMetric === "power"
         ? node("span", { text: `#${team.originalPowerRank}`, title: "全体报名队伍中的原赛前综合战力名次" })
         : state.reviewMetric === "medals"
-          ? previewValueControl(team, team.medals, null, m => m.medals, medals => node("span", { text: previewMedalText(medals) }))
+          ? previewValueControl(team, team.medals, null, m => m.medals, previewMedalNode)
           : previewValueControl(team, team.ratings[state.reviewMetric], null,
             m => m.ratings[state.reviewMetric], value => previewRatingNode(state.reviewMetric, value));
       row.append(node("td", { className: "preview-metric-cell" }, [metricValue]));

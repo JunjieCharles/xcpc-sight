@@ -148,7 +148,6 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /\(member\) => member\.ratings\[source\.id\]/);
   assert.doesNotMatch(appModule, /previewRatingValue/);
   assert.match(appModule, /formatPreviewRating\(value, \["xcpcrating", "cpcfinder"\]\.includes\(sourceId\) \? 2 : 0\)/);
-  assert.match(appModule, /`🥇\$\{medals\.gold\}  🥈\$\{medals\.silver\}  🥉\$\{medals\.bronze\}`/);
   assert.match(appModule, /elements\.seriesModeSwitch\.hidden = supportedCount === 0/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
