@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-28";
+} from "./data.mjs?v=20260906-31";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-28";
+} from "./problem-rating.mjs?v=20260906-31";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -28,12 +28,11 @@ import {
   bestAchievementMedal,
   createPreviewStore,
   listPreviewSchools,
-  previewRatingValue,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-28";
+} from "./preview.mjs?v=20260906-31";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -493,7 +492,7 @@ function previewRatingNode(sourceId, value) {
   }
   return node("span", {
     className: `preview-rating preview-rating-${sourceId}`,
-    text: formatPreviewRating(value, sourceId === "xcpcrating" ? 2 : 0),
+    text: formatPreviewRating(value, ["xcpcrating", "cpcfinder"].includes(sourceId) ? 2 : 0),
   });
 }
 
@@ -763,7 +762,7 @@ function renderPreviewRows() {
         previewPowerControl(team),
       ]));
       for (const source of state.preview.metricSources) {
-        const value = previewRatingValue(source.id, team.ratings[source.id]);
+        const value = team.ratings[source.id];
         const rank = state.previewRanks.get(team.id).ratings[source.id];
         row.append(node("td", {
           className: `preview-metric-cell${value === null ? " preview-missing" : ""}`,
@@ -771,7 +770,7 @@ function renderPreviewRows() {
           team,
           value,
           rank,
-          (member) => previewRatingValue(source.id, member.ratings[source.id]),
+          (member) => member.ratings[source.id],
           (rating) => previewRatingNode(source.id, rating),
         )]));
       }

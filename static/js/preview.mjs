@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-28";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-31";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -182,6 +182,7 @@ export function searchPreviewTeams(teams, query, schools = []) {
 }
 
 export function previewRatingValue(metricId, value) {
+  // Normalize only for comprehensive power; display and rank the stored value.
   return metricId === "cpcfinder" && value === 0 ? null : value;
 }
 
@@ -232,7 +233,7 @@ function competitionRanks(teams, valueOf, compare, skipNull = false) {
 export function buildPreviewRanks(teams, metricIds = Object.keys(teams[0]?.ratings ?? {})) {
   const ratingRanks = new Map(metricIds.map((id) => [
     id,
-    competitionRanks(teams, (team) => previewRatingValue(id, team.ratings[id] ?? null), comparePowerValues, true),
+    competitionRanks(teams, (team) => team.ratings[id] ?? null, comparePowerValues, true),
   ]));
   const medalRanks = competitionRanks(teams, (team) => team.medals, compareMedals);
   return new Map(teams.map((team) => [team.id, {
@@ -314,8 +315,8 @@ function comparePreviewSortKeys(left, right, sort, order, previewPower) {
     );
   }
   return compareNullableNumber(
-    previewRatingValue(sort, left.ratings[sort] ?? null),
-    previewRatingValue(sort, right.ratings[sort] ?? null),
+    left.ratings[sort] ?? null,
+    right.ratings[sort] ?? null,
     order,
   );
 }

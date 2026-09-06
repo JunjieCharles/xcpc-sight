@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import {
   buildPreviewPower,
@@ -16,6 +17,22 @@ import {
   validatePreview,
   writePreviewQuery,
 } from "../static/js/preview.mjs";
+
+test("formats CPC Finder ratings with exactly two decimals and preserves missing values", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const functions = ["formatPreviewRating", "previewRatingNode"].map((name) => {
+    const match = source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`));
+    assert.ok(match);
+    return match[0];
+  }).join("\n");
+  const render = runInNewContext(`${functions}\npreviewRatingNode`, {
+    node: (tag, properties) => properties,
+  });
+  for (const [value, text] of [[0, "0.00"], [1234, "1234.00"], [12.3, "12.30"], [12.345, "12.35"], [null, "—"]]) {
+    assert.equal(render("cpcfinder", value).text, text);
+  }
+  assert.equal(render("xcpcrating", 100).text, "100.00");
+});
 
 function fixture() {
   const metricSources = [
@@ -127,7 +144,10 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(stylesheet, /\.preview-power-tooltip\s*\{[^}]*position:\s*fixed/);
   assert.match(stylesheet, /\.preview-power-shape\s*\{/);
   assert.match(appModule, /useGrouping:\s*false/);
-  assert.match(appModule, /formatPreviewRating\(value, sourceId === "xcpcrating" \? 2 : 0\)/);
+  assert.match(appModule, /const value = team\.ratings\[source\.id\];/);
+  assert.match(appModule, /\(member\) => member\.ratings\[source\.id\]/);
+  assert.doesNotMatch(appModule, /previewRatingValue/);
+  assert.match(appModule, /formatPreviewRating\(value, \["xcpcrating", "cpcfinder"\]\.includes\(sourceId\) \? 2 : 0\)/);
   assert.match(appModule, /`🥇\$\{medals\.gold\}  🥈\$\{medals\.silver\}  🥉\$\{medals\.bronze\}`/);
   assert.match(appModule, /elements\.seriesModeSwitch\.hidden = supportedCount === 0/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
@@ -314,7 +334,7 @@ test("ranks each displayed metric globally with competition ties", () => {
   assert.equal(tiedRanks.get("c").ratings.xcpcElo, 2);
 });
 
-test("treats a zero CPC Finder score as missing for display and ranking", () => {
+test("ranks zero CPC Finder scores but ties them with missing values only for power", () => {
   const teams = [
     {
       id: "scored",
@@ -333,7 +353,7 @@ test("treats a zero CPC Finder score as missing for display and ranking", () => 
     {
       id: "missing",
       sourceIndex: 2,
-      school: "C大学",
+      school: "A大学",
       ratings: { cpcfinder: null },
       medals: { gold: 0, silver: 0, bronze: 0 },
     },
@@ -343,7 +363,7 @@ test("treats a zero CPC Finder score as missing for display and ranking", () => 
   assert.equal(previewRatingValue("xcpcElo", 0), 0);
   assert.deepEqual(buildPreviewRanks(teams, ["cpcfinder"]), new Map([
     ["scored", { ratings: { cpcfinder: 1 }, medals: 1 }],
-    ["zero", { ratings: { cpcfinder: null }, medals: 1 }],
+    ["zero", { ratings: { cpcfinder: 2 }, medals: 1 }],
     ["missing", { ratings: { cpcfinder: null }, medals: 1 }],
   ]));
   assert.deepEqual(
@@ -351,6 +371,17 @@ test("treats a zero CPC Finder score as missing for display and ranking", () => 
     ["scored", "zero", "missing"],
   );
   const power = buildPreviewPower(teams, ["cpcfinder"]);
+  assert.deepEqual(
+    sortPreviewTeams(teams, "cpcfinder", "asc").map(({ id }) => id),
+    ["zero", "scored", "missing"],
+  );
+  const tiedZero = { ...teams[1], id: "zero-tie", sourceIndex: 3, school: "D大学" };
+  const ranks = buildPreviewRanks([...teams, tiedZero], ["cpcfinder"]);
+  assert.equal(ranks.get("zero").ratings.cpcfinder, 2);
+  assert.equal(ranks.get("zero-tie").ratings.cpcfinder, 2);
+  assert.deepEqual(power.get("scored").counts, [2, 0]);
+  assert.deepEqual(power.get("zero").counts, [0, 0]);
+  assert.deepEqual(power.get("zero"), power.get("missing"));
   assert.equal(power.get("zero").rank, power.get("missing").rank);
 });
 
