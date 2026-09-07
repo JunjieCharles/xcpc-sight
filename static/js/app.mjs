@@ -137,6 +137,7 @@ const state = {
   reviewOrder: "asc",
   reviewRenderFrame: 0,
   preview: null,
+  previewContestId: null,
   previewPower: new Map(),
   previewRanks: new Map(),
   previewSchoolRanks: new Map(),
@@ -955,8 +956,18 @@ function showPreview(updateUrl = false) {
   setUrl(updateUrl ? "push" : "replace");
 }
 
-function choosePreview(id) {
-  state.preview = state.previews.find(p => p.id === id) ?? state.previews[0];
+function selectLatestContest(contests, requestedId, timeKey) {
+  return contests.find(contest => contest.id === requestedId)
+    ?? contests.reduce((latest, contest) => {
+      if (!latest) return contest;
+      const difference = Date.parse(contest[timeKey]) - Date.parse(latest[timeKey]);
+      return difference > 0 || (difference === 0 && contest.id < latest.id) ? contest : latest;
+    }, null);
+}
+
+function choosePreview(id, remember = true) {
+  state.preview = selectLatestContest(state.previews, id, "sortAt");
+  if (remember) state.previewContestId = state.preview.id;
   const metrics = state.preview.metricSources.map(s => s.id);
   state.previewPower = buildPreviewPower(state.preview.teams, metrics);
   state.previewRanks = buildPreviewRanks(state.preview.teams, metrics);
@@ -1114,9 +1125,12 @@ async function showReview(query = {}, updateUrl = false) {
   const review = state.review ?? await reviewStore.getSeries(entry, state.previews);
   if (state.seriesEntry !== entry || state.view !== "review") return;
   state.review = review;
-  state.reviewContest = review.contests.find(c => c.id === query.reviewContest)
-    ?? state.reviewContest ?? review.contests.at(-1);
-  choosePreview(state.reviewContest.previewId);
+  state.reviewContest = selectLatestContest(
+    review.contests,
+    query.reviewContest ?? state.reviewContest?.id,
+    "startAt",
+  );
+  choosePreview(state.reviewContest.previewId, false);
   const metrics = [{ id: "power", title: "综合战力" }, ...state.preview.metricSources, { id: "medals", title: "奖牌" }];
   const requestedMetric = query.reviewMetric ?? state.reviewMetric;
   state.reviewMetric = metrics.some(m => m.id === requestedMetric) ? requestedMetric : "power";
@@ -1782,8 +1796,9 @@ async function loadSeries(seriesId, queryState = {}) {
   state.reviewMetric = queryState.reviewMetric ?? "power";
   state.reviewSort = queryState.reviewSort ?? "actualRank";
   state.reviewOrder = queryState.reviewOrder ?? "asc";
-  const preview = previews.find(p => p.id === queryState.previewContest) ?? previews[0] ?? null;
+  const preview = selectLatestContest(previews, queryState.previewContest, "sortAt");
   state.preview = preview;
+  state.previewContestId = preview?.id ?? null;
   state.previewPower = preview
     ? buildPreviewPower(preview.teams, preview.metricSources.map(({ id }) => id))
     : new Map();
@@ -1903,6 +1918,7 @@ elements.problemRatingTab.addEventListener("click", () => {
 });
 elements.previewTab.addEventListener("click", () => {
   if (state.view === "preview") return;
+  choosePreview(state.previewContestId);
   showPreview(true);
 });
 elements.previewContestSelect.addEventListener("change", () => {

@@ -69,6 +69,48 @@ test("current season ratings break power ties and preserve missing and equal rat
   assert.deepEqual(teams.map(t => ranks.get(t.id).ratings.currentSeason), [1, 1, 3, null]);
 });
 
+test("preview and review default to the latest timestamp and preserve explicit contest links", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const select = runInNewContext(
+    `${source.match(/function selectLatestContest\([^]*?\n\}/)[0]}\nselectLatestContest`,
+  );
+  for (const key of ["sortAt", "startAt"]) {
+    const old = { id: "old", [key]: "2026-09-06T13:00:00+08:00" };
+    const newest = { id: "new", [key]: "2026-09-12T13:00:00+08:00" };
+    const middle = { id: "middle", [key]: "2026-09-12T04:00:00Z" };
+    const contests = [newest, old, middle];
+    assert.equal(select(contests, "", key), newest);
+    assert.equal(select(contests, "missing", key), newest);
+    assert.equal(select(contests, "old", key), old);
+    assert.equal(select([old], undefined, key), old);
+    assert.equal(select([], undefined, key), null);
+    const tied = { id: "a", [key]: "2026-09-12T05:00:00Z" };
+    assert.equal(select([newest, tied], undefined, key), tied);
+    assert.deepEqual(contests, [newest, old, middle]);
+  }
+});
+
+test("review preview selection does not overwrite the remembered preview contest", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const functions = ["selectLatestContest", "choosePreview"].map(name =>
+    source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`))[0],
+  ).join("\n");
+  const old = { id: "old", sortAt: "2026-09-06", teams: [], metricSources: [] };
+  const newest = { id: "new", sortAt: "2026-09-12", teams: [], metricSources: [] };
+  const state = { previews: [old, newest] };
+  const choose = runInNewContext(`${functions}\nchoosePreview`, {
+    state, buildPreviewPower, buildPreviewRanks,
+  });
+  choose();
+  assert.equal(state.previewContestId, "new");
+  choose("old");
+  choose("new", false);
+  assert.equal(state.preview.id, "new");
+  assert.equal(state.previewContestId, "old");
+  choose(state.previewContestId);
+  assert.equal(state.preview, old);
+});
+
 test("unawarded IOI rows show only the competition without separators", async () => {
   const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
   const render = runInNewContext(
