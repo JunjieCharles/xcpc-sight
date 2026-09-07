@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from core import DefaultNormalizer
+from scripts import generate_preview_data as generator
 from scripts.generate_preview_data import (
     AchievementIndex,
     PersonIndex,
@@ -83,3 +87,71 @@ def test_stable_team_id_uses_school_team_and_member_order() -> None:
 
     assert identity == stable_team_id("测试大学", "队名", ["甲", "乙", "丙"])
     assert identity != stable_team_id("测试大学", "队名", ["甲", "丙", "乙"])
+
+
+@pytest.mark.parametrize("with_current", [False, True])
+def test_second_preview_metadata_and_cached_source_date(
+    monkeypatch, tmp_path: Path, with_current: bool,
+) -> None:
+    teams = tmp_path / "teams.json"
+    teams.write_text(json.dumps([["队名", "Team", "学校", "甲 / 乙", "教练"]]))
+    monkeypatch.setattr("sys.argv", [
+        "generate_preview_data", "--teams", str(teams),
+        "--xcpcrating-data", ".", "--xcpc-elo-data", ".",
+        "--previous-series", ".", "--cpcfinder-pages", ".", "--school-aliases", ".",
+        "--snapshot-date", "2026-09-07", "--cpcfinder-snapshot-date", "2026-09-04",
+        "--preview-id", "icpc-2026-preliminary-2", "--preview-title", "第二场",
+        "--team-source-url", "https://example.test/second", "--sort-at",
+        "2026-09-12T13:00:00+08:00",
+    ])
+    monkeypatch.setattr(generator, "load_normalizer", lambda _: DefaultNormalizer())
+    for name in ("load_xcpcrating", "load_xcpc_elo", "load_previous_series"):
+        monkeypatch.setattr(generator, name, lambda _: ([], "2026-09-04"))
+    monkeypatch.setattr(generator, "load_cpcfinder", lambda _: [])
+    monkeypatch.setattr(generator, "load_achievements", lambda *_: AchievementIndex([]))
+
+    args = generator.parse_args()
+    if with_current:
+        current = tmp_path / "current.json"
+        current.write_text(json.dumps({"id": "2026-2027"}))
+        args.current_series = current
+        monkeypatch.setattr(generator, "load_previous_series", lambda path: (
+            [PersonRecord("甲", "学校", 1600), PersonRecord("乙", "另一学校", 1700)]
+            if path == current else [], "2026-09-06T13:00:00+08:00",
+        ))
+    document = generator.build_document(args)
+
+    assert document["id"] == "icpc-2026-preliminary-2"
+    assert document["title"] == "第二场"
+    assert document["sortAt"] == "2026-09-12T13:00:00+08:00"
+    assert document["teamSource"]["url"] == "https://example.test/second"
+    assert document["snapshotDate"] == "2026-09-07"
+    assert document["sourceSnapshots"]["cpcfinder"] == "2026-09-04"
+    assert document["matchingSummary"]["members"] == 2
+    assert [m["name"] for m in document["teams"][0]["members"]] == ["甲", "乙"]
+    if with_current:
+        assert [s["id"] for s in document["metricSources"]] == [
+            "xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder",
+        ]
+        assert document["sourceSnapshots"]["currentSeason"] == "2026-09-06T13:00:00+08:00"
+        assert document["teams"][0]["ratings"]["currentSeason"] == 1600
+        assert document["teams"][0]["members"][1]["ratings"]["currentSeason"] is None
+        assert document["matchingSummary"]["currentSeason"] == 1
+        args.sort_at = "2026-09-06T13:00:00+08:00"
+        with pytest.raises(ValueError, match="must precede"):
+            generator.build_document(args)
+        current.write_text(json.dumps({"id": "2025-2026"}))
+        with pytest.raises(ValueError, match="expected series"):
+            generator.build_document(args)
+    else:
+        assert "currentSeason" not in document["teams"][0]["ratings"]
+
+
+def test_default_publication_includes_both_preview_snapshots() -> None:
+    from scripts.generate_static_data import preview_specs
+
+    documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
+    assert [document["id"] for document in documents] == [
+        "icpc-2026-preliminary-1", "icpc-2026-preliminary-2",
+    ]
+    assert [len(document["teams"]) for document in documents] == [2535, 2636]

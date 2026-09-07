@@ -6,6 +6,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -95,17 +96,23 @@ class AchievementIndex:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build the manually requested ICPC 网络赛 1 preview snapshot"
+        description="Build a manually requested ICPC preview snapshot"
     )
     parser.add_argument("--teams", type=Path, required=True)
     parser.add_argument("--xcpcrating-data", type=Path, required=True)
     parser.add_argument("--xcpc-elo-data", type=Path, required=True)
     parser.add_argument("--previous-series", type=Path, required=True)
+    parser.add_argument("--current-series", type=Path)
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
     parser.add_argument("--school-aliases", type=Path, required=True)
     parser.add_argument("--noi-data", type=Path, default=Path("data-cache/noi/normalized"))
     parser.add_argument("--ioi-data", type=Path, default=Path("data-cache/ioi"))
     parser.add_argument("--snapshot-date", required=True)
+    parser.add_argument("--preview-id", default=PREVIEW_ID)
+    parser.add_argument("--preview-title", default=PREVIEW_TITLE)
+    parser.add_argument("--team-source-url", default=TEAM_SOURCE_URL)
+    parser.add_argument("--sort-at", default="2026-09-06T13:00:00+08:00")
+    parser.add_argument("--cpcfinder-snapshot-date")
     parser.add_argument(
         "--output",
         type=Path,
@@ -276,6 +283,18 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "previousSeason": PersonIndex(previous, normalizer),
         "cpcfinder": PersonIndex(cpcfinder, normalizer),
     }
+    metric_sources = list(METRIC_SOURCES)
+    current_snapshots = {}
+    if args.current_series:
+        current_document = load_json(args.current_series)
+        if current_document["id"] != SERIES_ID:
+            raise ValueError(f"{args.current_series}: expected series {SERIES_ID}")
+        current, current_at = load_previous_series(args.current_series)
+        if datetime.fromisoformat(current_at) >= datetime.fromisoformat(args.sort_at):
+            raise ValueError(f"{args.current_series}: current ratings must precede the preview")
+        indexes["currentSeason"] = PersonIndex(current, normalizer)
+        metric_sources.insert(3, ("currentSeason", "本赛季 Rating", f"./?series={SERIES_ID}"))
+        current_snapshots["currentSeason"] = current_at
     match_counts = dict.fromkeys(indexes, 0)
     teams = []
     raw_teams = load_json(args.teams)
@@ -335,24 +354,25 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "schemaVersion": 1,
         "seriesId": SERIES_ID,
         "seriesTitle": SERIES_TITLE,
-        "id": PREVIEW_ID,
-        "title": PREVIEW_TITLE,
-        "sortAt": "2026-09-06T13:00:00+08:00",
+        "id": args.preview_id,
+        "title": args.preview_title,
+        "sortAt": args.sort_at,
         "snapshotDate": args.snapshot_date,
         "teamSource": {
             "title": "ICPC 报名系统队伍公示",
-            "url": TEAM_SOURCE_URL,
+            "url": args.team_source_url,
             "note": "外部报名名单静态快照；不来自 Pintia 比赛榜单，不随比赛进程自动更新。",
         },
         "metricSources": [
             {"id": source_id, "title": title, "url": url}
-            for source_id, title, url in METRIC_SOURCES
+            for source_id, title, url in metric_sources
         ],
         "sourceSnapshots": {
             "xcpcrating": xcpcrating_at,
             "xcpcElo": xcpc_elo_at,
             "previousSeason": previous_at,
-            "cpcfinder": args.snapshot_date,
+            "cpcfinder": args.cpcfinder_snapshot_date or args.snapshot_date,
+            **current_snapshots,
         },
         "matchingPolicy": (
             "先按规范化人名查找，再要求规范化或别名学校完全匹配；"

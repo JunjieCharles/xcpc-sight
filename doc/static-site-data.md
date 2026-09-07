@@ -16,6 +16,7 @@ python scripts/generate_static_data.py
 - `static/data/series/nowcoder-summer-2026.json`
 - `static/data/series/hdu-summer-2026.json`
 - `static/data/previews/2026-2027.json`
+- `static/data/previews/icpc-2026-preliminary-2.json`
 - `static/data/reviews/2026-2027.json`
 
 XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238。各来源进入 Rating 前都过滤无提交队伍并重建含并列的比赛排名。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部 Rating 系列，同时读取已提交的前瞻和对应复盘文件；成功后依次原子发布系列、前瞻与复盘文件，最后发布入口索引。它不会自行请求、刷新或扩展前瞻名单。
@@ -43,7 +44,7 @@ JSON 是紧凑 UTF-8（无 BOM），禁止 NaN，保留一个末尾换行，不�
 - `series[]`：可用系列的 `id`、显示 `title`，以及至少一个数据入口。`path` 指向选手 Rating series，`previewPath` 指向首个前瞻，可选 `previews: [{id, path}]` 提供完整多场次目录；可选 `reviewPath` 指向赛后复盘，2026–2027 同时提供选手榜、前瞻和复盘。
 
 索引按每个 Rating 系列 `contests[].startAt` 的最大值或前瞻 `sortAt` 倒序排列，时间相同则按系列 ID 升序；同一系列同时存在两类数据时取两者中较新的时间。第一项成为默认系列。投影拒绝空输入、无内容系列、重复场次 ID 和重复路径；同一系列 ID 的 Rating 与前瞻合并为一项，并要求标题一致；多份前瞻通过 `previews` 登记且首项保留 `previewPath`。`project_static_data_index` 接受 `review_publications` 并验证复盘引用已发布前瞻。
-已发布的 `index.json` 必须由同一批系列 JSON 投影得到；离线回归测试会校验这一一致性，避免单独更新系列数据后目录顺序滞后。
+2026–2027 的 `previews` 按第一场、第二场登记，`previewPath` 继续指向第一场；默认生成器复制两场已提交快照。已发布的 `index.json` 必须由同一批系列 JSON 投影得到；离线回归测试校验完整多场次目录的一致性，避免单独更新系列数据后目录顺序滞后。
 
 ## 系列契约
 

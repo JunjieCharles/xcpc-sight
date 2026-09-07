@@ -58,6 +58,7 @@ HDU_SERIES_ID = "hdu-summer-2026"
 HDU_SERIES_TITLE = '2026“钉耙编程”中国大学生算法设计暑期联赛'
 HDU_CONTEST_IDS = (1229, 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1238)
 PREVIEW_2026_2027_PATH = "previews/2026-2027.json"
+PREVIEW_2026_2027_SECOND_PATH = "previews/icpc-2026-preliminary-2.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -151,6 +152,10 @@ def preview_specs() -> tuple[PreviewSpec, ...]:
         PreviewSpec(
             repository_root / "static" / "data" / PREVIEW_2026_2027_PATH,
             PREVIEW_2026_2027_PATH,
+        ),
+        PreviewSpec(
+            repository_root / "static" / "data" / PREVIEW_2026_2027_SECOND_PATH,
+            PREVIEW_2026_2027_SECOND_PATH,
         ),
     )
 

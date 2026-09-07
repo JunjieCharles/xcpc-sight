@@ -187,11 +187,12 @@ def test_published_index_matches_published_series_documents() -> None:
     )
     preview_publications = tuple(
         (
-            json.loads((data_dir / entry["previewPath"]).read_text(encoding="utf-8")),
-            entry["previewPath"],
+            json.loads((data_dir / preview["path"]).read_text(encoding="utf-8")),
+            preview["path"],
         )
         for entry in index["series"]
         if "previewPath" in entry
+        for preview in entry.get("previews", [{"path": entry["previewPath"]}])
     )
 
     review_publications = tuple(

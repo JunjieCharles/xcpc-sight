@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260906-41";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260907-42";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -86,7 +86,7 @@ export function bestAchievementMedal(achievements, competition) {
 export function achievementDisplayParts(achievement) {
   const competition = `${achievement.year} ${achievement.competition.toUpperCase()}`;
   if (achievement.medal === "participant") {
-    return [competition, "参与#—", "未获奖"];
+    return [competition];
   }
   const medal = { gold: "金牌", silver: "银牌", bronze: "铜牌" }[achievement.medal];
   return [

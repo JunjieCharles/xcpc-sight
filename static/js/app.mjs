@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260906-41";
+} from "./data.mjs?v=20260907-42";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260906-41";
+} from "./problem-rating.mjs?v=20260907-42";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -32,11 +32,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260906-41";
+} from "./preview.mjs?v=20260907-42";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260906-41";
+} from "./review.mjs?v=20260907-42";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -524,7 +524,7 @@ function previewRatingNode(sourceId, value) {
   if (value === null || value === undefined) {
     return node("span", { className: "preview-rating preview-missing", text: "—" });
   }
-  if (sourceId === "previousSeason") {
+  if (["previousSeason", "currentSeason"].includes(sourceId)) {
     return ratingNode(value, "preview-rating preview-rating-previous-season");
   }
   if (sourceId === "xcpcElo") {
@@ -650,6 +650,11 @@ function achievementLabel(achievement) {
 
 function achievementRow(achievement) {
   const parts = achievementDisplayParts(achievement);
+  if (parts.length === 1) {
+    return node("span", { className: "preview-achievement-row" }, [
+      node("span", { className: "preview-achievement-competition", text: parts[0] }),
+    ]);
+  }
   return node("span", { className: "preview-achievement-row" }, [
     node("span", { className: "preview-achievement-competition", text: parts[0] }),
     node("span", { className: "preview-achievement-separator", text: "·" }),
@@ -703,15 +708,16 @@ function radarPoints(counts, maximum, radius, centerX, centerY) {
 function previewPowerRadar(power) {
   const labels = [...state.preview.metricSources.map(({ title }) => title), "奖牌"];
   const maximum = Math.max(1, state.preview.teams.length - 1);
-  const centerX = 150;
+  const width = labels.length > 5 ? 340 : 300;
+  const centerX = width / 2;
   const centerY = 105;
   const radius = 58;
   const labelRadius = 87;
   const svg = svgNode("svg", {
     class: "preview-power-radar",
-    viewBox: "0 0 300 215",
+    viewBox: `0 0 ${width} 215`,
     role: "img",
-    "aria-label": `五维综合战力雷达图，超过队伍数：${power.counts.join("、")}`,
+    "aria-label": `${labels.length}维综合战力雷达图，超过队伍数：${power.counts.join("、")}`,
   });
   for (const scale of [0.5, 1]) {
     svg.append(svgNode("polygon", {
@@ -764,7 +770,7 @@ function previewPowerControl(team) {
   const control = node("span", {
     className: "preview-power-control",
     tabIndex: 0,
-    "aria-label": `综合战力第 ${power.rank} 名；悬浮或聚焦查看五维雷达图`,
+    "aria-label": `综合战力第 ${power.rank} 名；悬浮或聚焦查看${power.counts.length}维雷达图`,
   }, [document.createTextNode(`#${power.rank}`), tooltip]);
   attachPreviewTooltip(control, tooltip);
   return control;

@@ -18,6 +18,68 @@ import {
   writePreviewQuery,
 } from "../static/js/preview.mjs";
 
+test("loads both published previews from the index and preserves contest selection", async () => {
+  const root = new URL("../static/data/", import.meta.url);
+  const index = JSON.parse(await readFile(new URL("index.json", root), "utf8"));
+  const entry = index.series.find(item => item.id === "2026-2027");
+  const store = createPreviewStore(new URL("index.json", root).href, async url => ({
+    ok: true, status: 200,
+    json: async () => JSON.parse(await readFile(new URL(url), "utf8")),
+  }));
+  const previews = await store.getPreviews(entry);
+  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2"]);
+  const second = previews[1];
+  assert.deepEqual(second.metricSources.map(s => s.id), [
+    "xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder",
+  ]);
+  assert.equal(previews[0].metricSources.length, 4);
+  const power = buildPreviewPower(second.teams, second.metricSources.map(s => s.id));
+  assert.ok([...power.values()].every(p => p.counts.length === 6));
+  assert.equal(second.teams.length, 2636);
+  assert.equal(second.matchingSummary.members, 7788);
+  assert.equal(second.sourceSnapshots.xcpcrating, "2026-09-06T16:17:41.538314+00:00");
+  assert.equal(second.sourceSnapshots.xcpcElo, "2026-09-07T04:26:01.864Z");
+  for (const [metric, expected] of [["xcpcrating", 7189], ["xcpcElo", 7155]]) {
+    assert.equal(second.matchingSummary[metric], expected);
+    assert.equal(second.teams.flatMap(t => t.members).filter(m => m.ratings[metric] !== null).length, expected);
+  }
+  assert.equal(second.sortAt, "2026-09-12T13:00:00+08:00");
+  assert.equal(second.teamSource.url, "https://uep.pintia.cn/icpc-reg/examGroups/2086691546024431616/publicTeams");
+  const url = writePreviewQuery("https://example.test/sub/?series=2026-2027", {
+    view: "preview", contest: second.id,
+  });
+  assert.equal(readPreviewQuery(url).previewContest, second.id);
+});
+
+test("current season ratings break power ties and preserve missing and equal ratings", () => {
+  const metrics = ["xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder"];
+  const teams = [1600, 1600, 1400, null].map((currentSeason, i) => ({
+    id: String(i), sourceIndex: i, school: "学校",
+    ratings: { xcpcrating: 1500, xcpcElo: 1500, previousSeason: 1500, currentSeason, cpcfinder: 10 },
+    medals: { gold: 0, silver: 0, bronze: 0 },
+  }));
+  const oldPower = buildPreviewPower(teams, metrics.filter(id => id !== "currentSeason"));
+  assert.deepEqual([...oldPower.values()].map(p => p.rank), [1, 1, 1, 1]);
+  const power = buildPreviewPower(teams, metrics);
+  assert.deepEqual([...power.values()].map(p => p.rank), [1, 1, 3, 4]);
+  assert.deepEqual(power.get("0").counts, [0, 0, 0, 2, 0, 0]);
+  assert.deepEqual(power.get("0").vector, [2, 0, 0, 0, 0, 0]);
+  assert.deepEqual(sortPreviewTeams(teams, "currentSeason", "asc").map(t => t.id), ["2", "0", "1", "3"]);
+  const ranks = buildPreviewRanks(teams, metrics);
+  assert.deepEqual(teams.map(t => ranks.get(t.id).ratings.currentSeason), [1, 1, 3, null]);
+});
+
+test("unawarded IOI rows show only the competition without separators", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const render = runInNewContext(
+    `${source.match(/function achievementRow\([^]*?\n\}/)[0]}\nachievementRow`,
+    { achievementDisplayParts, node: (tag, properties, children = []) => ({ ...properties, children }) },
+  );
+  const row = render({ competition: "ioi", year: 2024, medal: "participant" });
+  assert.equal(row.children.length, 1);
+  assert.equal(row.children[0].text, "2024 IOI");
+});
+
 test("formats CPC Finder ratings with exactly two decimals and preserves missing values", async () => {
   const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
   const functions = ["formatPreviewRating", "previewRatingNode"].map((name) => {
@@ -207,7 +269,7 @@ test("validates achievement history and selects each competition's best medal", 
   assert.equal(bestAchievementMedal([], "noi"), null);
   assert.deepEqual(achievementDisplayParts(achievements[0]), ["2024 NOI", "银牌#20", "500 / 705"]);
   assert.deepEqual(achievementDisplayParts(achievements[2]), ["2025 IOI", "铜牌#100", "200 / 600"]);
-  assert.deepEqual(achievementDisplayParts(achievements[3]), ["2026 IOI", "参与#—", "未获奖"]);
+  assert.deepEqual(achievementDisplayParts(achievements[3]), ["2026 IOI"]);
 
   const wrongOrder = fixture();
   wrongOrder.teams[0].members[0].achievements = [achievements[2], achievements[0]];
