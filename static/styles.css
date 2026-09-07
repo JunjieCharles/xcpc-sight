@@ -248,7 +248,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-member-name.ioi-gold { --ioi-achievement-color: #d6a800; }
 .preview-member-name.ioi-silver { --ioi-achievement-color: #708090; }
 .preview-member-name.ioi-bronze { --ioi-achievement-color: #a6532d; }
-.preview-member-name.ioi-participant { --ioi-achievement-color: #111111; }
+.preview-member-name.ioi-participant { --ioi-achievement-color: #57514d; }
 .preview-achievement-tooltip { width: max-content; max-width: calc(100vw - 1rem); }
 .preview-achievement-list { display: grid; grid-template-columns: repeat(5, max-content); align-items: baseline; column-gap: .25rem; white-space: nowrap; }
 .preview-achievement-row { display: contents; }

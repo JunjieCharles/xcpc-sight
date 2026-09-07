@@ -241,7 +241,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(stylesheet, /\.preview-member-name\.has-noi::after[^}]*bottom:\s*-5px/);
   assert.match(stylesheet, /\.preview-member-name\.has-ioi::before[^}]*bottom:\s*-10px/);
   assert.match(stylesheet, /\.preview-member-name\.noi-gold[^}]*#d6a800/);
-  assert.match(stylesheet, /\.preview-member-name\.ioi-participant[^}]*#111111/);
+  assert.match(stylesheet, /\.preview-member-name\.ioi-participant[^}]*#57514d/);
   assert.match(stylesheet, /\.preview-ranked-value\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 1\.9rem/);
   assert.match(stylesheet, /\.preview-global-rank\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
   assert.match(stylesheet, /\.preview-member-tooltip\s*\{[^}]*position:\s*fixed/);
