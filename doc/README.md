@@ -2,6 +2,7 @@
 
 | 功能 | 文档 |
 | --- | --- |
+| 本地学校别名、更名维护与加载 | [school-aliases.md](school-aliases.md) |
 | 个人与报名实体 rating 规则及系列计算 | [rating-rules.md](rating-rules.md) |
 | 题目难度 rating 的特征、训练、验证、XCPC 预测与静态展示 | [problem-rating.md](problem-rating.md) |
 | 多系列静态站点 JSON 数据契约、生成与零构建前端 | [static-site-data.md](static-site-data.md) |

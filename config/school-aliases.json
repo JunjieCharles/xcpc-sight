@@ -1,0 +1,2048 @@
+{
+  "清华大学": [
+    "Tsinghua University"
+  ],
+  "北京大学": [
+    "Peking University"
+  ],
+  "浙江大学": [
+    "Zhejiang University"
+  ],
+  "上海交通大学": [
+    "Shanghai Jiao Tong University"
+  ],
+  "南京大学": [
+    "Nanjing University"
+  ],
+  "复旦大学": [
+    "Fudan University"
+  ],
+  "中国科学技术大学": [
+    "University of Science and Technology of China"
+  ],
+  "华中科技大学": [
+    "Huazhong University of Science and Technology",
+    "Huazhong University of Science & Technology"
+  ],
+  "武汉大学": [
+    "Wuhan University"
+  ],
+  "西安交通大学": [
+    "Xi'an Jiaotong University"
+  ],
+  "哈尔滨工业大学": [
+    "Harbin Institute of Technology"
+  ],
+  "中山大学": [
+    "Zhong Shan (Sun Yat-Sen) University",
+    "Sun Yat-Sen University"
+  ],
+  "北京师范大学": [
+    "Beijing Normal University"
+  ],
+  "四川大学": [
+    "Sichuan University"
+  ],
+  "北京航空航天大学": [
+    "Beihang University"
+  ],
+  "同济大学": [
+    "Tongji University"
+  ],
+  "东南大学": [
+    "Southeast University China",
+    "Southeast University"
+  ],
+  "中国人民大学": [
+    "Renmin University of China"
+  ],
+  "北京理工大学": [
+    "Beijing Institute of Technology"
+  ],
+  "南开大学": [
+    "Nankai University"
+  ],
+  "山东大学": [
+    "Shandong University"
+  ],
+  "天津大学": [
+    "Tianjin University"
+  ],
+  "中南大学": [
+    "Central South University"
+  ],
+  "吉林大学": [
+    "Jilin University"
+  ],
+  "西北工业大学": [
+    "Northwestern Polytechnical University"
+  ],
+  "厦门大学": [
+    "Xiamen University"
+  ],
+  "华南理工大学": [
+    "华南理工大学软件学院",
+    "South China University of Technology",
+    "华南理工大学计算机学院"
+  ],
+  "大连理工大学": [
+    "Dalian University of Technology",
+    "大连理工大学软件学院",
+    "大连理工大学主校区"
+  ],
+  "大连理工大学盘锦校区": [
+    "Panjin Campus of Dalian University of Technology",
+    "大连理工大学盘锦"
+  ],
+  "华东师范大学": [
+    "East China Normal University"
+  ],
+  "中国农业大学": [
+    "China Agricultural University"
+  ],
+  "电子科技大学": [
+    "University of Electronic Science and Technology of China"
+  ],
+  "湖南大学": [
+    "Hunan University"
+  ],
+  "北京科技大学": [
+    "University of Science and Technology Beijing"
+  ],
+  "重庆大学": [
+    "Chongqing University"
+  ],
+  "南京航空航天大学": [
+    "Nanjing University of Aeronautics and Astronautics"
+  ],
+  "东北大学": [
+    "Northeastern University (China)",
+    "Northeastern University"
+  ],
+  "南京理工大学": [
+    "Nanjing University of Science and Technology"
+  ],
+  "西安电子科技大学": [
+    "Xidian University"
+  ],
+  "兰州大学": [
+    "Lanzhou University"
+  ],
+  "北京交通大学": [
+    "Beijing jiaotong University"
+  ],
+  "南方科技大学": [
+    "Southern University of Science and Technology"
+  ],
+  "华中农业大学": [
+    "Huazhong Agricultural University"
+  ],
+  "上海大学": [
+    "Shanghai University"
+  ],
+  "苏州大学": [
+    "Soochow University (China)"
+  ],
+  "华东理工大学": [
+    "East China University of Science and Technology"
+  ],
+  "华中师范大学": [
+    "Central China Normal University"
+  ],
+  "南京师范大学": [
+    "Nanjing Normal University"
+  ],
+  "中国地质大学（武汉）": [
+    "China University of Geosciences (Wuhan)"
+  ],
+  "东北师范大学": [
+    "Northeast Normal University"
+  ],
+  "哈尔滨工程大学": [
+    "Harbin Engineering University"
+  ],
+  "西南交通大学": [
+    "Southwest Jiaotong University"
+  ],
+  "南京农业大学": [
+    "Nanjing Agricultural University"
+  ],
+  "郑州大学": [
+    "Zhengzhou University"
+  ],
+  "北京邮电大学": [
+    "Beijing University of Posts and Telecommunications"
+  ],
+  "武汉理工大学": [
+    "Wuhan University of Technology"
+  ],
+  "中国海洋大学": [
+    "Ocean University of China"
+  ],
+  "暨南大学": [
+    "Jinan University"
+  ],
+  "中国石油大学（北京）": [
+    "China University of Petroleum - Beijing"
+  ],
+  "北京工业大学": [
+    "Beijing University of Technology"
+  ],
+  "河海大学": [
+    "Hohai University"
+  ],
+  "中国矿业大学": [
+    "China University of Mining and Technology",
+    "China University of Mining and Technology - Xuzhou"
+  ],
+  "北京化工大学": [
+    "Beijing University of Chemical Technology"
+  ],
+  "中国地质大学（北京）": [
+    "China University of Geosciences (Beijing)"
+  ],
+  "西北大学": [
+    "Northwest University"
+  ],
+  "江南大学": [
+    "Jiangnan University"
+  ],
+  "上海科技大学": [
+    "ShanghaiTech University"
+  ],
+  "中国石油大学（华东）": [
+    "China University of Petroleum (East China)",
+    "China University of Petroleum",
+    "China University of Petroleum (Huadong)"
+  ],
+  "西南大学": [
+    "Southwest University"
+  ],
+  "中国矿业大学（北京）": [
+    "China University of Mining and Technology - Beijing"
+  ],
+  "深圳大学": [
+    "Shenzhen University"
+  ],
+  "陕西师范大学": [
+    "Shaanxi Normal University"
+  ],
+  "江苏大学": [
+    "Jiangsu University"
+  ],
+  "浙江工业大学": [
+    "Zhejiang University of Technology"
+  ],
+  "北京林业大学": [
+    "Beijing Forestry University"
+  ],
+  "华南师范大学": [
+    "South China Normal University"
+  ],
+  "西北农林科技大学": [
+    "Northwest A&F University"
+  ],
+  "扬州大学": [
+    "Yangzhou University"
+  ],
+  "南昌大学": [
+    "Nanchang University"
+  ],
+  "福州大学": [
+    "Fuzhou University"
+  ],
+  "华北电力大学": [
+    "North China Electric Power University"
+  ],
+  "东华大学": [
+    "Donghua University"
+  ],
+  "合肥工业大学": [
+    "Hefei University of Technology"
+  ],
+  "云南大学": [
+    "Yunnan University"
+  ],
+  "宁波大学": [
+    "Ningbo University"
+  ],
+  "首都师范大学": [
+    "Capital Normal University"
+  ],
+  "湖南师范大学": [
+    "Hunan Normal University"
+  ],
+  "南京工业大学": [
+    "Nanjing Tech University"
+  ],
+  "长安大学": [
+    "Chang'an University"
+  ],
+  "福建师范大学": [
+    "Fujian Normal University"
+  ],
+  "安徽大学": [
+    "Anhui University"
+  ],
+  "南京信息工程大学": [
+    "Nanjing University of Information Science & Technology",
+    "Nanjing University of Information Science and Technology"
+  ],
+  "上海理工大学": [
+    "University of Shanghai for Science and Technology"
+  ],
+  "华南农业大学": [
+    "South China Agricultural University"
+  ],
+  "广西大学": [
+    "Guangxi University"
+  ],
+  "南京邮电大学": [
+    "Nanjing University of Posts and Telecommunications"
+  ],
+  "燕山大学": [
+    "Yanshan University"
+  ],
+  "河南大学": [
+    "Henan University"
+  ],
+  "湖北大学": [
+    "Hubei University"
+  ],
+  "广州大学": [
+    "Guangzhou University"
+  ],
+  "青岛大学": [
+    "Qingdao University"
+  ],
+  "湘潭大学": [
+    "Xiangtan University"
+  ],
+  "广东工业大学": [
+    "Guangdong University of Technology"
+  ],
+  "浙江师范大学": [
+    "Zhejiang Normal University"
+  ],
+  "大连海事大学": [
+    "Dalian Maritime University"
+  ],
+  "上海师范大学": [
+    "Shanghai Normal University"
+  ],
+  "杭州电子科技大学": [
+    "Hangzhou Dianzi University"
+  ],
+  "武汉科技大学": [
+    "Wuhan University of Science and Technology"
+  ],
+  "南京林业大学": [
+    "Nanjing Forestry University"
+  ],
+  "河北工业大学": [
+    "Hebei University of Technology"
+  ],
+  "山东师范大学": [
+    "Shandong Normal University"
+  ],
+  "浙江理工大学": [
+    "Zhejiang Sci-Tech University"
+  ],
+  "山西大学": [
+    "Shanxi University"
+  ],
+  "太原理工大学": [
+    "Taiyuan University of Technology"
+  ],
+  "东北林业大学": [
+    "Northeast Forestry University - China",
+    "Northeast Forestry University"
+  ],
+  "河北大学": [
+    "Hebei University"
+  ],
+  "东北农业大学": [
+    "Northeast Agricultural University",
+    "Northeast Agricultural University - China"
+  ],
+  "江西师范大学": [
+    "Jiangxi Normal University"
+  ],
+  "西安建筑科技大学": [
+    "Xi'an University of Architecture and Technology"
+  ],
+  "杭州师范大学": [
+    "Hangzhou Normal University"
+  ],
+  "内蒙古大学": [
+    "Inner Mongolia University"
+  ],
+  "福建农林大学": [
+    "Fujian Agriculture and Forestry University"
+  ],
+  "江苏师范大学": [
+    "Jiangsu Normal University"
+  ],
+  "西安理工大学": [
+    "Xi'an University of Technology"
+  ],
+  "辽宁大学": [
+    "Liaoning University"
+  ],
+  "北京建筑大学": [
+    "Beijing University of Civil Engineering and Architecture"
+  ],
+  "安徽师范大学": [
+    "Anhui Normal University"
+  ],
+  "河南师范大学": [
+    "Henan Normal University"
+  ],
+  "长沙理工大学": [
+    "Changsha University of Science and Technology"
+  ],
+  "昆明理工大学": [
+    "Kunming University of Science and Technology"
+  ],
+  "新疆大学": [
+    "Xinjiang University"
+  ],
+  "汕头大学": [
+    "Shantou University"
+  ],
+  "西南石油大学": [
+    "Southwest Petroleum University"
+  ],
+  "山东科技大学": [
+    "Shandong University of Science and Technology"
+  ],
+  "河南农业大学": [
+    "Henan Agricultural University"
+  ],
+  "贵州大学": [
+    "Guizhou University"
+  ],
+  "华侨大学": [
+    "Huaqiao University"
+  ],
+  "河北师范大学": [
+    "Hebei Normal University"
+  ],
+  "黑龙江大学": [
+    "Heilongjiang University"
+  ],
+  "中国计量大学": [
+    "China Jiliang University"
+  ],
+  "陕西科技大学": [
+    "Shaanxi University of Science and Technology"
+  ],
+  "沈阳农业大学": [
+    "Shenyang Agricultural University"
+  ],
+  "天津师范大学": [
+    "Tianjin Normal University"
+  ],
+  "湖北工业大学": [
+    "Hubei University of Technology"
+  ],
+  "海南大学": [
+    "Hainan University"
+  ],
+  "济南大学": [
+    "University of Jinan"
+  ],
+  "山东农业大学": [
+    "Shandong Agricultural University"
+  ],
+  "常州大学": [
+    "Changzhou University"
+  ],
+  "温州大学": [
+    "Wenzhou University"
+  ],
+  "重庆邮电大学": [
+    "Chongqing University of Posts and Telecommunications"
+  ],
+  "齐鲁工业大学": [
+    "齐鲁工业大学山东省科学院",
+    "Qilu University of Technology"
+  ],
+  "曲阜师范大学": [
+    "Qufu Normal University"
+  ],
+  "武汉工程大学": [
+    "Wuhan Institute of Technology"
+  ],
+  "湖南农业大学": [
+    "Hunan Agricultural University"
+  ],
+  "天津工业大学": [
+    "Tiangong University",
+    "Tianjin Polytechnic University"
+  ],
+  "安徽农业大学": [
+    "Anhui Agricultural University"
+  ],
+  "江苏科技大学": [
+    "Jiangsu University of Science and Technology"
+  ],
+  "浙江农林大学": [
+    "Zhejiang A&F University"
+  ],
+  "北方工业大学": [
+    "North China University of Technology"
+  ],
+  "广西师范大学": [
+    "Guangxi Normal University"
+  ],
+  "吉林农业大学": [
+    "Jilin Agricultural University"
+  ],
+  "青岛科技大学": [
+    "Qingdao University of Science and Technology"
+  ],
+  "四川农业大学": [
+    "Sichuan Agricultural University"
+  ],
+  "西北师范大学": [
+    "Northwest Normal University China"
+  ],
+  "南通大学": [
+    "Nantong University"
+  ],
+  "石河子大学": [
+    "Shihezi University"
+  ],
+  "上海海洋大学": [
+    "Shanghai Ocean University"
+  ],
+  "三峡大学": [
+    "China Three Gorges University"
+  ],
+  "安徽工业大学": [
+    "Anhui University of Technology"
+  ],
+  "河南理工大学": [
+    "Henan Polytechnic University"
+  ],
+  "宁夏大学": [
+    "Ningxia University"
+  ],
+  "西安科技大学": [
+    "Xi'an University of Science and Technology"
+  ],
+  "上海海事大学": [
+    "Shanghai Maritime University"
+  ],
+  "成都理工大学": [
+    "Chengdu University of Technology"
+  ],
+  "南昌航空大学": [
+    "Nanchang Hangkong University"
+  ],
+  "长春理工大学": [
+    "Changchun University of Science and Technology"
+  ],
+  "辽宁师范大学": [
+    "Liaoning Normal University"
+  ],
+  "西南科技大学": [
+    "Southwest University of Science and Technology"
+  ],
+  "河北农业大学": [
+    "Hebei Agricultural University"
+  ],
+  "中北大学": [
+    "North University of China"
+  ],
+  "青海大学": [
+    "Qinghai University"
+  ],
+  "集美大学": [
+    "Jimei University"
+  ],
+  "武汉纺织大学": [
+    "Wuhan Textile University"
+  ],
+  "天津理工大学": [
+    "Tianjin University of Technology"
+  ],
+  "四川师范大学": [
+    "Sichuan Normal University"
+  ],
+  "云南师范大学": [
+    "Yunnan Normal University"
+  ],
+  "浙江海洋大学": [
+    "Zhejiang Ocean University"
+  ],
+  "天津科技大学": [
+    "Tianjin University of Science and Technology"
+  ],
+  "湖南科技大学": [
+    "Hunan University of Science and Technology"
+  ],
+  "重庆交通大学": [
+    "Chongqing Jiaotong University"
+  ],
+  "长江大学": [
+    "Yangtze University"
+  ],
+  "兰州理工大学": [
+    "Lanzhou University of Technology"
+  ],
+  "山东理工大学": [
+    "Shandong University of Technology"
+  ],
+  "安徽理工大学": [
+    "Anhui University of Science and Technology"
+  ],
+  "烟台大学": [
+    "Yantai University"
+  ],
+  "大连工业大学": [
+    "Dalian Polytechnic University"
+  ],
+  "哈尔滨理工大学": [
+    "Harbin University of Science and Technology"
+  ],
+  "沈阳师范大学": [
+    "Shenyang Normal University"
+  ],
+  "延边大学": [
+    "Yanbian University"
+  ],
+  "内蒙古农业大学": [
+    "Inner Mongolia Agricultural University"
+  ],
+  "河南科技大学": [
+    "Henan University of Science and Technology"
+  ],
+  "南华大学": [
+    "University of South China"
+  ],
+  "哈尔滨师范大学": [
+    "Harbin Normal University"
+  ],
+  "石家庄铁道大学": [
+    "Shijiazhuang Tiedao University"
+  ],
+  "北京信息科技大学": [
+    "Beijing Information Science and Technology University",
+    "Beijing Information Science & Technology University"
+  ],
+  "沈阳建筑大学": [
+    "Shenyang Jianzhu University"
+  ],
+  "青岛农业大学": [
+    "Qingdao Agricultural University"
+  ],
+  "上海工程技术大学": [
+    "Shanghai University of Engineering Science"
+  ],
+  "河南工业大学": [
+    "Henan University of Technology"
+  ],
+  "江西理工大学": [
+    "Jiangxi University of Science and Technology"
+  ],
+  "中南林业科技大学": [
+    "Central South University of Forestry & Technology",
+    "Central South University of Forestry and Technology"
+  ],
+  "北京农学院": [
+    "Beijing University of Agriculture"
+  ],
+  "重庆师范大学": [
+    "Chongqing Normal University"
+  ],
+  "江西农业大学": [
+    "Jiangxi Agricultural University"
+  ],
+  "兰州交通大学": [
+    "Lanzhou Jiaotong University"
+  ],
+  "西藏大学": [
+    "Tibet University"
+  ],
+  "沈阳工业大学": [
+    "Shenyang University of Technology"
+  ],
+  "华东交通大学": [
+    "East China Jiaotong University"
+  ],
+  "沈阳航空航天大学": [
+    "Shenyang Aerospace University"
+  ],
+  "西安邮电大学": [
+    "Xi'an University of Posts and Telecommunications"
+  ],
+  "东华理工大学": [
+    "East China University of Technology"
+  ],
+  "东北电力大学": [
+    "Northeast Electric Power University"
+  ],
+  "上海电力大学": [
+    "Shanghai University of Electric Power"
+  ],
+  "鲁东大学": [
+    "Ludong University"
+  ],
+  "国际关系学院": [
+    "University of International Relations"
+  ],
+  "大连大学": [
+    "Dalian University"
+  ],
+  "苏州科技大学": [
+    "Suzhou University of Science and Technology"
+  ],
+  "河北科技大学": [
+    "Hebei University of Science and Technology"
+  ],
+  "渤海大学": [
+    "Bohai University"
+  ],
+  "华北理工大学": [
+    "North China University of Science and Technology"
+  ],
+  "甘肃农业大学": [
+    "Gansu Agricultural University"
+  ],
+  "北京印刷学院": [
+    "Beijing Institute of Graphic Communication"
+  ],
+  "重庆理工大学": [
+    "Chongqing University of Technology"
+  ],
+  "西安石油大学": [
+    "Xi'an Shiyou University"
+  ],
+  "海南师范大学": [
+    "Hainan Normal University"
+  ],
+  "上海应用技术大学": [
+    "Shanghai Institute of Technology"
+  ],
+  "桂林电子科技大学": [
+    "Guilin University of Electronic Technology"
+  ],
+  "聊城大学": [
+    "Liaocheng University"
+  ],
+  "郑州轻工业大学": [
+    "Zhengzhou University of Light Industry"
+  ],
+  "武汉轻工大学": [
+    "Wuhan Polytechnic University"
+  ],
+  "安徽建筑大学": [
+    "Anhui jianzhu University"
+  ],
+  "东北石油大学": [
+    "Northeast Petroleum University"
+  ],
+  "成都信息工程大学": [
+    "Chengdu University of Information Technology"
+  ],
+  "东莞理工学院": [
+    "Dongguan University of Technology"
+  ],
+  "大连交通大学": [
+    "Dalian Jiaotong University"
+  ],
+  "山东建筑大学": [
+    "Shandong Jianzhu University"
+  ],
+  "西华师范大学": [
+    "China West Normal University"
+  ],
+  "西安工程大学": [
+    "Xi'an Polytechnic University"
+  ],
+  "贵州师范大学": [
+    "Guizhou Normal University"
+  ],
+  "成都大学": [
+    "Chengdu University"
+  ],
+  "西安工业大学": [
+    "Xi'an Technological University"
+  ],
+  "浙大宁波理工学院": [
+    "NingboTech University",
+    "Ningbo Institute of Technology ZJU"
+  ],
+  "佛山科学技术学院": [
+    "Foshan University"
+  ],
+  "山西农业大学": [
+    "Shanxi Agricultural University"
+  ],
+  "青岛理工大学": [
+    "Qingdao University of Technology"
+  ],
+  "华北水利水电大学": [
+    "North China University of Water Resources and Electric Power"
+  ],
+  "厦门理工学院": [
+    "Xiamen University of Technology"
+  ],
+  "北京电子科技学院": [
+    "中共中央办公厅电子科技学院",
+    "Beijing Electronic Science and Technology Institute"
+  ],
+  "南京工程学院": [
+    "Nanjing Institute of Technology"
+  ],
+  "北京联合大学": [
+    "Beijing Union University"
+  ],
+  "长春工业大学": [
+    "Changchun University of Technology"
+  ],
+  "辽宁工程技术大学": [
+    "Liaoning Technical University"
+  ],
+  "湖州师范学院": [
+    "Huzhou University"
+  ],
+  "江汉大学": [
+    "Jianghan University"
+  ],
+  "辽宁石油化工大学": [
+    "Liaoning shihua University"
+  ],
+  "青海师范大学": [
+    "Qinghai Normal University"
+  ],
+  "吉林师范大学": [
+    "Jilin Normal University"
+  ],
+  "北京石油化工学院": [
+    "Beijing Institute of Petrochemical Technology"
+  ],
+  "内蒙古师范大学": [
+    "Inner Mongolia Normal University"
+  ],
+  "中国民航大学": [
+    "Civil Aviation University of China"
+  ],
+  "辽宁工业大学": [
+    "Liaoning University of Technology"
+  ],
+  "湖南工业大学": [
+    "Hunan University of Technology"
+  ],
+  "延安大学": [
+    "Yan'an University"
+  ],
+  "西华大学": [
+    "Xihua University"
+  ],
+  "桂林理工大学": [
+    "Guilin University of Technology"
+  ],
+  "河北工程大学": [
+    "Hebei University of Engineering"
+  ],
+  "沈阳化工大学": [
+    "Shenyang University of Chemical Technology"
+  ],
+  "绍兴文理学院": [
+    "Shaoxing University"
+  ],
+  "安徽工程大学": [
+    "Anhui Polytechnic University"
+  ],
+  "盐城工学院": [
+    "Yancheng Institute of Technology"
+  ],
+  "盐城师范学院": [
+    "Yancheng Teachers University"
+  ],
+  "山西师范大学": [
+    "Shanxi Normal University"
+  ],
+  "赣南师范大学": [
+    "GanNan Normal University"
+  ],
+  "大连海洋大学": [
+    "Dalian Ocean University"
+  ],
+  "内蒙古工业大学": [
+    "Inner Mongolia University of Technology"
+  ],
+  "淮阴师范学院": [
+    "Huaiyin Normal University"
+  ],
+  "信阳师范学院": [
+    "Xinyang Normal University"
+  ],
+  "安庆师范大学": [
+    "Anqing Normal University"
+  ],
+  "合肥学院": [
+    "Hefei University"
+  ],
+  "云南农业大学": [
+    "Yunnan Agricultural University"
+  ],
+  "辽宁科技大学": [
+    "University of Science and Technology Liaoning"
+  ],
+  "南宁师范大学": [
+    "Guangxi Teachers Education University"
+  ],
+  "沈阳理工大学": [
+    "Shenyang Ligong University"
+  ],
+  "内蒙古民族大学": [
+    "Inner Mongolia University for Nationalities"
+  ],
+  "新疆师范大学": [
+    "Xinjiang Normal University"
+  ],
+  "湖北师范大学": [
+    "Hubei Normal University"
+  ],
+  "重庆科技学院": [
+    "Chongqing University of Science and Technology"
+  ],
+  "淮阴工学院": [
+    "Huaiyin Institute of Technology"
+  ],
+  "吉林建筑大学": [
+    "Jilin Jianzhu University"
+  ],
+  "中原工学院": [
+    "Zhongyuan University of Technology"
+  ],
+  "北华大学": [
+    "Beihua University"
+  ],
+  "嘉兴学院": [
+    "Jiaxing University"
+  ],
+  "临沂大学": [
+    "Linyi University"
+  ],
+  "吉首大学": [
+    "Jishou University"
+  ],
+  "景德镇陶瓷大学": [
+    "Jingdezhen Ceramic Institute"
+  ],
+  "广东技术师范大学": [
+    "Guangdong Polytechnic Normal University"
+  ],
+  "淮北师范大学": [
+    "Huaibei Normal University"
+  ],
+  "广东海洋大学": [
+    "Guangdong Ocean University"
+  ],
+  "长江师范学院": [
+    "Yangtze Normal University"
+  ],
+  "宁波工程学院": [
+    "Ningbo University of Technology"
+  ],
+  "上海海关学院": [
+    "Shanghai Customs College"
+  ],
+  "黑龙江八一农垦大学": [
+    "Heilongjiang Bayi Agricultural University"
+  ],
+  "江西科技师范大学": [
+    "Jiangxi Science and Technology Normal University"
+  ],
+  "安阳师范学院": [
+    "Anyang Normal University"
+  ],
+  "西南林业大学": [
+    "Southwest Forestry University"
+  ],
+  "新疆农业大学": [
+    "Xinjiang Agricultural University"
+  ],
+  "闽南师范大学": [
+    "Minnan Normal University"
+  ],
+  "天津城建大学": [
+    "Tianjin Chengjian University"
+  ],
+  "福建工程学院": [
+    "Fujian University of Technology"
+  ],
+  "沈阳大学": [
+    "Shenyang University"
+  ],
+  "五邑大学": [
+    "Wuyi University"
+  ],
+  "内蒙古科技大学": [
+    "Inner Mongolia University of Science and Technology",
+    "Inner Mongolia University of Science & Technology"
+  ],
+  "江苏理工学院": [
+    "Jiangsu University of Technology"
+  ],
+  "上海第二工业大学": [
+    "Shanghai Polytechnic University",
+    "Shanghai Second Polytechnic University"
+  ],
+  "浙大城市学院": [
+    "Zhejiang University City College"
+  ],
+  "太原科技大学": [
+    "Taiyuan University of Science and Technology"
+  ],
+  "岭南师范学院": [
+    "LingNan Normal University"
+  ],
+  "天津农学院": [
+    "Tianjin Agricultural University"
+  ],
+  "塔里木大学": [
+    "Tarim University"
+  ],
+  "南京晓庄学院": [
+    "Nanjing XiaoZhuang University"
+  ],
+  "大理大学": [
+    "Dali University"
+  ],
+  "井冈山大学": [
+    "Jinggangshan University"
+  ],
+  "湖南理工学院": [
+    "Hunan Institute of Science and Technology"
+  ],
+  "江苏海洋大学": [
+    "Huaihai Institute of Technology"
+  ],
+  "台州学院": [
+    "Taizhou University"
+  ],
+  "闽江学院": [
+    "Minjiang University"
+  ],
+  "黄冈师范学院": [
+    "Huanggang Normal University"
+  ],
+  "重庆文理学院": [
+    "Chongqing University of Arts and Science"
+  ],
+  "浙江万里学院": [
+    "Zhejiang Wanli University"
+  ],
+  "齐齐哈尔大学": [
+    "Qiqihar University"
+  ],
+  "四川轻化工大学": [
+    "Sichuan University of Science and Engineering"
+  ],
+  "南昌工程学院": [
+    "Nanchang Institute of Technology"
+  ],
+  "天津职业技术师范大学": [
+    "TianJin University of Technology and Education"
+  ],
+  "上海电机学院": [
+    "Shanghai Dianji University"
+  ],
+  "湖北科技学院": [
+    "Hubei University of Science and Technology"
+  ],
+  "陕西理工大学": [
+    "Shaanxi University of Technology"
+  ],
+  "内江师范学院": [
+    "Neijiang Normal University"
+  ],
+  "合肥师范学院": [
+    "Hefei Normal University"
+  ],
+  "阜阳师范大学": [
+    "Fuyang Normal University"
+  ],
+  "南阳师范学院": [
+    "Nanyang Normal University"
+  ],
+  "贵州师范学院": [
+    "Guizhou Education University",
+    "Guizhou Normal College"
+  ],
+  "徐州工程学院": [
+    "Xuzhou Institute of Technology",
+    "Xuzhou University of Technology"
+  ],
+  "洛阳师范学院": [
+    "Luoyang Normal University"
+  ],
+  "仲恺农业工程学院": [
+    "Zhongkai University of Agriculture and Engineering"
+  ],
+  "长春师范大学": [
+    "Changchun Normal University"
+  ],
+  "湖北文理学院": [
+    "Hubei University of Arts and Science"
+  ],
+  "宝鸡文理学院": [
+    "Baoji University of Arts and Sciences"
+  ],
+  "安徽科技学院": [
+    "Anhui Science and Technology University"
+  ],
+  "长沙学院": [
+    "Changsha University"
+  ],
+  "衡阳师范学院": [
+    "Hengyang Normal University"
+  ],
+  "无锡学院": [
+    "Nanjing University of Information Science and Technology, Binjiang College"
+  ],
+  "滨州学院": [
+    "Binzhou University"
+  ],
+  "长春大学": [
+    "Changchun University"
+  ],
+  "黑龙江科技大学": [
+    "Heilongjiang University of Science and Technology"
+  ],
+  "泉州师范学院": [
+    "Quanzhou Normal University"
+  ],
+  "河北科技师范学院": [
+    "Hebei Normal University of Science and Technology"
+  ],
+  "广西科技大学": [
+    "Guangxi University of Science and Technology"
+  ],
+  "江苏第二师范学院": [
+    "Jiangsu Second Normal University"
+  ],
+  "西藏农牧学院": [
+    "Tibet Agriculture and Animal Husbandry University"
+  ],
+  "贵州理工学院": [
+    "Guizhou Institute of Technology"
+  ],
+  "咸阳师范学院": [
+    "Xianyang Normal University"
+  ],
+  "九江学院": [
+    "Jiujiang University"
+  ],
+  "绵阳师范学院": [
+    "Mianyang Teachers' College"
+  ],
+  "湖北汽车工业学院": [
+    "Hubei University of Automotive Technology"
+  ],
+  "常州工学院": [
+    "Changzhou Institute of Technology"
+  ],
+  "金陵科技学院": [
+    "Jinling Institute of Technology"
+  ],
+  "黑龙江工程学院": [
+    "Heilongjiang Institute of Technology"
+  ],
+  "乐山师范学院": [
+    "Leshan Normal University"
+  ],
+  "潍坊学院": [
+    "Weifang University"
+  ],
+  "佳木斯大学": [
+    "Jiamusi University"
+  ],
+  "唐山师范学院": [
+    "Tangshan Normal University"
+  ],
+  "山东交通学院": [
+    "Shandong Jiaotong University"
+  ],
+  "广东石油化工学院": [
+    "Guangdong University of Petrochemical Technology"
+  ],
+  "河北建筑工程学院": [
+    "Hebei University of Architecture"
+  ],
+  "湖北工程学院": [
+    "Hubei Engineering University"
+  ],
+  "惠州学院": [
+    "Huizhou University"
+  ],
+  "成都工业学院": [
+    "Chengdu Technological University"
+  ],
+  "丽水学院": [
+    "Lishui University"
+  ],
+  "黄淮学院": [
+    "Huanghuai University"
+  ],
+  "许昌学院": [
+    "Xuchang University"
+  ],
+  "北华航天工业学院": [
+    "North China Institute of Aerospace Engineering"
+  ],
+  "湖北第二师范学院": [
+    "Hubei University of Education"
+  ],
+  "湖南第一师范学院": [
+    "Hunan First Normal University"
+  ],
+  "湖南文理学院": [
+    "Hunan University of Arts and Science"
+  ],
+  "周口师范学院": [
+    "Zhoukou Normal University"
+  ],
+  "成都师范学院": [
+    "Chengdu Normal University"
+  ],
+  "重庆三峡学院": [
+    "Chongqing Three Gorges University"
+  ],
+  "铜仁学院": [
+    "Tongren University"
+  ],
+  "遵义师范学院": [
+    "Zunyi Normal University"
+  ],
+  "上饶师范学院": [
+    "Shangrao Normal University"
+  ],
+  "商丘师范学院": [
+    "Shangqiu Normal University"
+  ],
+  "宜春学院": [
+    "Yichun University"
+  ],
+  "浙江水利水电学院": [
+    "Zhejiang University of Water Resources and Electric Power"
+  ],
+  "滁州学院": [
+    "Chuzhou University"
+  ],
+  "吉林化工学院": [
+    "Jilin Institute of Chemical Technology"
+  ],
+  "德州学院": [
+    "Dezhou University"
+  ],
+  "肇庆学院": [
+    "Zhaoqing University"
+  ],
+  "泰山学院": [
+    "Taishan University"
+  ],
+  "广东第二师范学院": [
+    "Guangdong University of Education"
+  ],
+  "沈阳工程学院": [
+    "Shenyang Institute of Engineering"
+  ],
+  "榆林学院": [
+    "Yulin University"
+  ],
+  "长春工程学院": [
+    "Changchun Institute of Technology"
+  ],
+  "洛阳理工学院": [
+    "Luoyang Institute of Science and Technology"
+  ],
+  "韩山师范学院": [
+    "Hanshan Normal University"
+  ],
+  "河北科技工程职业技术大学": [
+    "North China Electric Power University Science and Technology College"
+  ],
+  "天水师范学院": [
+    "Tianshui Normal University"
+  ],
+  "北部湾大学": [
+    "Beibu Gulf University"
+  ],
+  "西安文理学院": [
+    "Xi'an University"
+  ],
+  "齐鲁师范学院": [
+    "Qilu Normal University"
+  ],
+  "皖西学院": [
+    "West AnHui University"
+  ],
+  "哈尔滨学院": [
+    "Harbin University"
+  ],
+  "湖南城市学院": [
+    "Hunan City University"
+  ],
+  "通化师范学院": [
+    "Tonghua Normal University"
+  ],
+  "防灾科技学院": [
+    "Institute of Disaster Prevention"
+  ],
+  "宜宾学院": [
+    "Yibin University"
+  ],
+  "河北工业职业技术大学": [
+    "Polytechnic College of Hebei University of Science and Technology"
+  ],
+  "兰州城市学院": [
+    "Lanzhou City University"
+  ],
+  "河南科技学院": [
+    "Henan Institute of Science and Technology"
+  ],
+  "宁夏师范学院": [
+    "Ningxia Normal University"
+  ],
+  "曲靖师范学院": [
+    "Qujing Normal University"
+  ],
+  "渭南师范学院": [
+    "Weinan Normal University"
+  ],
+  "玉林师范学院": [
+    "Yulin Normal University"
+  ],
+  "南京特殊教育师范学院": [
+    "Nanjing Normal University of Special Education"
+  ],
+  "华北科技学院": [
+    "North China Institute of Science and Technology"
+  ],
+  "唐山学院": [
+    "Tangshan College"
+  ],
+  "韶关学院": [
+    "Shaoguan University"
+  ],
+  "河西学院": [
+    "HeXi University"
+  ],
+  "黄山学院": [
+    "Huangshan University"
+  ],
+  "中国民用航空飞行学院": [
+    "Civil Aviation Flight University of China"
+  ],
+  "湖南工程学院": [
+    "Hunan Institute of Engineering"
+  ],
+  "三明学院": [
+    "Sanming University"
+  ],
+  "泰州学院": [
+    "Taizhou University"
+  ],
+  "湖北理工学院": [
+    "Hubei Polytechnic University"
+  ],
+  "石家庄学院": [
+    "Shijiazhuang University"
+  ],
+  "莆田学院": [
+    "Putian University"
+  ],
+  "龙岩学院": [
+    "Longyan University"
+  ],
+  "内蒙古科技大学包头师范学院": [
+    "Baotou Teachers' College"
+  ],
+  "安顺学院": [
+    "Anshun University"
+  ],
+  "南昌师范学院": [
+    "Nanchang Normal University"
+  ],
+  "四川文理学院": [
+    "Sichuan University of Arts and Science"
+  ],
+  "廊坊师范学院": [
+    "Langfang Teachers University"
+  ],
+  "玉溪师范学院": [
+    "Yuxi Normal University"
+  ],
+  "河南城建学院": [
+    "Henan University of Urban Construction"
+  ],
+  "重庆第二师范学院": [
+    "Chongqing University of Education"
+  ],
+  "西昌学院": [
+    "Xichang College"
+  ],
+  "凯里学院": [
+    "Kaili University"
+  ],
+  "牡丹江师范学院": [
+    "Mudanjiang Normal University"
+  ],
+  "四川旅游学院": [
+    "Sichuan Tourism University"
+  ],
+  "郑州师范学院": [
+    "Zhengzhou Normal University"
+  ],
+  "大庆师范学院": [
+    "Daqing Normal University"
+  ],
+  "攀枝花学院": [
+    "Panzhihua University"
+  ],
+  "昆明学院": [
+    "Kunming University"
+  ],
+  "衢州学院": [
+    "Quzhou University"
+  ],
+  "白城师范学院": [
+    "Baicheng Normal University"
+  ],
+  "吉林工程技术师范学院": [
+    "Jilin Engineering Normal University"
+  ],
+  "淮南师范学院": [
+    "Huainan Normal University"
+  ],
+  "湖州学院": [
+    "Huzhou University Qiuzhen College"
+  ],
+  "嘉应学院": [
+    "Jiaying University"
+  ],
+  "南阳理工学院": [
+    "Nanyang Institute of Technology"
+  ],
+  "营口理工学院": [
+    "YingKou Institute of Technology"
+  ],
+  "商洛学院": [
+    "Shangluo University"
+  ],
+  "陇东学院": [
+    "Long Dong University"
+  ],
+  "保定学院": [
+    "Baoding University"
+  ],
+  "苏州城市学院": [
+    "Wenzheng College of Soochow University"
+  ],
+  "安康学院": [
+    "Ankang University"
+  ],
+  "湖南科技学院": [
+    "Hunan University of Science and Engineering"
+  ],
+  "山东管理学院": [
+    "Shandong Management University"
+  ],
+  "贵阳学院": [
+    "Guiyang University"
+  ],
+  "辽宁科技学院": [
+    "Liaoning Institute of Science and Technology"
+  ],
+  "武夷学院": [
+    "Wuyi University"
+  ],
+  "鞍山师范学院": [
+    "Anshan Normal University Liaoning China"
+  ],
+  "湘南学院": [
+    "Xiangnan University"
+  ],
+  "六盘水师范学院": [
+    "Liupanshui Normal University"
+  ],
+  "河南牧业经济学院": [
+    "Henan University of Animal Husbandry and Economy"
+  ],
+  "平顶山学院": [
+    "Pingdingshan University"
+  ],
+  "贺州学院": [
+    "Hezhou University"
+  ],
+  "兰州工业学院": [
+    "Lanzhou Institute of Technology"
+  ],
+  "宁德师范学院": [
+    "Ningde Normal University"
+  ],
+  "池州学院": [
+    "Chizhou University"
+  ],
+  "黔南民族师范学院": [
+    "Qiannan Normal University for Nationalities",
+    "Qiannan Normal College for Nationalities"
+  ],
+  "太原师范学院": [
+    "Taiyuan Normal University"
+  ],
+  "宿州学院": [
+    "Suzhou University"
+  ],
+  "山东石油化工学院": [
+    "Shengli College China University of Petroleum",
+    "Shandong Institute of Petroleum and Chemical Technology"
+  ],
+  "海南热带海洋学院": [
+    "Hainan Tropical Ocean University"
+  ],
+  "黑河学院": [
+    "Heihe University"
+  ],
+  "吉林农业科技学院": [
+    "Jilin Agricultural Science and Technology University"
+  ],
+  "辽东学院": [
+    "Eastern Liaoning University"
+  ],
+  "山西大同大学": [
+    "Shanxi Datong University"
+  ],
+  "西安航空学院": [
+    "Xi'an Aeronautical University"
+  ],
+  "陕西学前师范学院": [
+    "Shaanxi Xueqian Normal University"
+  ],
+  "四川民族学院": [
+    "Sichuan University for Nationalities"
+  ],
+  "山东农业工程学院": [
+    "Shandong Agriculture and Engineering University"
+  ],
+  "蚌埠学院": [
+    "Bengbu University"
+  ],
+  "怀化学院": [
+    "Huaihua University"
+  ],
+  "新余学院": [
+    "Xinyu University"
+  ],
+  "邵阳学院": [
+    "Shaoyang University"
+  ],
+  "楚雄师范学院": [
+    "Chuxiong Normal University"
+  ],
+  "河南工程学院": [
+    "Henan University of Engineering"
+  ],
+  "济宁学院": [
+    "Jining University"
+  ],
+  "喀什大学": [
+    "Kashi University"
+  ],
+  "兰州文理学院": [
+    "Lanzhou University of Arts and Science"
+  ],
+  "赤峰学院": [
+    "Chifeng University"
+  ],
+  "汉江师范学院": [
+    "Hanjiang Normal University"
+  ],
+  "伊犁师范大学": [
+    "Yili Normal University"
+  ],
+  "贵州工程应用技术学院": [
+    "Guizhou University of Engineering Science"
+  ],
+  "邢台学院": [
+    "Xingtai University"
+  ],
+  "邯郸学院": [
+    "Handan College"
+  ],
+  "衡水学院": [
+    "Hengshui University"
+  ],
+  "晋中学院": [
+    "Jinzhong University"
+  ],
+  "梧州学院": [
+    "Wuzhou University"
+  ],
+  "菏泽学院": [
+    "Heze University"
+  ],
+  "红河学院": [
+    "Honghe University"
+  ],
+  "甘肃民族师范学院": [
+    "Gansu Normal University for Nationalities"
+  ],
+  "呼伦贝尔学院": [
+    "Hulunbuir University"
+  ],
+  "山东女子学院": [
+    "Shandong Women's University"
+  ],
+  "湖南人文科技学院": [
+    "Hunan University of Humanities, Science and Technology"
+  ],
+  "广州航海学院": [
+    "Guangzhou Maritime University"
+  ],
+  "新乡学院": [
+    "Xinxiang University"
+  ],
+  "百色学院": [
+    "Baise University"
+  ],
+  "沧州师范学院": [
+    "Cangzhou Normal University"
+  ],
+  "景德镇学院": [
+    "Jingdezhen University"
+  ],
+  "福建技术师范学院": [
+    "Fujian Polytechnic Normal University"
+  ],
+  "赣南科技学院": [
+    "College of Applied Science, Jiangxi University of Science and Technology"
+  ],
+  "广西民族师范学院": [
+    "Guangxi Normal University for Nationalities"
+  ],
+  "荆楚理工学院": [
+    "Jingchu University of Technology"
+  ],
+  "安阳工学院": [
+    "Anyang Institute of Technology"
+  ],
+  "阿坝师范学院": [
+    "Aba Teachers University",
+    "Aba Teachers College"
+  ],
+  "信阳农林学院": [
+    "Xinyang Agriculture and Forestry University"
+  ],
+  "巢湖学院": [
+    "Chaohu University"
+  ],
+  "河北民族师范学院": [
+    "Hebei Normal University for Nationalities"
+  ],
+  "桂林航天工业学院": [
+    "Guilin University of Aerospace Technology"
+  ],
+  "长治学院": [
+    "Changzhi University"
+  ],
+  "河池学院": [
+    "Hechi University"
+  ],
+  "河北环境工程学院": [
+    "Hebei University of Environmental Engineering"
+  ],
+  "张家口学院": [
+    "Zhangjiakou University"
+  ],
+  "湖南工学院": [
+    "Hunan Institute of Technology"
+  ],
+  "河南工学院": [
+    "Henan Institute of Technology"
+  ],
+  "兴义民族师范学院": [
+    "Xingyi Normal University for Nationalities"
+  ],
+  "绥化学院": [
+    "Suihua University"
+  ],
+  "温州理工学院": [
+    "Wenzhou University Oujiang College"
+  ],
+  "保山学院": [
+    "Baoshan University"
+  ],
+  "山东青年政治学院": [
+    "Shandong Youth University of Political Science"
+  ],
+  "长沙师范学院": [
+    "Changsha Normal University"
+  ],
+  "枣庄学院": [
+    "Zaozhuang University"
+  ],
+  "郑州工程技术学院": [
+    "Zhengzhou Institute of Technology"
+  ],
+  "运城学院": [
+    "Yuncheng University"
+  ],
+  "文山学院": [
+    "Wenshan University"
+  ],
+  "吕梁学院": [
+    "Luliang University"
+  ],
+  "新疆工程学院": [
+    "Xinjiang Institute of Engineering"
+  ],
+  "普洱学院": [
+    "Puer University"
+  ],
+  "萍乡学院": [
+    "Pingxiang University"
+  ],
+  "集宁师范学院": [
+    "Jining Normal University"
+  ],
+  "滇西科技师范学院": [
+    "West Yunnan University"
+  ],
+  "太原工业学院": [
+    "Taiyuan Institute of Technology"
+  ],
+  "新疆理工学院": [
+    "Xinjiang Institute of Technology"
+  ],
+  "广西科技师范学院": [
+    "Guangxi Science and Technology Normal University"
+  ],
+  "昭通学院": [
+    "Zhaotong University"
+  ],
+  "忻州师范学院": [
+    "Xinzhou Teachers University"
+  ],
+  "河北石油职业技术大学": [
+    "Hebei University of Technology City College"
+  ],
+  "昌吉学院": [
+    "Changji University"
+  ],
+  "琼台师范学院": [
+    "Qiongtai Normal University"
+  ],
+  "鄂尔多斯应用技术学院": [
+    "Ordos Institute of Technology"
+  ],
+  "黑龙江工业学院": [
+    "Heilongjiang University of Technology"
+  ],
+  "新疆政法学院": [
+    "Xinjiang University of Political Science and Law"
+  ],
+  "山西能源学院": [
+    "Shanxi Institute of Energy"
+  ],
+  "赣东学院": [
+    "East China Institute of Technology, Yangtze River College"
+  ],
+  "河套学院": [
+    "Hetao University"
+  ],
+  "亳州学院": [
+    "Bozhou University"
+  ],
+  "豫章师范学院": [
+    "Yuzhang Normal University"
+  ],
+  "山西工程技术学院": [
+    "Shanxi Institute of Technology"
+  ],
+  "太原学院": [
+    "Taiyuan University"
+  ],
+  "信息工程大学": [
+    "中国人民解放军战略支援部队信息工程大学",
+    "战略支援部队信息工程大学",
+    "Information Engineering University",
+    "战略支援信息工程大学",
+    "中国人民解放军网络空间部队信息工程大学",
+    "Information Engineering University of the Peoples Liberation Army",
+    "解放军信息工程大学",
+    "中国人民解放军信息工程大学"
+  ],
+  "国防科技大学": [
+    "中国人民解放军国防科技大学",
+    "National University of Defense Technology"
+  ],
+  "陆军工程大学": [
+    "中国人民解放军陆军工程大学",
+    "Army Engineering University of PLA",
+    "中国人民解放军理工大学"
+  ],
+  "北京理工大学珠海学院": [
+    "Beijing Institute of Technology, Zhuhai"
+  ],
+  "北京师范大学珠海校区": [
+    "Beijing Normal University at Zhuhai"
+  ],
+  "北京师范大学香港浸会大学联合国际学院": [
+    "Beijing Normal University-Hong Kong Baptist University United International College",
+    "Beijing Normal-Hong Kong Baptist University",
+    "北师香港浸会大学"
+  ],
+  "电子科技大学成都学院": [
+    "Chengdu College of University of Electronic Science and Technology of China"
+  ],
+  "成都东软学院": [
+    "Chengdu Neusoft University"
+  ],
+  "中国计量大学现代科技学院": [
+    "CHINA JILIANG UNIVERSITY College of Modern Science and Technology"
+  ],
+  "中华大学": [
+    "中華大學",
+    "Chung Hua University"
+  ],
+  "香港城市大学": [
+    "City University of Hong Kong"
+  ],
+  "澳门城市大学": [
+    "City University of Macau"
+  ],
+  "中国传媒大学": [
+    "Communication University of China"
+  ],
+  "广东医科大学": [
+    "Guangdong Medical University"
+  ],
+  "广东外语外贸大学": [
+    "Guangdong University of Foreign Studies"
+  ],
+  "哈尔滨工业大学（深圳）": [
+    "Harbin Institute of Technology at Shenzhen",
+    "Harbin Institute of Technology Shenzhen"
+  ],
+  "哈尔滨工业大学（威海）": [
+    "Harbin Institute of Technology Weihai",
+    "Harbin Institute of Technology at Weihai"
+  ],
+  "哈尔滨理工大学荣成校区": [
+    "Harbin University of Science and Technology (Rong Cheng)",
+    "Harbin University of Science and Technology at Rong Cheng"
+  ],
+  "香港浸会大学": [
+    "Hong Kong Baptist University"
+  ],
+  "香港理工大学": [
+    "Hong Kong Polytechnic University"
+  ],
+  "香港科技大学": [
+    "Hong Kong University of Science and Technology"
+  ],
+  "湖南中医药大学": [
+    "Hunan University of Chinese Medicine"
+  ],
+  "杭州电子科技大学信息工程学院": [
+    "杭电信息工程学院",
+    "Information Engineering College of Hangzhou Dianzi University",
+    "Hangzhou Dianzi University Information Engineering University",
+    "Hangzhou Dianzi University Information Engineering College"
+  ],
+  "江西财经大学": [
+    "Jiangxi University of Finance and Economics"
+  ],
+  "金策工业综合大学": [
+    "Kim Chaek University of Technology"
+  ],
+  "澳门科技大学": [
+    "Macau University of Science and Technology"
+  ],
+  "蒙古科技大学": [
+    "Mongolian university of science and technology",
+    "Mongolian University of Science and Technology"
+  ],
+  "广州南方学院": [
+    "Nanfang College Guangzhou",
+    "Nanfang College at Guangzhou"
+  ],
+  "蒙古国立大学": [
+    "National University of Mongolia"
+  ],
+  "广东东软学院": [
+    "Neusoft Institute Guangdong"
+  ],
+  "新蒙古理工学院": [
+    "New Mongol Institute of Technology"
+  ],
+  "东北大学秦皇岛分校": [
+    "Northeastern University at Qinhuangdao"
+  ],
+  "泉州信息工程学院": [
+    "Quanzhou University of Information Engineering"
+  ],
+  "天津仁爱学院": [
+    "Renai College of Tianjin University",
+    "Tianjin Renai College"
+  ],
+  "山东工商学院": [
+    "Shandong Technology and Business University"
+  ],
+  "山东大学（威海）": [
+    "Shandong University Weihai",
+    "Shandong University at Weihai"
+  ],
+  "山东财经大学": [
+    "Shandong University of Finance and Economics"
+  ],
+  "深圳技术大学": [
+    "Shenzhen Technology University"
+  ],
+  "广州软件学院": [
+    "Software Engineering Institute of Guangzhou"
+  ],
+  "中南民族大学": [
+    "South-Central Minzu University",
+    "South-Central University For Nationalities"
+  ],
+  "西南交通大学峨眉校区": [
+    "Southwest Jiaotong University E'mei"
+  ],
+  "西南民族大学": [
+    "Southwest Minzu University"
+  ],
+  "香港中文大学": [
+    "The Chinese University of Hong Kong"
+  ],
+  "香港中文大学（深圳）": [
+    "The Chinese University of Hong Kong, Shenzhen"
+  ],
+  "香港恒生大学": [
+    "The Hang Seng University of Hong Kong"
+  ],
+  "中国科学院大学": [
+    "University of Chinese Academy of Sciences"
+  ],
+  "电子科技大学中山学院": [
+    "University of Electronic Science and Technology of China, Zhongshan Institute"
+  ],
+  "香港大学": [
+    "The University of Hong Kong",
+    "University of Hong Kong"
+  ],
+  "澳门大学": [
+    "University of Macau",
+    "Universidade de Macau",
+    "澳门大学Universidade de Macau"
+  ],
+  "武汉商学院": [
+    "Wuhan Business University"
+  ],
+  "西安欧亚学院": [
+    "Xi'an Eurasia University"
+  ],
+  "浙江中医药大学": [
+    "Zhejiang Chinese Medical University"
+  ],
+  "浙江工商大学": [
+    "Zhejiang Gongshang University"
+  ],
+  "浙江财经大学": [
+    "Zhejiang University of Finance and Economics",
+    "Zhejiang University of Finance & Economics"
+  ],
+  "浙江科技大学": [
+    "浙江科技学院",
+    "Zhejiang University of Science & Technology",
+    "Zhejiang University of Science and Technology"
+  ],
+  "广州城市理工学院": [
+    "Guangzhou City University of Technology",
+    "华南理工大学广州学院"
+  ],
+  "宁波职业技术大学": [
+    "Ningbo Polytechnic University",
+    "宁波职业技术学院"
+  ],
+  "山东科技大学泰安校区": [
+    "Shandong University of Science and Technology Taian",
+    "山东科技大学泰安"
+  ],
+  "重庆移通学院": [
+    "重庆邮电大学移通学院",
+    "Chongqing College of Mobile Communication"
+  ],
+  "中国人民警察大学": [
+    "China People's Police University",
+    "中国人民武装警察部队学院"
+  ],
+  "浙江机电职业技术大学": [
+    "浙江机电职业技术学院",
+    "Zhejiang Polytechnic University of Mechanical and Electrical Engineering"
+  ],
+  "文华学院": [
+    "华中科技大学文华学院",
+    "Wenhua College"
+  ],
+  "苏州工学院": [
+    "Changshu Institute of Technology",
+    "常熟理工学院",
+    "常熟理工学院苏州工学院",
+    "Suzhou University of Technology"
+  ],
+  "武汉职业技术大学": [
+    "武汉职业技术学院",
+    "Wuhan Technical University"
+  ],
+  "绍兴理工学院": [
+    "绍兴文理学院元培学院",
+    "Shaoxing University Yuanpei College",
+    "Shaoxing Institute of Technology"
+  ],
+  "香港科技大学广州": [
+    "The Hong Kong University of Science and Technology (Guangzhou)"
+  ],
+  "培正中学": [
+    "Pui Ching Middle School"
+  ],
+  "武昌首义学院": [
+    "Wuchang Shouyi University"
+  ],
+  "西南财经大学": [
+    "SouthWestern University of Finance and Economics",
+    "Southwestern University of Finance and Economics"
+  ],
+  "濠江中学": [
+    "Hou Kong Middle School"
+  ],
+  "厦门大学嘉庚学院": [
+    "Xiamen University Tan Kah Kee College"
+  ],
+  "成都锦城学院": [
+    "Chengdu Jincheng College"
+  ],
+  "昆山杜克大学": [
+    "Duke Kunshan University"
+  ],
+  "合肥工业大学宣城校区": [
+    "Hefei University of Technology at Xuancheng"
+  ],
+  "上海纽约大学": [
+    "New York University Shanghai"
+  ],
+  "广东工业大学揭阳校区": [
+    "Guangdong University of Technology Jieyang Campus"
+  ],
+  "中国石油大学北京克拉玛依校区": [
+    "China University of Petroleum-Beijing at Karamay"
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -10,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from core import DataValidationError, DefaultNormalizer
+from core import DataValidationError, DefaultNormalizer, load_school_aliases
 
 SERIES_ID = "2026-2027"
 SERIES_TITLE = "2026–2027 ICPC + CCPC"
@@ -49,8 +50,12 @@ class RegisteredTeam:
 
 
 class PersonIndex:
-    def __init__(self, records: list[PersonRecord], normalizer: DefaultNormalizer) -> None:
+    def __init__(
+        self, records: list[PersonRecord], normalizer: DefaultNormalizer,
+        *, sum_matches: bool = False,
+    ) -> None:
         self.normalizer = normalizer
+        self.sum_matches = sum_matches
         self.by_name: dict[str, list[PersonRecord]] = {}
         for record in records:
             try:
@@ -73,6 +78,13 @@ class PersonIndex:
         ]
         if not matched:
             return None
+        if self.sum_matches:
+            # CPC Finder splits accumulated achievements across spelling variants.
+            return PersonRecord(
+                member_key, school_key,
+                round(math.fsum(item.rating for item in matched), 2),
+                tuple(sum(item.medals[i] for item in matched) for i in range(3)),
+            )
         # Duplicate historical identities occasionally survive upstream cleanup. The highest
         # rating is deterministic and agrees with the team-level maximum display policy.
         return max(matched, key=lambda item: (item.rating, item.medals, item.school, item.name))
@@ -104,7 +116,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--previous-series", type=Path, required=True)
     parser.add_argument("--current-series", type=Path)
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
-    parser.add_argument("--school-aliases", type=Path, required=True)
+    parser.add_argument(
+        "--school-aliases", type=Path,
+        default=Path(__file__).resolve().parents[1] / "config/school-aliases.json",
+    )
     parser.add_argument("--noi-data", type=Path, default=Path("data-cache/noi/normalized"))
     parser.add_argument("--ioi-data", type=Path, default=Path("data-cache/ioi"))
     parser.add_argument("--snapshot-date", required=True)
@@ -139,13 +154,7 @@ def write_json_atomic(path: Path, document: object) -> None:
 
 
 def load_normalizer(path: Path) -> DefaultNormalizer:
-    document = load_json(path)
-    aliases = {
-        alias: canonical
-        for canonical, values in document.items()
-        for alias in values
-    }
-    return DefaultNormalizer(school_aliases=aliases)
+    return DefaultNormalizer(school_aliases=load_school_aliases(path))
 
 
 def load_xcpcrating(root: Path) -> tuple[list[PersonRecord], str]:
@@ -281,7 +290,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "xcpcrating": PersonIndex(xcpcrating, normalizer),
         "xcpcElo": PersonIndex(xcpc_elo, normalizer),
         "previousSeason": PersonIndex(previous, normalizer),
-        "cpcfinder": PersonIndex(cpcfinder, normalizer),
+        "cpcfinder": PersonIndex(cpcfinder, normalizer, sum_matches=True),
     }
     metric_sources = list(METRIC_SOURCES)
     current_snapshots = {}

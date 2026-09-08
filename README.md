@@ -55,6 +55,8 @@ print(len(document["contests"]), len(document["competitors"]))
 
 也可自行构造 `Contest`/`TeamResult` 后调用 `calculate_contest_ratings` 或 `calculate_series_ratings`，从而完全脱离网络运行。`TeamResult.penalty` 使用非负毫秒；Rating 会忽略调用方提供的 `rank`，过滤非正式或无提交活动的队伍，并按 `solved` 降序、`penalty` 升序重建名次。需要单独标准化比赛时可调用 `rebuild_competition_ranks`。传入 `initial_ratings` 可从指定状态开始；默认新选手为 1400。为 `Contest.unrated_reason` 提供非空原因可只记录本场排名，所有参赛者的 rating 变化均为 0。
 
+学校别名与更名直接维护在 [config/school-aliases.json](config/school-aliases.json)，已完整纳入 658 个学校条目、730 个别名。前瞻和复盘生成器默认读取该文件，不依赖线上列表；`--school-aliases` 可指定其他本地文件。程序中通过 `core.load_school_aliases(path)` 加载后传给 `DefaultNormalizer(school_aliases=...)`。格式、歧义处理和维护方法见 [学校别名设计](doc/school-aliases.md)。
+
 生成静态站点数据：
 
 ```bash

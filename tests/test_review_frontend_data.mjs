@@ -187,9 +187,9 @@ test("published first preliminary joins all teams and retains 1972 nonzero origi
   assert.equal(analysis.agreement.value.toFixed(3), "0.736");
   // Reference values calculated with scipy.stats.spearmanr on these same filtered teams.
   const expected = {
-    power: 0.7358508830928794, xcpcrating: 0.7445437433129665,
+    power: 0.7358560837348063, xcpcrating: 0.7445437433129665,
     xcpcElo: 0.7310809988653579, previousSeason: 0.6704024441505873,
-    cpcfinder: 0.6427538492664044, medals: 0.6616287877412923,
+    cpcfinder: 0.6425002771082232, medals: 0.6615396075355272,
   };
   for (const [metric, value] of Object.entries(expected)) {
     assert.ok(Math.abs(buildReviewAnalysis(p, r.contests[0], metric).agreement.value - value) < 1e-12);

@@ -43,6 +43,7 @@ from .nowcoder import (
 from .ranking import rebuild_competition_ranks
 from .rankland import RankLandClient, normalize_srk_contest
 from .review import project_review_contest
+from .school_aliases import load_school_aliases
 from .seasons import (
     SEASON_2025_2026,
     SEASON_2026_2027,
@@ -88,6 +89,7 @@ __all__ = [
     "load_2025_2026_season",
     "load_2026_2027_season",
     "load_season",
+    "load_school_aliases",
     "hdu_leaderboard_to_contest",
     "normalize_nowcoder_page",
     "parse_noi_awards",

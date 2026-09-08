@@ -39,6 +39,8 @@
 
 覆盖率分母是本场前瞻名单中实际参赛队伍数。每个比赛首次展示计算所有指标，按前瞻对象、结果对象和指标缓存；搜索、排序、重复选择卡片均复用缓存。纯计算模块位于 `static/js/review.mjs`，不引入统计库。平均秩排序为 O(n log n)，相关系数累加为 O(n)，不需要两两枚举队伍。
 
+2026-09-08 修正前瞻中 CPC Finder 繁简身份及学校别名的累加后，复盘直接使用修正后的前瞻重新计算。首场综合战力、CPC Finder、奖牌的 Spearman ρ 分别为 0.7358560837348063、0.6425002771082232、0.6615396075355272；有效队伍数与其他评分指标不变。回归基准使用 SciPy `spearmanr` 独立复核，赛后结果快照无需修改。
+
 ## 静态契约与生成
 
 站点 schema v2 索引新增可选 `reviewPath`，相对站点索引解析。前瞻支持可选 `previews: [{id, path}]` 多场次入口，提供列表时它是完整目录，`previewPath` 如同时存在必须等于第一项路径；仅有旧 `previewPath` 仍正常加载。索引生成器收到同系列多份不同 ID 的前瞻会输出列表及首项兼容入口，拒绝同系列重复场次 ID。复盘引用必须对应已发布前瞻。
@@ -57,7 +59,7 @@
 python scripts/generate_review_data.py
 ```
 
-默认只下载首场指定 SRK，核验实际下载字节的 SHA-256 后生成复盘。可用 `--srk` 读取本地文件完全离线生成；`--preview`、`--contest-id`、`--file-id`、`--file-url`、`--sha256` 指定其他已授权场次，`--school-aliases` 和 `--overrides` 接受 JSON 映射。`--output` 指定复盘系列文件，同场替换、其他场保留，按比赛时间和 ID 排序后原子写入。该脚本不刷新赛前评分、不修改站点索引；新增入口需在站点发布时登记。
+默认只下载首场指定 SRK，核验实际下载字节的 SHA-256 后生成复盘。可用 `--srk` 读取本地文件完全离线生成；`--preview`、`--contest-id`、`--file-id`、`--file-url`、`--sha256` 指定其他已授权场次。学校别名默认使用仓库 `config/school-aliases.json`，通过 `core.load_school_aliases` 加载，与前瞻共用同一份本地维护表，不下载线上列表；`--school-aliases` 可指定替代文件，兼容规范名到别名数组和旧的别名到规范名格式，详见 [学校别名设计](school-aliases.md)。`--overrides` 接受队伍 ID 的 JSON 映射。`--output` 指定复盘系列文件，同场替换、其他场保留，按比赛时间和 ID 排序后原子写入。该脚本不刷新赛前评分、不修改站点索引；新增入口需在站点发布时登记。离线生成器回归覆盖默认本地别名表的加载。
 
 `rating.project_static_data_index` 新增 `review_publications=` 参数，与 `preview_publications=` 配合验证入口引用。`scripts/generate_static_data.py` 只复制已提交且对应本次前瞻系列的复盘快照，先发布所有内容再发布索引，不重新下载复盘结果。浏览器只访问发布 JSON，不访问上游或本地缓存。
 

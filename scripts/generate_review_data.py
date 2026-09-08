@@ -10,7 +10,7 @@ from pathlib import Path
 import httpx
 from generate_static_data import write_json_atomic
 
-from core import ContestProvenance, DefaultNormalizer, normalize_srk_contest
+from core import ContestProvenance, DefaultNormalizer, load_school_aliases, normalize_srk_contest
 from core.review import project_review_contest
 
 FILE_ID = "90036200580141056"
@@ -28,7 +28,10 @@ def main() -> None:
     parser.add_argument("--file-id", default=FILE_ID)
     parser.add_argument("--file-url", default=FILE_URL)
     parser.add_argument("--sha256", default=SHA256)
-    parser.add_argument("--school-aliases", type=Path)
+    parser.add_argument(
+        "--school-aliases", type=Path,
+        default=Path(__file__).resolve().parents[1] / "config/school-aliases.json",
+    )
     parser.add_argument(
         "--overrides", type=Path, help="JSON mapping preview team ID to result team ID"
     )
@@ -49,9 +52,7 @@ def main() -> None:
         series=preview["seriesId"],
         provenance=ContestProvenance(args.contest_id, args.file_id, args.file_url, args.sha256),
     )
-    aliases = (
-        json.loads(args.school_aliases.read_text(encoding="utf-8")) if args.school_aliases else {}
-    )
+    aliases = load_school_aliases(args.school_aliases)
     overrides = json.loads(args.overrides.read_text(encoding="utf-8")) if args.overrides else {}
     projected = project_review_contest(
         preview,
