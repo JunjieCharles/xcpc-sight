@@ -284,6 +284,70 @@ test("published 2026-2027 preview satisfies its schema", async () => {
   assert.ok(document.teams.every((team) => team.members.length > 0));
 });
 
+test("preview tooltips hide immediately on mouse leave and preserve keyboard focus", async () => {
+  const app = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const source = app.slice(app.indexOf("function attachPreviewTooltip("), app.indexOf("function previewMedalNode("));
+  const events = new Map();
+  const control = { addEventListener: (name, callback) => events.set(name, callback) };
+  let visible = false;
+  const tooltip = {
+    classList: { add: () => { visible = true; }, remove: () => { visible = false; } },
+    remove() {},
+  };
+  const attach = new Function("document", "positionPreviewTooltip",
+    `let activePreviewTooltip = null; ${source}; return attachPreviewTooltip;`)(
+    { body: { append() {} } }, () => {},
+  );
+  attach(control, tooltip);
+  events.get("mouseenter")();
+  assert.equal(visible, true);
+  events.get("mouseleave")();
+  assert.equal(visible, false);
+  events.get("focus")();
+  assert.equal(visible, true);
+  events.get("blur")();
+  assert.equal(visible, false);
+});
+
+test("history tooltip omits the member list and aligns ranks in shared columns", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../static/styles.css", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(app, /preview-history-members/);
+  assert.doesNotMatch(css, /\.preview-history-tooltip\s*\{[^}]*pointer-events:\s*auto/);
+  assert.match(app, /team\.previousSeasonHistory \? "暂无" :/);
+  assert.match(css, /\.preview-history-tooltip\s*\{[^}]*grid-template-columns:/);
+  assert.match(css, /\.preview-history-tooltip > span\.preview-history-row\s*\{[^}]*grid-template-columns:\s*subgrid/);
+  assert.match(css, /\.preview-history-rank\s*\{[^}]*text-align:\s*right;[^}]*font-variant-numeric:\s*tabular-nums/);
+});
+
+test("validates team history and abbreviates regional and final titles", async () => {
+  const { previewHistoryTitle } = await import("../static/js/preview.mjs");
+  const record = {
+    contestId: "icpc2025chengdu", contestTitle: "第 50 届 ICPC 国际大学生程序设计竞赛区域赛成都站",
+    startAt: "2025-10-26T09:10:00+08:00", teamId: "old", teamName: "历史队名",
+    rank: 1, medal: "gold", matchedMembers: 2,
+  };
+  const document = fixture();
+  document.teams[0].previousSeasonHistory = [record];
+  assert.equal(validatePreview(document), document);
+  assert.equal(previewHistoryTitle(record), "50th ICPC 成都");
+  assert.equal(previewHistoryTitle({ contestId: "ccpc2025final", contestTitle: "第十一届中国大学生程序设计竞赛总决赛" }), "11th CCPC Final");
+  assert.equal(previewHistoryTitle({ contestId: "icpc2025hongkong", contestTitle: "The 50th ICPC Asia Hong Kong Regional Contest" }), "50th ICPC 香港");
+  for (const [field, value, error] of [
+    ["rank", 0, /rank/], ["medal", "unknown", /medal/],
+    ["matchedMembers", 3, /matched members/], ["startAt", "invalid", /startAt/],
+  ]) {
+    const broken = structuredClone(document);
+    broken.teams[0].previousSeasonHistory[0][field] = value;
+    assert.throws(() => validatePreview(broken), error);
+  }
+  const duplicate = structuredClone(document);
+  duplicate.teams[0].previousSeasonHistory.push(record);
+  assert.throws(() => validatePreview(duplicate), /duplicate history/);
+});
+
 test("validates member maxima and team medal totals", () => {
   const document = fixture();
   assert.equal(validatePreview(document), document);

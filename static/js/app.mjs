@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260907-42";
+} from "./data.mjs?v=20260910-46";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260907-42";
+} from "./problem-rating.mjs?v=20260910-46";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -28,15 +28,16 @@ import {
   bestAchievementMedal,
   createPreviewStore,
   listPreviewSchools,
+  previewHistoryTitle,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260907-42";
+} from "./preview.mjs?v=20260910-46";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260907-42";
+} from "./review.mjs?v=20260910-46";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -802,9 +803,14 @@ function renderPreviewRows() {
         ]),
       ]));
       const memberNames = team.members.map(({ name }) => name).join(" / ");
-      const identityTooltip = node("span", { className: "preview-member-tooltip", role: "tooltip" }, [
-        node("strong", { text: "成员" }),
-        ...team.members.map(({ name }) => node("span", {}, [node("strong", { text: name })])),
+      const identityTooltip = node("span", { className: "preview-member-tooltip preview-history-tooltip", role: "tooltip" }, [
+        node("strong", { text: "上赛季比赛记录" }),
+        ...(team.previousSeasonHistory?.length ? team.previousSeasonHistory.map((record) =>
+          node("span", { className: "preview-history-row" }, [
+            node("span", { text: previewHistoryTitle(record), title: record.contestTitle }),
+            node("span", { className: `preview-history-rank ${record.medal || ""}`, text: `#${record.rank}` }),
+            node("span", { text: `${record.teamName} (${record.matchedMembers}/${team.members.length})` }),
+          ])) : [node("span", { text: team.previousSeasonHistory ? "暂无" : "尚未收录上赛季比赛记录" })]),
       ]);
       const identityControl = node("span", {
         className: "preview-team-identity",
@@ -819,7 +825,7 @@ function renderPreviewRows() {
         identityTooltip,
       ]);
       attachPreviewTooltip(identityControl, identityTooltip);
-      row.append(node("td", { className: "preview-team-cell", title: team.name }, [identityControl]));
+      row.append(node("td", { className: "preview-team-cell" }, [identityControl]));
       const memberChildren = [];
       team.members.forEach((member, memberIndex) => {
         if (memberIndex) memberChildren.push(document.createTextNode(" / "));

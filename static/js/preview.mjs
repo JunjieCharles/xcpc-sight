@@ -1,8 +1,24 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260907-42";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260910-46";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
 const ACHIEVEMENT_PRIORITY = { participant: 0, bronze: 1, silver: 2, gold: 3 };
+
+export function previewHistoryTitle(record) {
+  const title = record.contestTitle;
+  const competition = record.contestId.startsWith("ccpc") ? "CCPC" : "ICPC";
+  const editionText = title.match(/第\s*(\d+|十一)\s*届/u)?.[1]
+    ?? title.match(/(\d+)(?:st|nd|rd|th)\s+ICPC/u)?.[1];
+  const edition = editionText === "十一" ? 11 : Number(editionText);
+  const place = /总决赛/u.test(title) ? (competition === "ICPC" ? "EC-Final" : "Final")
+    : title.match(/(?:区域赛|竞赛)([\u4e00-\u9fff]{2,4})站/u)?.[1]
+      ?? title.match(/区域赛[（(]([^）)]+)[）)]/u)?.[1]
+      ?? (title.includes("Hong Kong Regional") ? "香港" : null);
+  if (!edition || !place) return title;
+  const suffix = edition % 100 >= 11 && edition % 100 <= 13 ? "th"
+    : ({ 1: "st", 2: "nd", 3: "rd" }[edition % 10] || "th");
+  return `${edition}${suffix} ${competition} ${place}`;
+}
 
 function fail(path, message) {
   throw new TypeError(`${path}: ${message}`);
@@ -135,6 +151,25 @@ export function validatePreview(document) {
     teamIds.add(team.id);
     array(team.members, `${path}.members`);
     if (!team.members.length) fail(`${path}.members`, "expected at least one member");
+    if (team.previousSeasonHistory !== undefined) {
+      array(team.previousSeasonHistory, `${path}.previousSeasonHistory`);
+      const historyIds = new Set();
+      team.previousSeasonHistory.forEach((record, index) => {
+        const historyPath = `${path}.previousSeasonHistory[${index}]`;
+        object(record, historyPath);
+        for (const key of ["contestId", "contestTitle", "startAt", "teamId", "teamName"]) {
+          string(record[key], `${historyPath}.${key}`);
+        }
+        if (!Number.isFinite(Date.parse(record.startAt))) fail(historyPath, "invalid startAt");
+        integer(record.rank, `${historyPath}.rank`, 1);
+        integer(record.matchedMembers, `${historyPath}.matchedMembers`, 1);
+        if (record.matchedMembers > team.members.length) fail(historyPath, "too many matched members");
+        if (![null, "gold", "silver", "bronze"].includes(record.medal)) fail(historyPath, "invalid medal");
+        const key = JSON.stringify([record.contestId, record.teamId]);
+        if (historyIds.has(key)) fail(historyPath, "duplicate history team");
+        historyIds.add(key);
+      });
+    }
     const memberRatingValues = new Map([...metricIds].map((id) => [id, []]));
     const medalTotals = { gold: 0, silver: 0, bronze: 0 };
     team.members.forEach((member, memberIndex) => {

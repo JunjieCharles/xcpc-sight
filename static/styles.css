@@ -236,6 +236,13 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-member-tooltip > span:not(.preview-achievement-list) { display: flex; justify-content: space-between; gap: 1rem; white-space: nowrap; }
 .preview-member-tooltip > span > strong { font-weight: 650; }
 .preview-member-tooltip.preview-tooltip-visible { visibility: visible; opacity: 1; }
+.preview-history-tooltip { display: grid; grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr); column-gap: .45em; max-width: min(46rem, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto; font-weight: 400; }
+.preview-history-tooltip > strong, .preview-history-tooltip > span { grid-column: 1 / -1; }
+.preview-history-tooltip > span.preview-history-row { display: grid; grid-template-columns: subgrid; gap: 0 .45em; white-space: normal; overflow-wrap: anywhere; line-height: 1.6; }
+.preview-history-rank { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.preview-history-rank.gold { color: #e99a00; }
+.preview-history-rank.silver { color: #808080; }
+.preview-history-rank.bronze { color: #a56836; }
 .preview-members-cell { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .preview-member-control { position: relative; display: inline-block; color: inherit; cursor: default; outline-offset: 2px; }
 .preview-member-name { position: relative; display: inline-block; line-height: 1.05; }

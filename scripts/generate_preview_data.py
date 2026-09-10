@@ -114,6 +114,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--xcpcrating-data", type=Path, required=True)
     parser.add_argument("--xcpc-elo-data", type=Path, required=True)
     parser.add_argument("--previous-series", type=Path, required=True)
+    parser.add_argument("--history-srk-root", type=Path,
+                        help="Local SRK collection for previous-season team histories")
     parser.add_argument("--current-series", type=Path)
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
     parser.add_argument(
@@ -358,6 +360,16 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
                 },
             }
         )
+    if getattr(args, "history_srk_root", None):
+        from scripts.preview_history import build_history_index, team_history
+
+        history_series = load_json(args.previous_series)
+        year = int(SERIES_ID.split("-")[0])
+        if history_series["id"] != f"{year - 1}-{year}":
+            raise ValueError(f"{args.previous_series}: history must come from the previous season")
+        history_index = build_history_index(history_series, args.history_srk_root, normalizer)
+        for team in teams:
+            team["previousSeasonHistory"] = team_history(team, history_index, normalizer)
     member_count = sum(len(team["members"]) for team in teams)
     return {
         "schemaVersion": 1,
