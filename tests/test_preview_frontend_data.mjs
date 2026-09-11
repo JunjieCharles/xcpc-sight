@@ -38,7 +38,7 @@ test("loads both published previews from the index and preserves contest selecti
   assert.equal(second.teams.length, 2636);
   assert.equal(second.matchingSummary.members, 7788);
   assert.equal(second.sourceSnapshots.xcpcrating, "2026-09-06T16:17:41.538314+00:00");
-  assert.equal(second.sourceSnapshots.xcpcElo, "2026-09-07T04:26:01.864Z");
+  assert.equal(second.sourceSnapshots.xcpcElo, "2026-09-11T05:22:39.085Z");
   for (const [metric, expected] of [["xcpcrating", 7189], ["xcpcElo", 7155]]) {
     assert.equal(second.matchingSummary[metric], expected);
     assert.equal(second.teams.flatMap(t => t.members).filter(m => m.ratings[metric] !== null).length, expected);
