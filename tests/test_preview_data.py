@@ -175,6 +175,7 @@ def test_second_preview_metadata_and_cached_source_date(
         ))
     document = generator.build_document(args)
 
+    assert document["ratingAggregation"] == "normalized-lse"
     assert document["id"] == "icpc-2026-preliminary-2"
     assert document["title"] == "第二场"
     assert document["sortAt"] == "2026-09-12T13:00:00+08:00"
@@ -198,6 +199,17 @@ def test_second_preview_metadata_and_cached_source_date(
         assert document["teams"][0]["ratings"]["currentSeason"] == 1600
         assert document["teams"][0]["members"][1]["ratings"]["currentSeason"] is None
         assert document["matchingSummary"]["currentSeason"] == 1
+        monkeypatch.setattr(generator, "load_previous_series", lambda path: (
+            [PersonRecord("甲", "学校", 2000), PersonRecord("乙", "学校", 1600)]
+            if path == current else [], "2026-09-06T13:00:00+08:00",
+        ))
+        assert generator.build_document(args)["teams"][0]["ratings"]["currentSeason"] == (
+            pytest.approx(1896.1450757976976)
+        )
+        monkeypatch.setattr(generator, "load_previous_series", lambda _: (
+            [], "2026-09-06T13:00:00+08:00",
+        ))
+        assert generator.build_document(args)["teams"][0]["ratings"]["currentSeason"] is None
         args.sort_at = "2026-09-06T13:00:00+08:00"
         with pytest.raises(ValueError, match="must precede"):
             generator.build_document(args)

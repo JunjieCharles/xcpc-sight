@@ -2,6 +2,20 @@
 
 实现位于 `rating` 包：rating 专属模型在 `rating.models`，纯算法在 `rating.calculation`。算法依赖 `core` 的标准化竞赛与身份模型，不负责 HTTP 获取或文件输出。`rating.static_data` 位于计算之后，只把既有结果投影为静态站点 JSON 原生类型，不改变任何 rating 规则。
 
+## 队伍展示与预测的聚合
+
+公开纯函数 `rating.normalized_lse_rating(ratings)` 使用固定尺度 400：
+
+```text
+R_team = 400 * log10(sum(10 ** (R_i / 400)) / n)
+```
+
+实现先减去最高分再计算指数，避免大分值溢出；保留浮点精度，不对个人分做更新。三人同分 x 时队伍分为 x，单人时为本人分；异分时介于算术平均分与最高分之间，最高分贡献更大。调用方只传入有 Rating 的成员，缺失者既不计入求和也不计入 n，不补 0 或初始分；空输入返回 `None`。数值 0 是有效评分；非有限值、布尔值与非数字报带成员索引的 `DataValidationError`。
+
+第二场起的前瞻对 XCPC Rating、XCPC Elo、上赛季和本赛季 Rating 使用此聚合；CPC Finder 仍取 max，奖牌仍求和。第一场前瞻及其复盘保留原聚合。题目预测的 RankLand 适配也使用此函数；牛客/HDU 已按报名实体计算，无个人成员分可再次聚合，继续使用该实体分。已有题目预测结果按用户要求冻结，新规则仅用于后续重新预测。
+
+该函数独立于下述 `calculate_contest_ratings` / `calculate_series_ratings`，个人及报名实体的赛季计分、初始分、更新和历史均不改变。回归覆盖等分、单人、空输入、异分 golden vector、顺序无关、平移稳定性、非法值、缺失成员、旧快照兼容和个人原有算法。
+
 ## 输入与身份
 
 Rating 默认以个人为单位：没有显式 rating 实体的正式队伍展开为最多三名个人，每个人使用该队伍的比赛排名，但每个人都独立进入 expected-seed 参赛者池。身份键是“规范化学校 + 规范化姓名”；规范化包含 NFKC、繁转简、大小写折叠以及只保留 Unicode 字母和数字。别名由调用方注入，不读取机器专属文件。

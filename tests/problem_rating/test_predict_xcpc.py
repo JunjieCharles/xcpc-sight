@@ -1,15 +1,18 @@
 import json
 
+import pytest
+
+from core.errors import DataValidationError
 from problem_rating.predict_xcpc import (
     ContestData,
     Participant,
     build_feature_rows,
     load_nowcoder_contest,
     load_rankland_contest,
-    max_member_rating,
     parse_hdu_accepted_time,
     stable_competitor_id,
     stable_member_competitor_id,
+    team_member_rating,
 )
 
 
@@ -71,16 +74,23 @@ def test_stable_competitor_id_keeps_sources_separate():
     assert hdu != nowcoder
 
 
-def test_rankland_team_rating_is_maximum_of_every_member_rating():
+def test_rankland_team_rating_is_normalized_lse_of_every_member_rating():
     alice = stable_member_competitor_id("Example University", "Alice")
     bob = stable_member_competitor_id("Example University", "Bob")
     ratings = {alice: 1700, bob: 1930}
 
-    assert max_member_rating("Example University", ["Alice", "Bob"], ratings) == 1930
-    assert max_member_rating("Example University", ["Alice", "Missing"], ratings) is None
+    assert team_member_rating("Example University", ["Alice", "Bob"], ratings) == pytest.approx(
+        1850.5714328364172
+    )
+    assert team_member_rating("Example University", ["Alice", "Missing"], ratings) == 1700
+    assert team_member_rating("Example University", ["Missing"] * 3, ratings) is None
+    assert team_member_rating("Example University", [], ratings) is None
+    assert team_member_rating("Example University", ["Alice", "Bob", "Missing"], ratings) == (
+        team_member_rating("Example University", ["Alice", "Bob"], ratings)
+    )
 
 
-def test_load_rankland_contest_adapts_problem_results_with_max_member_rating(tmp_path):
+def test_load_rankland_contest_adapts_problem_results_with_team_member_rating(tmp_path):
     contest_id = "regional"
     cache_dir = tmp_path / "rankland"
     cache_dir.mkdir()
@@ -135,5 +145,13 @@ def test_load_rankland_contest_adapts_problem_results_with_max_member_rating(tmp
     assert loaded.series == "2025-2026"
     assert loaded.duration_seconds == 18_000
     assert loaded.problems[0][1] == "RankLand 公开榜单未提供题名"
-    assert loaded.participants[0].rating == 1930
+    assert loaded.participants[0].rating == pytest.approx(1850.5714328364172)
     assert loaded.participants[0].accepted_times == {"A": 100}
+    metadata = {"id": contest_id, "title": "Regional", "startAt": "2025-10-01T09:00:00+08:00"}
+    partial = load_rankland_contest(metadata, {
+        stable_member_competitor_id("Example University", "Alice"): 0,
+    }, cache_dir)
+    assert partial.participants[0].rating == 0
+    assert partial.participants[0].accepted_times == {"A": 100}
+    with pytest.raises(DataValidationError, match="no rated participants"):
+        load_rankland_contest(metadata, {}, cache_dir)

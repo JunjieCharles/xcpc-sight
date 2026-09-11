@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260910-46";
+} from "./data.mjs?v=20260911-47";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260910-46";
+} from "./problem-rating.mjs?v=20260911-47";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -33,11 +33,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260910-46";
+} from "./preview.mjs?v=20260911-47";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260910-46";
+} from "./review.mjs?v=20260911-47";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -161,9 +161,8 @@ function node(tag, properties = {}, children = []) {
   return element;
 }
 
-function ratingNode(rating, className = "") {
+function ratingNode(rating, className = "", value = String(rating)) {
   const tier = ratingTier(rating);
-  const value = String(rating);
   const ratingElement = node("span", { className: ["rating-value", tier.className, className].filter(Boolean).join(" ") });
   if (tier.legendary) {
     ratingElement.append(
@@ -513,7 +512,7 @@ function showSeries() {
   applySearch({ resetScroll: false });
 }
 
-function formatPreviewRating(value, minimumFractionDigits = 0) {
+function formatPreviewRating(value, minimumFractionDigits = 2) {
   if (value === null || value === undefined) return "—";
   return new Intl.NumberFormat("zh-CN", {
     useGrouping: false,
@@ -522,16 +521,18 @@ function formatPreviewRating(value, minimumFractionDigits = 0) {
   }).format(value);
 }
 
-function previewRatingNode(sourceId, value) {
+function previewRatingNode(sourceId, value, isMember = false) {
   if (value === null || value === undefined) {
     return node("span", { className: "preview-rating preview-missing", text: "—" });
   }
+  const integerMember = isMember && Number.isInteger(value)
+    && ["xcpcElo", "previousSeason", "currentSeason"].includes(sourceId);
+  const text = formatPreviewRating(value, integerMember ? 0 : 2);
   if (["previousSeason", "currentSeason"].includes(sourceId)) {
-    return ratingNode(value, "preview-rating preview-rating-previous-season");
+    return ratingNode(value, "preview-rating preview-rating-previous-season", text);
   }
   if (sourceId === "xcpcElo") {
     if (value >= 3000) {
-      const text = formatPreviewRating(value);
       return node("span", {
         className: "preview-rating preview-rating-xcpc-elo preview-rating-xcpc-elo-legendary",
       }, [
@@ -539,7 +540,7 @@ function previewRatingNode(sourceId, value) {
         document.createTextNode(text.slice(1)),
       ]);
     }
-    const ratingElement = ratingNode(value, "preview-rating preview-rating-xcpc-elo");
+    const ratingElement = ratingNode(value, "preview-rating preview-rating-xcpc-elo", text);
     if (value >= 2300 && value < 2400) {
       ratingElement.classList.remove("rating-orange");
       ratingElement.classList.add("rating-red");
@@ -548,7 +549,7 @@ function previewRatingNode(sourceId, value) {
   }
   return node("span", {
     className: `preview-rating preview-rating-${sourceId}`,
-    text: formatPreviewRating(value, ["xcpcrating", "cpcfinder"].includes(sourceId) ? 2 : 0),
+    text,
   });
 }
 
@@ -565,7 +566,7 @@ function previewValueControl(team, value, rank, memberValue, renderValue) {
   for (const member of team.members) {
     tooltip.append(node("span", {}, [
       node("strong", { text: member.name }),
-      renderValue(memberValue(member)),
+      renderValue(memberValue(member), true),
     ]));
   }
   const displayed = renderValue(value);
@@ -848,7 +849,7 @@ function renderPreviewRows() {
           value,
           rank,
           (member) => member.ratings[source.id],
-          (rating) => previewRatingNode(source.id, rating),
+          (rating, isMember) => previewRatingNode(source.id, rating, isMember),
         )]));
       }
       row.append(node("td", { className: "preview-metric-cell preview-medals" }, [
@@ -1051,7 +1052,8 @@ function renderReviewRows() {
         : state.reviewMetric === "medals"
           ? previewValueControl(team, team.medals, null, m => m.medals, previewMedalNode)
           : previewValueControl(team, team.ratings[state.reviewMetric], null,
-            m => m.ratings[state.reviewMetric], value => previewRatingNode(state.reviewMetric, value));
+            m => m.ratings[state.reviewMetric],
+            (value, isMember) => previewRatingNode(state.reviewMetric, value, isMember));
       row.append(node("td", { className: "preview-metric-cell" }, [metricValue]));
       for (const [rank, original] of [[team.previewRank, team.originalPreviewRank], [team.actualRank, team.originalActualRank]]) {
         row.append(node("td", {}, [node("span", {

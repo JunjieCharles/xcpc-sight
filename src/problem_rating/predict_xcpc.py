@@ -21,6 +21,7 @@ from sklearn.base import clone
 from core import normalize_srk_contest
 from core.errors import DataValidationError
 from core.normalization import DefaultNormalizer, is_coach_name
+from rating import normalized_lse_rating
 
 from .build_problem_features import DEFAULT_OUTPUT
 from .experiment_models import build_models, prepare_features
@@ -75,23 +76,23 @@ def stable_member_competitor_id(
     return f"c_{hashlib.sha256(identity).hexdigest()}"
 
 
-def max_member_rating(
+def team_member_rating(
     school: str,
     members: Iterable[str],
     ratings: dict[str, int],
     *,
     normalizer: DefaultNormalizer | None = None,
-) -> int | None:
-    """Return max(all member ratings), or None unless every member can be mapped."""
+) -> float | None:
+    """Aggregate known non-coach members; return None when none have a rating."""
     normalizer = normalizer or DefaultNormalizer()
     member_ids = [
         stable_member_competitor_id(school, member, normalizer=normalizer)
         for member in members
         if member.strip() and not is_coach_name(member)
     ]
-    if not member_ids or any(member_id not in ratings for member_id in member_ids):
-        return None
-    return max(ratings[member_id] for member_id in member_ids)
+    return normalized_lse_rating(
+        ratings[member_id] for member_id in member_ids if ratings.get(member_id) is not None
+    )
 
 
 def load_series(path: Path) -> tuple[dict, dict[str, int]]:
@@ -323,7 +324,7 @@ def load_rankland_contest(
             )
         row_context = f"RankLand contest {contest_id}.rows[{row_index}]"
         members = _rankland_competitor_names(raw_row, row_context)
-        rating = max_member_rating(
+        rating = team_member_rating(
             team.school_name,
             members,
             ratings,
@@ -357,7 +358,7 @@ def load_rankland_contest(
     if excluded_teams:
         print(
             f"Excluding RankLand {contest_id}: {len(excluded_teams)} active official "
-            "teams do not map every member to a published final rating",
+            "teams have no members with a published final rating",
             flush=True,
         )
     if not participants:

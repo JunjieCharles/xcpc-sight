@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 
 import {
   buildPreviewPower,
+  normalizedLseRating,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
   bestAchievementMedal,
@@ -29,6 +30,8 @@ test("loads both published previews from the index and preserves contest selecti
   const previews = await store.getPreviews(entry);
   assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2"]);
   const second = previews[1];
+  assert.equal(previews[0].ratingAggregation, undefined);
+  assert.equal(second.ratingAggregation, "normalized-lse");
   assert.deepEqual(second.metricSources.map(s => s.id), [
     "xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder",
   ]);
@@ -122,7 +125,7 @@ test("unawarded IOI rows show only the competition without separators", async ()
   assert.equal(row.children[0].text, "2024 IOI");
 });
 
-test("formats CPC Finder ratings with exactly two decimals and preserves missing values", async () => {
+test("formats all preview ratings with exactly two decimals and preserves missing values", async () => {
   const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
   const functions = ["formatPreviewRating", "previewRatingNode"].map((name) => {
     const match = source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`));
@@ -130,12 +133,33 @@ test("formats CPC Finder ratings with exactly two decimals and preserves missing
     return match[0];
   }).join("\n");
   const render = runInNewContext(`${functions}\npreviewRatingNode`, {
-    node: (tag, properties) => properties,
+    node: (tag, properties, children = []) => ({
+      ...properties, text: properties.text ?? children.map(child => child.text).join(""),
+    }),
+    ratingNode: (value, className, text) => ({ text, classList: { remove() {}, add() {} } }),
+    document: { createTextNode: text => ({ text }) },
   });
   for (const [value, text] of [[0, "0.00"], [1234, "1234.00"], [12.3, "12.30"], [12.345, "12.35"], [null, "—"]]) {
-    assert.equal(render("cpcfinder", value).text, text);
+    for (const id of ["xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder"]) {
+      assert.equal(render(id, value).text, text);
+    }
   }
   assert.equal(render("xcpcrating", 100).text, "100.00");
+  assert.equal(render("xcpcElo", 2300).text, "2300.00");
+  assert.equal(render("xcpcElo", 3000).text, "3000.00");
+  assert.equal(render("xcpcElo", 3012.345).text, "3012.35");
+  for (const id of ["xcpcElo", "previousSeason", "currentSeason"]) {
+    for (const value of [0, 1400, 2300, 3000]) {
+      assert.equal(render(id, value, true).text, String(value));
+      assert.equal(render(id, value).text, `${value}.00`);
+    }
+    assert.equal(render(id, null, true).text, "—");
+    assert.equal(render(id, 1400.125, true).text, "1400.13");
+  }
+  for (const id of ["xcpcrating", "cpcfinder"]) {
+    assert.equal(render(id, 1400, true).text, "1400.00");
+    assert.equal(render(id, 0, true).text, "0.00");
+  }
 });
 
 function fixture() {
@@ -251,7 +275,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /const value = team\.ratings\[source\.id\];/);
   assert.match(appModule, /\(member\) => member\.ratings\[source\.id\]/);
   assert.doesNotMatch(appModule, /previewRatingValue/);
-  assert.match(appModule, /formatPreviewRating\(value, \["xcpcrating", "cpcfinder"\]\.includes\(sourceId\) \? 2 : 0\)/);
+  assert.match(appModule, /renderValue\(memberValue\(member\), true\)/);
   assert.match(appModule, /elements\.seriesModeSwitch\.hidden = supportedCount === 0/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
@@ -348,7 +372,39 @@ test("validates team history and abbreviates regional and final titles", async (
   assert.throws(() => validatePreview(duplicate), /duplicate history/);
 });
 
-test("validates member maxima and team medal totals", () => {
+test("normalized LSE preserves scale, favors strong members and validates per snapshot", () => {
+  assert.equal(normalizedLseRating([]), null);
+  assert.equal(normalizedLseRating([2000, 2000, 2000]), 2000);
+  assert.equal(normalizedLseRating([1400]), 1400);
+  assert.ok(Math.abs(normalizedLseRating([2000, 1600, 1600]) - 1840.823996531185) < 1e-9);
+  assert.ok(Math.abs(normalizedLseRating([102000, 101600, 101600]) - 101840.823996531185) < 1e-9);
+  for (const value of [null, true, NaN, Infinity, "1400"]) {
+    assert.throws(() => normalizedLseRating([value]), /finite number/);
+  }
+  const document = fixture();
+  document.ratingAggregation = "normalized-lse";
+  for (const team of document.teams) {
+    for (const { id } of document.metricSources) {
+      if (id !== "cpcfinder") team.ratings[id] = normalizedLseRating(
+        team.members.map(member => member.ratings[id]).filter(value => value !== null),
+      );
+    }
+  }
+  assert.equal(validatePreview(document), document);
+  assert.equal(document.teams[0].ratings.xcpcElo, 1400);
+  assert.equal(document.teams[0].ratings.cpcfinder, 1400);
+  const broken = structuredClone(document);
+  broken.teams[0].ratings.xcpcrating = 1700;
+  assert.throws(() => validatePreview(broken), /normalized LSE/);
+  const invalidMode = structuredClone(document);
+  invalidMode.ratingAggregation = "average";
+  assert.throws(() => validatePreview(invalidMode), /unsupported aggregation/);
+  const nullMode = structuredClone(document);
+  nullMode.ratingAggregation = null;
+  assert.throws(() => validatePreview(nullMode), /unsupported aggregation/);
+});
+
+test("validates legacy member maxima and team medal totals", () => {
   const document = fixture();
   assert.equal(validatePreview(document), document);
   const brokenRating = structuredClone(document);

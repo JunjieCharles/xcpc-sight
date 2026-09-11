@@ -1,3 +1,4 @@
+from .aggregation import normalized_lse_rating
 from .calculation import calculate_contest_ratings, calculate_series_ratings
 from .models import (
     CompetitorRatingChange,
@@ -14,6 +15,7 @@ __all__ = [
     "SeriesRatingResult",
     "calculate_contest_ratings",
     "calculate_series_ratings",
+    "normalized_lse_rating",
     "project_series_rating_data",
     "project_static_data_index",
 ]

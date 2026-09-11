@@ -1,8 +1,18 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260910-46";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260911-47";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
 const ACHIEVEMENT_PRIORITY = { participant: 0, bronze: 1, silver: 2, gold: 3 };
+
+export function normalizedLseRating(values) {
+  values.forEach((value, index) => {
+    if (!Number.isFinite(value)) fail(`team ratings[${index}]`, "expected a finite number");
+  });
+  if (!values.length) return null;
+  const peak = Math.max(...values);
+  const weights = values.map(value => 10 ** ((value - peak) / 400)).sort((a, b) => a - b);
+  return peak + 400 * Math.log10(weights.reduce((sum, value) => sum + value, 0) / values.length);
+}
 
 export function previewHistoryTitle(record) {
   const title = record.contestTitle;
@@ -122,6 +132,8 @@ export function validatePreview(document) {
   if (validatedPreviews.has(document)) return document;
   integer(document.schemaVersion, "preview.schemaVersion", 1);
   if (document.schemaVersion !== SCHEMA_VERSION) fail("preview.schemaVersion", `unsupported version ${document.schemaVersion}`);
+  const aggregation = document.ratingAggregation === undefined ? "max" : document.ratingAggregation;
+  if (!["max", "normalized-lse"].includes(aggregation)) fail("preview.ratingAggregation", "unsupported aggregation");
   for (const key of ["seriesId", "seriesTitle", "id", "title", "sortAt", "snapshotDate", "matchingPolicy"]) {
     string(document[key], `preview.${key}`);
   }
@@ -189,8 +201,13 @@ export function validatePreview(document) {
     for (const id of metricIds) {
       rating(team.ratings[id], `${path}.ratings.${id}`);
       const values = memberRatingValues.get(id);
-      const expected = values.length ? Math.max(...values) : null;
-      if (team.ratings[id] !== expected) fail(`${path}.ratings.${id}`, "must equal the highest member value");
+      const useLse = aggregation === "normalized-lse" && id !== "cpcfinder";
+      const expected = useLse ? normalizedLseRating(values) : values.length ? Math.max(...values) : null;
+      const actual = team.ratings[id];
+      const matches = actual === expected || (useLse && actual !== null && expected !== null
+        && Math.abs(actual - expected) <= 1e-9);
+      if (!matches) fail(`${path}.ratings.${id}`, useLse
+        ? "must equal normalized LSE of member values" : "must equal the highest member value");
     }
     validateMedals(team.medals, `${path}.medals`);
     for (const medal of Object.keys(medalTotals)) {

@@ -210,7 +210,7 @@ python -m problem_rating.experiment_models --suite advanced
 
 ### XCPC series 预测
 
-`predict_xcpc` 读取 `xcpc-sight` 发布的三个 series，以选手 `finalRating` 作为最新 rating，生成 2025–2026 ICPC + CCPC 16 场、牛客 10 场和 HDU 10 场的逐题预测。ICPC + CCPC 的队伍 Rating 定义为队内所有非教练选手 Rating 的最大值；适配器读取完整成员名单，并按 RankLand 的 `role=coach` 或姓名教练后缀排除教练，不依赖成员顺序。必须能映射全部队员，缺少任一成员时整队排除，不使用部分成员最大值：
+`predict_xcpc` 读取 `xcpc-sight` 发布的三个 series，以选手 `finalRating` 作为最新 rating，生成 2025–2026 ICPC + CCPC 16 场、牛客 10 场和 HDU 10 场的逐题预测。后续预测中，ICPC + CCPC 的队伍 Rating 使用已匹配非教练选手 Rating 的归一化 LSE（尺度 400）；适配器读取完整成员名单，并按 RankLand 的 `role=coach` 或姓名教练后缀排除教练，不依赖成员顺序。`team_member_rating` 替代原 `max_member_rating`，调用公开纯函数 `rating.normalized_lse_rating`。缺失成员不参与求和及人数 n；至少一人匹配即可纳入，全员缺失仍排除该队，0 分视为有效值。2026-09-11 按用户要求仅更新预测代码，已有 CSV、Markdown、Excel 和已发布题目 JSON 均保留旧结果；这些结果仍采用原全员匹配、取 max 的口径，下次显式重新预测时才应用新规则。个人赛季评分、训练数据和模型不变。离线测试覆盖等分、异分、部分/全部缺失、教练排除以及 SRK 到预测输入的适配：
 
 ```powershell
 python -m problem_rating.predict_xcpc

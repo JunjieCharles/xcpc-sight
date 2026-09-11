@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from core import DataValidationError, DefaultNormalizer, load_school_aliases
+from rating import normalized_lse_rating
 
 SERIES_ID = "2026-2027"
 SERIES_TITLE = "2026–2027 ICPC + CCPC"
@@ -86,7 +87,7 @@ class PersonIndex:
                 tuple(sum(item.medals[i] for item in matched) for i in range(3)),
             )
         # Duplicate historical identities occasionally survive upstream cleanup. The highest
-        # rating is deterministic and agrees with the team-level maximum display policy.
+        # rating is the deterministic identity-resolution policy, before team aggregation.
         return max(matched, key=lambda item: (item.rating, item.medals, item.school, item.name))
 
 
@@ -350,7 +351,8 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
                 "name": team_name,
                 "members": member_documents,
                 "ratings": {
-                    source_id: max(values) if values else None
+                    source_id: (max(values) if values else None)
+                    if source_id == "cpcfinder" else normalized_lse_rating(values)
                     for source_id, values in team_ratings.items()
                 },
                 "medals": {
@@ -373,6 +375,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
     member_count = sum(len(team["members"]) for team in teams)
     return {
         "schemaVersion": 1,
+        "ratingAggregation": "normalized-lse",
         "seriesId": SERIES_ID,
         "seriesTitle": SERIES_TITLE,
         "id": args.preview_id,
