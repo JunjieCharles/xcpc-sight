@@ -291,7 +291,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /attachPreviewTooltip\(identityControl, identityTooltip\)/);
   assert.match(appModule, /function previewMemberControl\(member\)/);
   assert.match(appModule, /memberChildren\.push\(previewMemberControl\(member\)\)/);
-  assert.match(appModule, /previewSortHeader\("奖牌", "medals"\)/);
+  assert.match(appModule, /previewSortHeader\("奖牌（三人总和）", "medals"\)/);
   assert.doesNotMatch(appModule, /奖牌（🥇\/🥈\/🥉）/);
   assert.match(appModule, /function positionPreviewTooltip\(/);
   assert.match(appModule, /document\.body\.append\(tooltip\)/);
@@ -626,7 +626,71 @@ test("comprehensive power treats missing ratings as weakest and preserves ties",
     rank: 1,
   });
   assert.deepEqual(power.get("b"), power.get("a"));
-  assert.equal(power.get("c").rank, 3);
+  assert.equal(power.get("c").rank, null);
+});
+
+test("power availability uses input data, not dominance counts, in five and six dimensions", () => {
+  for (const metricIds of [
+    ["xcpcrating", "xcpcElo", "previousSeason", "cpcfinder"],
+    ["xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder"],
+  ]) {
+    const makeTeam = (id, ratings = {}, medals = {}) => ({
+      id, sourceIndex: 0, school: "学校",
+      ratings: { ...Object.fromEntries(metricIds.map(id => [id, null])), ...ratings },
+      medals: { gold: 0, silver: 0, bronze: 0, ...medals },
+    });
+    for (const team of [makeTeam("missing"), makeTeam("zero-cpc", { cpcfinder: 0 })]) {
+      assert.equal(buildPreviewPower([team], metricIds).get(team.id).rank, null);
+    }
+    for (const team of [
+      makeTeam("zero-rating", { xcpcElo: 0 }),
+      makeTeam("scored", { [metricIds.at(-2)]: 1400 }),
+      makeTeam("cpc-only", { cpcfinder: 10 }),
+      makeTeam("medal-only", {}, { bronze: 1 }),
+    ]) {
+      const entry = buildPreviewPower([team], metricIds).get(team.id);
+      assert.ok(entry.counts.every(count => count === 0));
+      assert.equal(entry.rank, 1, "a valid score still ranks when no other team is beaten");
+    }
+  }
+});
+
+test("both published previews omit missing power controls and retain scored radar controls", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  for (const path of ["2026-2027.json", "icpc-2026-preliminary-2.json"]) {
+    const preview = JSON.parse(await readFile(new URL(`../static/data/previews/${path}`, import.meta.url), "utf8"));
+    const metricIds = preview.metricSources.map(s => s.id);
+    const power = buildPreviewPower(preview.teams, metricIds);
+    let radars = 0;
+    let tooltips = 0;
+    const render = runInNewContext(
+      `${source.match(/function previewPowerControl\([^]*?\n\}/)[0]}\npreviewPowerControl`, {
+        state: { previewPower: power },
+        node: (tag, properties, children = []) => ({ tag, ...properties, children }),
+        document: { createTextNode: text => ({ text }) },
+        previewPowerRadar: () => { radars++; return { tag: "svg" }; },
+        attachPreviewTooltip: () => { tooltips++; },
+      },
+    );
+    const missing = preview.teams.filter(t => metricIds.every(id => previewRatingValue(id, t.ratings[id]) === null)
+      && Object.values(t.medals).every(value => value === 0));
+    assert.ok(missing.length > 0);
+    for (const team of missing) {
+      assert.equal(power.get(team.id).rank, null);
+      const control = render(team);
+      assert.equal(control.text, "—");
+      assert.equal(control.tabIndex, undefined);
+      assert.equal(control.children.length, 0);
+    }
+    assert.equal(radars, 0);
+    assert.equal(tooltips, 0);
+    const scored = preview.teams.find(t => power.get(t.id).rank === 1);
+    const control = render(scored);
+    assert.equal(control.tabIndex, 0);
+    assert.equal(control.children[0].text, "#1");
+    assert.equal(radars, 1);
+    assert.equal(tooltips, 1);
+  }
 });
 
 test("round trips preview sorting through URL state", () => {

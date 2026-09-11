@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260911-47";
+} from "./data.mjs?v=20260911-50";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260911-47";
+} from "./problem-rating.mjs?v=20260911-50";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -33,11 +33,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260911-47";
+} from "./preview.mjs?v=20260911-50";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260911-47";
+} from "./review.mjs?v=20260911-50";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -766,6 +766,7 @@ function previewPowerRadar(power) {
 
 function previewPowerControl(team) {
   const power = state.previewPower.get(team.id);
+  if (power.rank === null) return node("span", { className: "preview-missing", text: "—" });
   const tooltip = node("span", { className: "preview-power-tooltip", role: "tooltip" }, [
     node("strong", { text: `综合战力 #${power.rank}` }),
     previewPowerRadar(power),
@@ -905,7 +906,7 @@ function renderPreviewHeader() {
     previewSortHeader("综合战力", "power"),
   );
   for (const source of state.preview.metricSources) row.append(previewSortHeader(source.title, source.id));
-  row.append(previewSortHeader("奖牌", "medals"));
+  row.append(previewSortHeader("奖牌（三人总和）", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
   const widths = [200, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150];

@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260911-47";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260911-50";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -325,7 +325,9 @@ export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratin
   ranked.forEach((team, index) => {
     const entry = power.get(team.id);
     if (previousVector === null || comparePowerVectors(entry.vector, previousVector)) rank = index + 1;
-    entry.rank = rank;
+    const hasData = metricIds.some((id) => previewRatingValue(id, team.ratings[id] ?? null) !== null)
+      || ["gold", "silver", "bronze"].some((medal) => team.medals[medal] > 0);
+    entry.rank = hasData ? rank : null;
     previousVector = entry.vector;
   });
   return power;
