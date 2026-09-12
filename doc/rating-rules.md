@@ -4,6 +4,8 @@
 
 ## 队伍展示与预测的聚合
 
+2026-09-12 的 [首场聚合回测](team-aggregation-first-preliminary.md) 比较 max、不同尺度归一化 LSE、均值和混合，记录同样本排名、覆盖分组、头部召回与学校交叉验证。结论依赖评分来源与目标；该实验不修改下述生产规则，不能由首场直接确定本赛季 Rating 的聚合方式。
+
 公开纯函数 `rating.normalized_lse_rating(ratings)` 使用固定尺度 400：
 
 ```text
