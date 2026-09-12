@@ -33,12 +33,28 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   )));
   assert.equal(series.contests[0].id, "icpc2026preliminary-1");
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
-  assert.ok(series.competitors.length > 0);
+  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2"]);
+  assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
+  assert.equal(series.competitors.length, 8404);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
-  assert.ok(participants.length > 0);
+  assert.equal(participants.length, 7380);
   assert.ok(participants.every((participation) => participation.before === 1400));
   assert.ok(participants.some((participation) => participation.delta !== 0));
+  const second = series.competitors.flatMap(person => person.participations)
+    .filter(p => p.contestIndex === 1);
+  assert.equal(second.length, 7505);
+  const both = series.competitors.filter(c => c.contestsParticipated === 2);
+  assert.equal(both.length, 6481);
+  assert.ok(both.every(c => c.participations[1].before === c.participations[0].after));
+  const newcomers = series.competitors.filter(c => c.participations[0].contestIndex === 1);
+  assert.equal(newcomers.length, 1024);
+  assert.ok(newcomers.every(c => c.participations[0].before === 1400));
+  const absent = series.competitors.filter(c => c.contestsParticipated === 1 && c.participations[0].contestIndex === 0);
+  assert.equal(absent.length, 899);
+  assert.ok(absent.every(c => c.finalRating === c.participations[0].after));
+  assert.equal(Math.min(...series.competitors.map(c => c.finalRating)), 1283);
+  assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 1904);
 });
 
 test("header and favicon share an outlined SVG with the header background color", async () => {
