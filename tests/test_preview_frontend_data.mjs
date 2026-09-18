@@ -76,6 +76,8 @@ test("CCPC preview validates the public roster, six metrics and pre-contest cuto
       .filter(m => m.ratings[source.id] !== null).length, preview.matchingSummary[source.id]);
   }
   assert.equal(preview.sourceSnapshots.currentSeason, "2026-09-12T13:00:00+08:00");
+  assert.equal(preview.sourceSnapshots.xcpcElo, "2026-09-18T12:04:21.949Z");
+  assert.equal(preview.matchingSummary.xcpcElo, 6149);
   assert.equal(preview.teams.filter(t => t.previousSeasonHistory.length).length, 840);
   const power = buildPreviewPower(preview.teams, preview.metricSources.map(s => s.id));
   assert.ok([...power.values()].every(p => p.counts.length === 6));

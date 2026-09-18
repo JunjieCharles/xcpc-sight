@@ -8,6 +8,8 @@
 
 五项评分采用既有六维综合战力规则：XCPC Rating、XCPC Elo、上赛季和本赛季 Rating 按已匹配队员归一化 LSE 聚合，CPC Finder 取最高值，奖牌求和。XCPC Rating 使用线上 `2026-09-17T17:17:00.323004+00:00` 版本（629 页，共 62852 条正式榜记录，下载后复核元信息），XCPC Elo 使用 `2026-09-17T15:31:35.519Z` 版本（67184 人），缓存位于 `data-cache/preview-sources-20260918/`。本仓库本赛季 Rating 截至 9 月 12 日 ICPC 第二场；CPC Finder 沿用 9 月 4 日缓存。五项分别匹配 6154、6149、2626、5878、1976 个队员条目；840 队关联 2773 条上赛季区域赛/总决赛记录。NOI/IOI 沿用既有缓存与姓名匹配政策。
 
+2026-09-18 再按用户要求仅刷新本场 XCPC Elo，当前版本为 `2026-09-18T12:04:21.949Z`（北京时间 20:04），上游仍为 67184 人，比赛范围截至 9 月 12 日 ICPC 第二场。匹配人数仍为 6149，6149 个队员 Elo、2098 支队伍聚合 Elo 变化；按既有归一化 LSE 重算，综合战力由前端随评分重算。逐项核验只有成员/队伍 `xcpcElo`、其来源时间及匹配计数字段可变，其余评分、名单、打星状态、历史战绩和两场 ICPC 快照均保留。缓存及核对摘要位于 `data-cache/preview-sources-20260918-elo-refresh/`，下载文件 SHA-256 为 `e8d64fc2f89b00930774885ce98946f848a45de7f5f6d4f113597248f1c383fb`。下方首次生成命令若要复现当前评分，应把 `--xcpc-elo-data` 改为此目录的 `xcpc-elo-data.js`。离线快照测试校验新的来源时间、6149 人覆盖和完整聚合契约。
+
 XCPC Elo 最新数据的 history 第四项可以为 null，表示该场不计分。导入器按其 [官方前端 computeCurrentRating](https://zzzzzzyt.github.io/xcpc-elo/app.js) 从后向前取最近非空值；全部为空或无历史时使用上游 `initialRating`。这不等于为名单中未匹配到的成员补分，后者仍保持 null。
 
 生成器新增 `--team-format pintia-public`，直接读取缓存响应；默认 `registration` 兼容原报名表。名单适配检查非空队伍列表、唯一且非空的 `teamFid`、学校/队名/成员字符串和布尔型 `excluded`，错误携带来源行号。只使用 `memberNames`，不读取教练列。Python 核心公开 API 不变。
