@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260911-50";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260918-52";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -158,6 +158,9 @@ export function validatePreview(document) {
     object(team, path);
     for (const key of ["id", "school", "name"]) string(team[key], `${path}.${key}`);
     integer(team.sourceIndex, `${path}.sourceIndex`, 0);
+    if (team.excluded !== undefined && typeof team.excluded !== "boolean") {
+      fail(`${path}.excluded`, "expected boolean");
+    }
     if (team.sourceIndex !== teamIndex) fail(`${path}.sourceIndex`, "must preserve source order");
     if (teamIds.has(team.id)) fail(`${path}.id`, "duplicate team id");
     teamIds.add(team.id);
@@ -255,19 +258,22 @@ function compareMedals(left, right) {
 
 function countStrictlyLower(teams, valueOf, compare) {
   const ordered = teams
-    .map((team) => ({ id: team.id, value: valueOf(team), sourceIndex: team.sourceIndex }))
+    .map((team) => ({ id: team.id, value: valueOf(team), sourceIndex: team.sourceIndex, excluded: team.excluded }))
     .sort((left, right) => compare(left.value, right.value) || left.sourceIndex - right.sourceIndex);
   const counts = new Map();
   let groupStart = 0;
+  let eligibleCount = 0;
   ordered.forEach((item, index) => {
-    if (index && compare(item.value, ordered[index - 1].value)) groupStart = index;
+    if (index && compare(item.value, ordered[index - 1].value)) groupStart = eligibleCount;
     counts.set(item.id, groupStart);
+    if (!item.excluded) eligibleCount += 1;
   });
   return counts;
 }
 
 function competitionRanks(teams, valueOf, compare, skipNull = false) {
   const ordered = teams
+    .filter((team) => !team.excluded)
     .map((team) => ({ id: team.id, value: valueOf(team), sourceIndex: team.sourceIndex }))
     .filter(({ value }) => !skipNull || value !== null)
     .sort((left, right) => compare(right.value, left.value) || left.sourceIndex - right.sourceIndex);
@@ -314,9 +320,9 @@ export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratin
   ];
   const power = new Map(teams.map((team) => {
     const counts = dimensions.map((values) => values.get(team.id));
-    return [team.id, { counts, vector: [...counts].sort((left, right) => right - left), rank: 0 }];
+    return [team.id, { counts, vector: [...counts].sort((left, right) => right - left), rank: null }];
   }));
-  const ranked = [...teams].sort((left, right) => (
+  const ranked = teams.filter((team) => !team.excluded).sort((left, right) => (
     comparePowerVectors(power.get(left.id).vector, power.get(right.id).vector)
     || left.sourceIndex - right.sourceIndex
   ));
@@ -383,6 +389,7 @@ export function buildPreviewSchoolRanks(sortedTeams, sort, previewPower = null) 
   let previousBest = null;
   let rank = 0;
   for (const team of sortedTeams) {
+    if (team.excluded) continue;
     if (rankedSchools.has(team.school)) continue;
     rankedSchools.add(team.school);
     if (previousBest === null || comparePreviewSortKeys(team, previousBest, sort, "desc", power)) {

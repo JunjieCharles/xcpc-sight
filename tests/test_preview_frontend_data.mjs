@@ -19,7 +19,7 @@ import {
   writePreviewQuery,
 } from "../static/js/preview.mjs";
 
-test("loads both published previews from the index and preserves contest selection", async () => {
+test("loads all published previews from the index and preserves contest selection", async () => {
   const root = new URL("../static/data/", import.meta.url);
   const index = JSON.parse(await readFile(new URL("index.json", root), "utf8"));
   const entry = index.series.find(item => item.id === "2026-2027");
@@ -28,7 +28,7 @@ test("loads both published previews from the index and preserves contest selecti
     json: async () => JSON.parse(await readFile(new URL(url), "utf8")),
   }));
   const previews = await store.getPreviews(entry);
-  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2"]);
+  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary"]);
   const second = previews[1];
   assert.equal(previews[0].ratingAggregation, undefined);
   assert.equal(second.ratingAggregation, "normalized-lse");
@@ -52,6 +52,88 @@ test("loads both published previews from the index and preserves contest selecti
     view: "preview", contest: second.id,
   });
   assert.equal(readPreviewQuery(url).previewContest, second.id);
+});
+
+test("CCPC preview validates the public roster, six metrics and pre-contest cutoff", async () => {
+  const preview = validatePreview(JSON.parse(await readFile(
+    new URL("../static/data/previews/ccpc-2026-preliminary.json", import.meta.url), "utf8",
+  )));
+  assert.equal(preview.id, "ccpc-2026-preliminary");
+  assert.equal(preview.title, "2026年CCPC网络预选赛");
+  assert.equal(preview.sortAt, "2026-09-19T13:00:00+08:00");
+  assert.equal(preview.teamSource.url, "https://pintia.cn/rankings/2099750481526394880");
+  assert.equal(preview.teams.length, 2173);
+  assert.equal(preview.teams.filter(t => t.excluded).length, 4);
+  assert.equal(preview.matchingSummary.members, 6443);
+  assert.equal(new Set(preview.teams.map(t => t.school)).size, 439);
+  assert.equal(preview.ratingAggregation, "normalized-lse");
+  assert.deepEqual(preview.metricSources.map(s => s.id), [
+    "xcpcrating", "xcpcElo", "previousSeason", "currentSeason", "cpcfinder",
+  ]);
+  for (const source of preview.metricSources) {
+    assert.ok(Date.parse(preview.sourceSnapshots[source.id]) < Date.parse(preview.sortAt));
+    assert.equal(preview.teams.flatMap(t => t.members)
+      .filter(m => m.ratings[source.id] !== null).length, preview.matchingSummary[source.id]);
+  }
+  assert.equal(preview.sourceSnapshots.currentSeason, "2026-09-12T13:00:00+08:00");
+  assert.equal(preview.teams.filter(t => t.previousSeasonHistory.length).length, 840);
+  const power = buildPreviewPower(preview.teams, preview.metricSources.map(s => s.id));
+  assert.ok([...power.values()].every(p => p.counts.length === 6));
+});
+
+test("unranked ratings and medals retain the same empty rank slot as ranked values", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const render = runInNewContext(
+    `${source.match(/function previewRankedValue\([^]*?\n\}/)[0]}\npreviewRankedValue`,
+    { node: (tag, properties, children = []) => ({ tag, ...properties, children }) },
+  );
+  for (const displayed of [{ text: "2053.11" }, { text: "🥇 1 🥈 8 🥉 1" }, { text: "—" }]) {
+    const ranked = render(displayed, 12);
+    const unranked = render(displayed, null);
+    assert.equal(unranked.className, ranked.className);
+    assert.equal(unranked.children.length, 2);
+    assert.equal(unranked.children[0], displayed);
+    assert.equal(unranked.children[1].className, ranked.children[1].className);
+    assert.equal(unranked.children[1].text, "");
+    assert.equal(ranked.children[1].text, "#12");
+  }
+});
+
+test("excluded teams retain sorted positions without changing any official ranks or power", () => {
+  const make = (id, score, excluded = false, school = id) => ({
+    id, sourceIndex: score ?? 0, school, name: id, members: [{ name: id }], excluded,
+    ratings: { score }, medals: { gold: score ?? 0, silver: 0, bronze: 0 },
+  });
+  const official = [make("a", 30), make("b", 20), make("c", 20), make("d", 10)];
+  const teams = [...official, make("star-top", 40, true, "d"), make("star-mid", 25, true),
+    make("star-tie", 20, true), make("star-missing", null, true)];
+  const baseline = buildPreviewPower(official);
+  const power = buildPreviewPower(teams);
+  const ranks = buildPreviewRanks(teams);
+  for (const team of official) {
+    assert.deepEqual(power.get(team.id), baseline.get(team.id));
+    assert.deepEqual(ranks.get(team.id), buildPreviewRanks(official).get(team.id));
+  }
+  for (const team of teams.filter(t => t.excluded)) {
+    assert.equal(power.get(team.id).rank, null);
+    assert.deepEqual(ranks.get(team.id), { ratings: { score: null }, medals: null });
+  }
+  assert.deepEqual(power.get("star-mid").counts, [3, 3]);
+  const expected = ["star-top", "a", "star-mid", "b", "c", "star-tie", "d", "star-missing"];
+  assert.deepEqual(sortPreviewTeams(teams, "score").map(t => t.id), expected);
+  assert.deepEqual(sortPreviewTeams(teams, "power", "desc", power).map(t => t.id), expected);
+  assert.deepEqual(sortPreviewTeams(teams, "score", "asc").map(t => t.id),
+    ["d", "b", "c", "star-tie", "star-mid", "a", "star-top", "star-missing"]);
+  for (const sort of ["score", "medals", "power"]) {
+    assert.deepEqual(
+      buildPreviewSchoolRanks(sortPreviewTeams(teams, sort, "desc", power), sort, power),
+      buildPreviewSchoolRanks(sortPreviewTeams(official, sort, "desc", baseline), sort, baseline),
+    );
+  }
+  assert.equal(buildPreviewPower([make("only-star", 20, true)]).get("only-star").rank, null);
+  const invalid = fixture();
+  invalid.teams[0].excluded = "true";
+  assert.throws(() => validatePreview(invalid), /excluded.*boolean/);
 });
 
 test("current season ratings break power ties and preserve missing and equal ratings", () => {

@@ -136,14 +136,38 @@ def test_stable_team_id_uses_school_team_and_member_order() -> None:
     assert identity != stable_team_id("测试大学", "队名", ["甲", "丙", "乙"])
 
 
+@pytest.mark.parametrize("values,expected", [
+    ([1600, None], 1600), ([None, 1700, None], 1700), ([None], 1400),
+    ([], 1400), ([1600, 0, None], 0),
+])
+def test_elo_loader_preserves_last_rated_value(tmp_path, values, expected) -> None:
+    document = {
+        "generatedAt": "2026-09-17T15:31:35.519Z",
+        "config": {"initialRating": 1400},
+        "players": [{"name": "甲", "organization": "学校",
+                     "history": [[i, 1, 0, value] for i, value in enumerate(values)]}],
+    }
+    path = tmp_path / "data.js"
+    path.write_text("window.__ELO_DATA__ = " + json.dumps(document) + ";", encoding="utf-8")
+    records, generated_at = generator.load_xcpc_elo(path)
+    assert records == [PersonRecord("甲", "学校", expected)]
+    assert generated_at == document["generatedAt"]
+
+
 @pytest.mark.parametrize("with_current", [False, True])
+@pytest.mark.parametrize("team_format", ["registration", "pintia-public"])
 def test_second_preview_metadata_and_cached_source_date(
-    monkeypatch, tmp_path: Path, with_current: bool,
+    monkeypatch, tmp_path: Path, with_current: bool, team_format: str,
 ) -> None:
     teams = tmp_path / "teams.json"
-    teams.write_text(json.dumps([["队名", "Team", "学校", "甲 / 乙", "教练"]]))
+    roster = {"xcpcRankings": {"rankings": [{"teamFid": "1", "teamInfo": {
+        "teamName": "队名", "schoolName": "学校", "memberNames": ["甲", "乙"],
+        "coachNames": ["教练"],
+    }}]}} if team_format == "pintia-public" else [["队名", "Team", "学校", "甲 / 乙", "教练"]]
+    teams.write_text(json.dumps(roster))
     monkeypatch.setattr("sys.argv", [
         "generate_preview_data", "--teams", str(teams),
+        "--team-format", team_format,
         "--xcpcrating-data", ".", "--xcpc-elo-data", ".",
         "--previous-series", ".", "--cpcfinder-pages", ".",
         "--snapshot-date", "2026-09-07", "--cpcfinder-snapshot-date", "2026-09-04",
@@ -180,6 +204,9 @@ def test_second_preview_metadata_and_cached_source_date(
     assert document["title"] == "第二场"
     assert document["sortAt"] == "2026-09-12T13:00:00+08:00"
     assert document["teamSource"]["url"] == "https://example.test/second"
+    assert document["teamSource"]["title"] == (
+        "Pintia 公开榜单队伍名单" if team_format == "pintia-public" else "ICPC 报名系统队伍公示"
+    )
     assert document["snapshotDate"] == "2026-09-07"
     assert document["sourceSnapshots"]["cpcfinder"] == "2026-09-04"
     assert document["matchingSummary"]["members"] == 2
@@ -220,15 +247,15 @@ def test_second_preview_metadata_and_cached_source_date(
         assert "currentSeason" not in document["teams"][0]["ratings"]
 
 
-def test_default_publication_includes_both_preview_snapshots() -> None:
+def test_default_publication_includes_all_preview_snapshots() -> None:
     from scripts.generate_static_data import preview_specs
 
     documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
     assert [document["id"] for document in documents] == [
-        "icpc-2026-preliminary-1", "icpc-2026-preliminary-2",
+        "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636]
-    for document in documents:
+    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173]
+    for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]
             if member["name"] == "姜宣丞" and team["school"] == "香港中文大学"
@@ -236,3 +263,37 @@ def test_default_publication_includes_both_preview_snapshots() -> None:
         assert len(matches) == 1
         assert matches[0]["ratings"]["cpcfinder"] == 1880.17
         assert matches[0]["medals"] == {"gold": 5, "silver": 3, "bronze": 1}
+
+
+def test_pintia_roster_keeps_zero_submission_and_excluded_teams() -> None:
+    document = generator.load_json(Path("tests/fixtures/preview/pintia-public.json"))
+    document["xcpcRankings"]["rankings"][0]["teamInfo"]["coachNames"] = ["教练"]
+    teams = generator.parse_pintia_teams(document)
+    assert len(teams) == 3
+    assert teams[0] == generator.RegisteredTeam(0, "可乐麻瓜", "北京师范大学", ("王晨宇",))
+    assert teams[1].members == ("谷旭涵", "陆珏行")
+    assert teams[2].name == "treap粉丝团"
+    assert teams[2].excluded is True
+    assert teams[0].excluded is False
+
+
+@pytest.mark.parametrize("field,value", [
+    ("memberNames", []), ("memberNames", "甲/乙"), ("memberNames", [None]),
+    ("schoolName", ""), ("teamName", None),
+    ("excluded", "false"),
+])
+def test_pintia_roster_rejects_malformed_identity(field, value) -> None:
+    document = generator.load_json(Path("tests/fixtures/preview/pintia-public.json"))
+    document["xcpcRankings"]["rankings"][1]["teamInfo"][field] = value
+    with pytest.raises(ValueError, match="Pintia team row 1"):
+        generator.parse_pintia_teams(document)
+
+
+def test_pintia_roster_rejects_missing_rows_and_duplicate_ids() -> None:
+    for document in ({}, {"xcpcRankings": {"rankings": []}}, []):
+        with pytest.raises(ValueError, match="Pintia public rankings"):
+            generator.parse_pintia_teams(document)
+    document = generator.load_json(Path("tests/fixtures/preview/pintia-public.json"))
+    document["xcpcRankings"]["rankings"].append(document["xcpcRankings"]["rankings"][0])
+    with pytest.raises(ValueError, match="duplicate teamFid"):
+        generator.parse_pintia_teams(document)

@@ -214,6 +214,11 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-table thead th:nth-child(-n+3) { z-index: 5; background: #eef2f4; }
 .preview-table tbody tr:hover td:nth-child(-n+3), .preview-table tbody tr:focus-within td:nth-child(-n+3) { background: #f3f9fa; }
 .preview-table .preview-metric-cell { overflow: visible; }
+.preview-table tbody tr.preview-excluded td,
+.preview-table tbody tr.preview-excluded:hover td,
+.preview-table tbody tr.preview-excluded:focus-within td { background: #f5efff; }
+.preview-excluded .preview-team-identity,
+.preview-excluded-label { color: #7440a0; font-weight: 600; }
 .preview-table .table-sort-button { min-width: 0; justify-content: center; }
 .preview-table td.preview-school-cell { padding-right: .45rem; padding-left: .45rem; }
 .preview-school-content { display: grid; grid-template-columns: 1.9rem minmax(0, 1fr); align-items: center; gap: .125rem; min-width: 0; }

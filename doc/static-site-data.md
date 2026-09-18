@@ -17,6 +17,7 @@ python scripts/generate_static_data.py
 - `static/data/series/hdu-summer-2026.json`
 - `static/data/previews/2026-2027.json`
 - `static/data/previews/icpc-2026-preliminary-2.json`
+- `static/data/previews/ccpc-2026-preliminary.json`
 - `static/data/reviews/2026-2027.json`
 
 XCPC 系列按 RankLand → 赛季选择 → rating 计算生成；牛客系列完整获取 133876 至 133885 榜单；HDU 系列通过认证会话完整获取固定 CID 1229 至 1238。各来源进入 Rating 前都过滤无提交队伍并重建含并列的比赛排名。`--output-dir` 可覆盖根目录。生成器先加载、计算并投影全部 Rating 系列，同时读取已提交的前瞻和对应复盘文件；成功后依次原子发布系列、前瞻与复盘文件，最后发布入口索引。它不会自行请求、刷新或扩展前瞻名单。

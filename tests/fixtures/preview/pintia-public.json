@@ -1,0 +1,131 @@
+{
+  "xcpcRankings": {
+    "rankings": [
+      {
+        "rank": 1,
+        "totalScore": 0.0,
+        "penaltyTime": 0,
+        "solvingTime": 0,
+        "solvedCount": 0,
+        "schoolRank": 1,
+        "updateAt": "1970-01-01T00:00:00Z",
+        "competitionId": "2099750481526394880",
+        "teamInfo": {
+          "memberNames": [
+            "王晨宇"
+          ],
+          "teamName": "可乐麻瓜",
+          "schoolName": "北京师范大学",
+          "groupFids": [],
+          "excluded": false,
+          "girlMajor": false,
+          "schoolFid": "105",
+          "remark": ""
+        },
+        "teamFid": "1",
+        "detailsByProblemSetProblemId": {},
+        "schoolOrderRank": 1
+      },
+      {
+        "rank": 1,
+        "totalScore": 0.0,
+        "penaltyTime": 0,
+        "solvingTime": 0,
+        "solvedCount": 0,
+        "schoolRank": 1,
+        "updateAt": "1970-01-01T00:00:00Z",
+        "competitionId": "2099750481526394880",
+        "teamInfo": {
+          "memberNames": [
+            "谷旭涵",
+            "陆珏行"
+          ],
+          "teamName": "小猫坏事做尽",
+          "schoolName": "香港中文大学（深圳）",
+          "groupFids": [],
+          "excluded": false,
+          "girlMajor": false,
+          "schoolFid": "394",
+          "remark": ""
+        },
+        "teamFid": "2",
+        "detailsByProblemSetProblemId": {},
+        "schoolOrderRank": 1
+      },
+      {
+        "rank": 0,
+        "totalScore": 0.0,
+        "penaltyTime": 0,
+        "solvingTime": 0,
+        "solvedCount": 0,
+        "schoolRank": 0,
+        "updateAt": "1970-01-01T00:00:00Z",
+        "competitionId": "2099750481526394880",
+        "teamInfo": {
+          "memberNames": [
+            "苏岳",
+            "李浩"
+          ],
+          "teamName": "treap粉丝团",
+          "schoolName": "山东大学",
+          "groupFids": [],
+          "excluded": true,
+          "girlMajor": false,
+          "schoolFid": "196",
+          "remark": ""
+        },
+        "teamFid": "274",
+        "detailsByProblemSetProblemId": {},
+        "schoolOrderRank": 0
+      }
+    ],
+    "problemInfoByProblemSetProblemId": {}
+  },
+  "competitionBasicInfo": {
+    "name": "2026年CCPC网络预选赛",
+    "startAt": "2026-09-19T05:00:00Z",
+    "endAt": "2026-09-19T10:00:00Z",
+    "logo": "3a8985ec-94de-4bfa-af37-73e4160f1eb2.png",
+    "sponsors": [
+      {
+        "name": "原力动机",
+        "image": "1ef0f7fe-afb5-4d6b-9bcb-c9963f6f7ce5.png",
+        "priority": 1
+      },
+      {
+        "name": "腾讯",
+        "image": "f2ddc827-f942-4f30-9afc-9a6858890e9c.png",
+        "priority": 2
+      },
+      {
+        "name": "字节",
+        "image": "828336fa-178a-45f8-bdc7-e34b01077b13.png",
+        "priority": 2
+      },
+      {
+        "name": "同花顺",
+        "image": "2055a1f0-214d-4ade-a64b-92453c4f3234.png",
+        "priority": 2
+      },
+      {
+        "name": "米哈游",
+        "image": "4d0b62ce-e87d-4d57-b956-c488166d3f9f.png",
+        "priority": 2
+      },
+      {
+        "name": "Aven",
+        "image": "42a22625-3e82-48bb-998f-7c55af826691.png",
+        "priority": 2
+      }
+    ],
+    "hideScoreboard": false,
+    "freezeAt": "2026-09-19T09:00:00Z",
+    "allowExcludedTeamFirstBlood": false,
+    "id": "2099750481526394880",
+    "type": "XCPC",
+    "enablePrinter": true,
+    "publicRanking": true
+  },
+  "balloonSettings": [],
+  "showFullBoardInPublic": false
+}

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260911-50";
+} from "./data.mjs?v=20260918-52";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260911-50";
+} from "./problem-rating.mjs?v=20260918-52";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -33,11 +33,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260911-50";
+} from "./preview.mjs?v=20260918-52";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260911-50";
+} from "./review.mjs?v=20260918-52";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -554,10 +554,9 @@ function previewRatingNode(sourceId, value, isMember = false) {
 }
 
 function previewRankedValue(displayed, rank) {
-  if (rank === null) return displayed;
   return node("span", { className: "preview-ranked-value" }, [
     displayed,
-    node("small", { className: "preview-global-rank", text: `#${rank}` }),
+    node("small", { className: "preview-global-rank", text: rank === null ? "" : `#${rank}` }),
   ]);
 }
 
@@ -710,7 +709,7 @@ function radarPoints(counts, maximum, radius, centerX, centerY) {
 
 function previewPowerRadar(power) {
   const labels = [...state.preview.metricSources.map(({ title }) => title), "奖牌"];
-  const maximum = Math.max(1, state.preview.teams.length - 1);
+  const maximum = Math.max(1, state.preview.teams.filter(team => !team.excluded).length - 1);
   const width = labels.length > 5 ? 340 : 300;
   const centerX = width / 2;
   const centerY = 105;
@@ -766,6 +765,7 @@ function previewPowerRadar(power) {
 
 function previewPowerControl(team) {
   const power = state.previewPower.get(team.id);
+  if (team.excluded) return node("span", { className: "preview-excluded-label", text: "打星" });
   if (power.rank === null) return node("span", { className: "preview-missing", text: "—" });
   const tooltip = node("span", { className: "preview-power-tooltip", role: "tooltip" }, [
     node("strong", { text: `综合战力 #${power.rank}` }),
@@ -794,7 +794,7 @@ function renderPreviewRows() {
     items: state.filtered,
     columns,
     createRow(team, index) {
-      const row = node("tr");
+      const row = node("tr", { className: team.excluded ? "preview-excluded" : "" });
       row.dataset.teamId = team.id;
       row.setAttribute("aria-rowindex", String(index + 2));
       const schoolRank = state.previewSchoolRanks.get(team.id);
@@ -817,9 +817,9 @@ function renderPreviewRows() {
       const identityControl = node("span", {
         className: "preview-team-identity",
         tabIndex: 0,
-        "aria-label": `${team.name}，${team.school}，成员：${memberNames}`,
+        "aria-label": `${team.excluded ? "打星队伍，不计排名；" : ""}${team.name}，${team.school}，成员：${memberNames}`,
       }, [
-        node("span", { className: "identity-primary", text: team.name }),
+        node("span", { className: "identity-primary", text: `${team.excluded ? "★ " : ""}${team.name}` }),
         node("small", {
           className: "identity-secondary",
           text: `${schoolRank ? `#${schoolRank} ` : ""}${team.school}`,
@@ -933,6 +933,11 @@ function renderSourceLinks(container, label, sources) {
 function renderPreviewSources() {
   renderSourceLinks(elements.previewTeamSource, "名单来源：", [state.preview.teamSource]);
   renderSourceLinks(elements.previewMetricSources, "数据来源：", state.preview.metricSources);
+  if (state.preview.teams.some(team => team.excluded)) {
+    elements.previewTeamSource.append(node("span", {
+      className: "preview-excluded-label", text: " · ★ 打星队伍按指标排序，不计队伍及学校排名",
+    }));
+  }
 }
 
 function showPreview(updateUrl = false) {

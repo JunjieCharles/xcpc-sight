@@ -48,6 +48,7 @@ class RegisteredTeam:
     name: str
     school: str
     members: tuple[str, ...]
+    excluded: bool = False
 
 
 class PersonIndex:
@@ -109,9 +110,11 @@ class AchievementIndex:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build a manually requested ICPC preview snapshot"
+        description="Build a manually requested XCPC preview snapshot"
     )
     parser.add_argument("--teams", type=Path, required=True)
+    parser.add_argument("--team-format", choices=("registration", "pintia-public"),
+                        default="registration")
     parser.add_argument("--xcpcrating-data", type=Path, required=True)
     parser.add_argument("--xcpc-elo-data", type=Path, required=True)
     parser.add_argument("--previous-series", type=Path, required=True)
@@ -180,7 +183,10 @@ def load_xcpc_elo(path: Path) -> tuple[list[PersonRecord], str]:
     records = []
     for player in document["players"]:
         history = player.get("history") or []
-        rating = int(history[-1][3]) if history else initial
+        # Upstream marks unrated events with a null newRating. Match its
+        # computeCurrentRating: retain the last rated value, or initialRating.
+        rating = next((int(event[3]) for event in reversed(history)
+                       if event[3] is not None), initial)
         records.append(PersonRecord(player["name"], player["organization"], rating))
     return records, str(document["generatedAt"])
 
@@ -282,6 +288,42 @@ def parse_registered_team(row: object, source_index: int) -> RegisteredTeam:
     return RegisteredTeam(source_index, team_name, school, members)
 
 
+def parse_pintia_teams(document: object) -> list[RegisteredTeam]:
+    """Read identities only; zero submissions are expected before a contest."""
+    if not isinstance(document, dict):
+        raise ValueError("Pintia public rankings: expected an object")
+    rankings = document.get("xcpcRankings")
+    rows = rankings.get("rankings") if isinstance(rankings, dict) else None
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Pintia public rankings: missing or empty rankings")
+    teams = []
+    seen = set()
+    for index, row in enumerate(rows):
+        context = f"Pintia team row {index}"
+        if not isinstance(row, dict):
+            raise ValueError(f"{context}: expected an object")
+        fid, info = row.get("teamFid"), row.get("teamInfo")
+        if not isinstance(fid, str) or not fid.strip() or fid in seen:
+            raise ValueError(f"{context}: missing or duplicate teamFid {fid!r}")
+        seen.add(fid)
+        if not isinstance(info, dict):
+            raise ValueError(f"{context}: missing teamInfo")
+        name, school, members = (info.get(key) for key in (
+            "teamName", "schoolName", "memberNames",
+        ))
+        if not all(isinstance(value, str) and value.strip() for value in (name, school)):
+            raise ValueError(f"{context}: missing teamName or schoolName")
+        if (not isinstance(members, list) or not members
+                or not all(isinstance(member, str) and member.strip() for member in members)):
+            raise ValueError(f"{context}: missing or invalid memberNames")
+        excluded = info.get("excluded", False)
+        if not isinstance(excluded, bool):
+            raise ValueError(f"{context}: excluded must be a boolean")
+        teams.append(RegisteredTeam(index, name.strip(), school.strip(),
+                                    tuple(member.strip() for member in members), excluded))
+    return teams
+
+
 def build_document(args: argparse.Namespace) -> dict[str, object]:
     normalizer = load_normalizer(args.school_aliases)
     xcpcrating, xcpcrating_at = load_xcpcrating(args.xcpcrating_data)
@@ -310,8 +352,12 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
     match_counts = dict.fromkeys(indexes, 0)
     teams = []
     raw_teams = load_json(args.teams)
-    for source_index, row in enumerate(raw_teams):
-        registered = parse_registered_team(row, source_index)
+    pintia = getattr(args, "team_format", "registration") == "pintia-public"
+    registered_teams = parse_pintia_teams(raw_teams) if pintia else [
+        parse_registered_team(row, index) for index, row in enumerate(raw_teams)
+    ]
+    for registered in registered_teams:
+        source_index = registered.source_index
         team_name = registered.name
         school = registered.school
         members = list(registered.members)
@@ -347,6 +393,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
             {
                 "id": stable_team_id(school, team_name, members),
                 "sourceIndex": source_index,
+                **({"excluded": registered.excluded} if pintia else {}),
                 "school": school,
                 "name": team_name,
                 "members": member_documents,
@@ -383,9 +430,13 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "sortAt": args.sort_at,
         "snapshotDate": args.snapshot_date,
         "teamSource": {
-            "title": "ICPC 报名系统队伍公示",
+            "title": "Pintia 公开榜单队伍名单" if pintia else "ICPC 报名系统队伍公示",
             "url": args.team_source_url,
-            "note": "外部报名名单静态快照；不来自 Pintia 比赛榜单，不随比赛进程自动更新。",
+            "note": (
+                "Pintia 公开榜单队伍静态快照，含公开的打星队伍；仅提取学校、队名和队员，"
+                "不使用本场成绩，不随比赛进程自动更新。" if pintia else
+                "外部报名名单静态快照；不来自 Pintia 比赛榜单，不随比赛进程自动更新。"
+            ),
         },
         "metricSources": [
             {"id": source_id, "title": title, "url": url}
