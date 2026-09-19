@@ -12,6 +12,23 @@ const review = validateReview(await read("./fixtures/review/results.json"), [pre
 const contest = review.contests[0];
 const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
 
+test("excluded preview teams are absent from review and all metric cohorts", () => {
+  const p = structuredClone(preview);
+  p.teams[0].excluded = true;
+  const r = structuredClone(review);
+  r.contests[0].teams = r.contests[0].teams.filter(t => t.previewTeamId !== p.teams[0].id);
+  validateReview(r, [p]);
+  for (const metric of ["power", ...p.metricSources.map(s => s.id), "medals"]) {
+    const a = buildReviewAnalysis(p, r.contests[0], metric);
+    assert.equal(a.activeCount, 5);
+    assert.ok(a.rows.every(t => !t.excluded));
+    assert.equal(a.coverage, a.rows.length / 5);
+  }
+  const invalid = structuredClone(r);
+  invalid.contests[0].teams.push(contest.teams[0]);
+  assert.throws(() => validateReview(invalid, [p]), /unknown or duplicate preview team/);
+});
+
 test("explicit removed results preserve roster coverage but leave all analysis cohorts", () => {
   const revised = structuredClone(review);
   const removed = revised.contests[0].teams[0];
@@ -202,7 +219,8 @@ test("failed review fetch can be retried without affecting preview availability"
 test("published first preliminary joins all teams and retains 1972 nonzero original power teams", async () => {
   const p = validatePreview(await read("../static/data/previews/2026-2027.json"));
   const second = validatePreview(await read("../static/data/previews/icpc-2026-preliminary-2.json"));
-  const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [p, second]);
+  const ccpc = validatePreview(await read("../static/data/previews/ccpc-2026-preliminary.json"));
+  const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [p, second, ccpc]);
   assert.equal(r.contests[0].teams.length, 2535);
   assert.equal(r.contests[0].teams.filter(t => t.hasActivity).length, 2496);
   const power = buildPreviewPower(p.teams);
@@ -227,8 +245,9 @@ test("published first preliminary joins all teams and retains 1972 nonzero origi
 test("published second preliminary joins all teams and compares all seven pre-contest metrics", async () => {
   const first = validatePreview(await read("../static/data/previews/2026-2027.json"));
   const p = validatePreview(await read("../static/data/previews/icpc-2026-preliminary-2.json"));
-  const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [first, p]);
-  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2"]);
+  const ccpc = validatePreview(await read("../static/data/previews/ccpc-2026-preliminary.json"));
+  const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [first, p, ccpc]);
+  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary"]);
   const c = r.contests[1];
   assert.equal(c.previewId, p.id);
   assert.equal(c.startAt, "2026-09-12T13:00:00+08:00");
@@ -271,5 +290,37 @@ test("all six metric comparisons remain available and contest changes use indepe
     assert.notEqual(next, summaries[i]);
     assert.ok(Math.abs(next.agreement.value + summaries[i].agreement.value) < 1e-12);
     assert.equal(buildReviewAnalysis(preview, contest, metrics[i]), summaries[i]);
+  }
+});
+
+
+test("published CCPC review covers only official teams and seven verified metrics", async () => {
+  const ps = await Promise.all(["2026-2027", "icpc-2026-preliminary-2", "ccpc-2026-preliminary"]
+    .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
+  const r = validateReview(await read("../static/data/reviews/2026-2027.json"), ps);
+  const p = ps[2], c = r.contests[2];
+  assert.equal(c.id, "ccpc2026preliminary");
+  assert.equal(c.previewId, p.id);
+  assert.equal(c.startAt, "2026-09-19T13:00:00+08:00");
+  assert.equal(c.source.fileId, "94747179192774656");
+  assert.equal(c.source.sha256, "ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2");
+  assert.equal(c.teams.length, 2169);
+  assert.equal(c.teams.filter(t => t.hasActivity).length, 2109);
+  assert.equal(c.teams.filter(t => !t.hasActivity && t.actualRank === null).length, 60);
+  assert.deepEqual(new Set(c.teams.map(t => t.previewTeamId)), new Set(p.teams.filter(t => !t.excluded).map(t => t.id)));
+  // Independently checked with scipy.stats.spearmanr, including tied ranks.
+  const expected = {
+    power: [2046, 0.8250005735255763], xcpcrating: [2045, 0.8723800195576543],
+    xcpcElo: [2042, 0.8903748875289162], previousSeason: [1128, 0.7064603188205778],
+    currentSeason: [1966, 0.868999915214312], cpcfinder: [871, 0.6410781746824133],
+    medals: [871, 0.6574826994852914],
+  };
+  for (const [metric, [count, rho]] of Object.entries(expected)) {
+    const a = buildReviewAnalysis(p, c, metric);
+    assert.equal(a.rows.length, count);
+    assert.equal(a.activeCount, 2109);
+    assert.equal(a.coverage, count / 2109);
+    assert.ok(a.rows.every(t => !t.excluded));
+    assert.ok(Math.abs(a.agreement.value - rho) < 1e-12);
   }
 });

@@ -44,7 +44,7 @@ def project_review_contest(
         school = normalizer.school(team.school_name)
         names[(school, _team_name(team.team_name))].append(team)
         members[(school, tuple(sorted(normalizer.member(n) for n in team.members)))].append(team)
-    roster = preview["teams"]
+    roster = [team for team in preview["teams"] if not team.get("excluded", False)]
     roster_ids = {team["id"] for team in roster}
     if len(roster_ids) != len(roster):
         raise DataValidationError(f"preview {preview['id']}: duplicate team ID")

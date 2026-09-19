@@ -89,6 +89,17 @@ def test_unofficial_teams_never_match_and_input_is_not_mutated():
         project_review_contest(preview, replace(contest, teams=(unofficial, *contest.teams[1:])))
 
 
+def test_excluded_preview_teams_are_omitted_without_requiring_a_result():
+    preview, contest = fixture()
+    preview["teams"][0]["excluded"] = True
+    before = copy.deepcopy(preview)
+    for teams in (contest.teams, contest.teams[1:]):
+        projected = project_review_contest(preview, replace(contest, teams=teams))
+        assert len(projected["teams"]) == len(preview["teams"]) - 1
+        assert "a" not in {row["previewTeamId"] for row in projected["teams"]}
+    assert preview == before
+
+
 def test_explicitly_removed_result_is_not_an_absence_and_ranks_are_rebuilt():
     preview, contest = fixture()
     original = copy.deepcopy(preview)

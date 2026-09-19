@@ -1,5 +1,5 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-53";
-import { buildPreviewPower, buildPreviewRanks, sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20260919-53";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-54";
+import { buildPreviewPower, buildPreviewRanks, sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20260919-54";
 
 const validated = new WeakMap();
 const analyses = new WeakMap();
@@ -29,7 +29,7 @@ export function validateReview(document, previews) {
       fail(`${path}.source`, "expected source title and URL");
     }
     if (!Array.isArray(contest.teams)) fail(`${path}.teams`, "expected array");
-    const rosterIds = new Set(preview.teams.map(t => t.id));
+    const rosterIds = new Set(preview.teams.filter(t => !t.excluded).map(t => t.id));
     const resultIds = new Set();
     for (const [j, team] of contest.teams.entries()) {
       const teamPath = `${path}.teams[${j}]`;
@@ -127,7 +127,7 @@ export function buildReviewAnalysis(preview, contest, metric = "power") {
   const power = buildPreviewPower(preview.teams, metricIds);
   const originalRanks = metric === "power" ? null : buildPreviewRanks(preview.teams, metricIds);
   const results = new Map(contest.teams.map(t => [t.previewTeamId, t]));
-  const active = preview.teams.filter(t => results.get(t.id)?.resultStatus !== "removed"
+  const active = preview.teams.filter(t => !t.excluded && results.get(t.id)?.resultStatus !== "removed"
     && results.get(t.id)?.hasActivity);
   const teams = active.filter(t => metric === "power"
     ? power.get(t.id).vector.some(value => value !== 0)

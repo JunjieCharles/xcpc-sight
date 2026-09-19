@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-53";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-54";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();

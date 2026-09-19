@@ -61,7 +61,7 @@ schema v1 结果行新增可选 `resultStatus: "removed"`：保留旧 `resultTea
 - `title`、`startAt`、`source`：来源标题、可打开的 RankLand `/ranklist/{contestId}` 链接；有 provenance 时还包含 `fileId`、`fileUrl`、`sha256`。
 - `teams[]`：`previewTeamId`、`resultTeamId`、`hasActivity`、`actualRank`。正常行的 `hasActivity` 为布尔值，有活动时名次必须为正整数，无活动时必须为 `null`；显式 `resultStatus: "removed"` 行的活动状态和名次均为 `null`。
 
-结果必须恰好覆盖对应快照中的每支队伍，各侧 ID 唯一；未知前瞻、重复关联、漏队、非法活动状态和名次会报出字段路径。源结果中未出现在前瞻中的队伍不加入复盘，其存在可能影响原实际名次，但筛选后名次会压缩。
+结果必须恰好覆盖对应快照中的每支正式队伍（排除 `excluded: true` 的打星队伍），各侧 ID 唯一；未知前瞻、重复关联、漏队、非法活动状态和名次会报出字段路径。源结果中未出现在前瞻中的队伍不加入复盘，其存在可能影响原实际名次，但筛选后名次会压缩。
 
 纯 Python API：`core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None)`。输入原前瞻映射和不可变 `Contest`，输出一场复盘映射，不访问网络或文件，不修改输入。先按规范化学校和队名唯一匹配，再用规范化学校及排序后的完整成员名单唯一匹配。学校、成员复用 `DefaultNormalizer`；队名仅进行 NFKC、大小写和空白归一化，保留标点，因为真实队名可能完全由标点组成。`overrides` 明确映射前瞻队伍 ID 到结果队伍 ID，并验证目标唯一且未被其他队伍使用。除显式登记的 `removed_results` 外，未匹配或歧义一律失败，不能视为无提交。
 
@@ -154,4 +154,30 @@ python scripts/generate_review_data.py --preview static/data/previews/icpc-2026-
 
 ```bash
 python scripts/generate_review_data.py --preview static/data/previews/icpc-2026-preliminary-2.json --srk data-cache/review-20260912/icpc2026preliminary-2.srk.json --contest-id icpc2026preliminary-2 --file-id 92205039610843136 --file-url https://cdn.algoux.cn/rankland/file/92205039610843136/icpc2026preliminary-2.srk.json --sha256 ab6a796e4ca65f1ba6dc8c9c87174a49aab7439cee6aacee17d3ce1285a9ceea
+```
+
+## CCPC 网络预选赛（2026-09-19）
+
+根据 [RankLand 榜单](https://rl.algoux.cn/ranklist/ccpc2026preliminary) 新增第三场复盘。比赛 ID `ccpc2026preliminary` 对应前瞻 `ccpc-2026-preliminary`，开赛时间为北京时间 2026-09-19 13:00。文件 ID `94747179192774656`，SHA-256 为 `ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2`，已核验实际下载字节。
+
+按用户要求，复盘不包含 4 支打星队伍。投影在匹配前排除前瞻中 `excluded: true` 的队伍，不要求其结果存在；前端完整性校验只接受正式名单，所有指标的样本和覆盖率分母均排除打星队伍。无需新增结果字段或更改公开 API。原前瞻保留 2173 队及全部评分，复盘覆盖其中 2169 支正式队伍，全部自动唯一匹配，无人工覆盖；2109 队有提交，60 队无提交。正式队伍匹配失败仍报错，不当作缺席。两场 ICPC 复盘内容保持不变。
+
+| 指标 | 有效队伍 | Spearman ρ（显示精度） |
+| --- | ---: | ---: |
+| 综合战力 | 2046 | 0.825 |
+| XCPC Rating | 2045 | 0.872 |
+| XCPC Elo | 2042 | 0.890 |
+| 上赛季 Rating | 1128 | 0.706 |
+| 本赛季 Rating | 1966 | 0.869 |
+| CPC Finder | 871 | 0.641 |
+| 奖牌 | 871 | 0.657 |
+
+覆盖率分母为 2109，七项系数已用 SciPy `spearmanr` 独立复核；不同指标覆盖范围不同。既有索引已包含 CCPC 前瞻和复盘路径，页面默认选择最新的 CCPC 场次。此次不更新个人赛季 Rating。静态资源版本为 `20260919-54`。
+
+离线回归覆盖打星队伍不要求结果存在、输入不变、前端拒绝打星结果行、所有指标排除打星队伍，以及完整 CCPC 快照来源、名单、活动计数和七项统计基准；继续核验前两场复盘。17 项 Python 复盘测试、72 项前端数据测试及 Ruff 检查通过。
+
+离线复现（先保存并核验上述固定 SRK）：
+
+```bash
+python scripts/generate_review_data.py --preview static/data/previews/ccpc-2026-preliminary.json --srk data-cache/review-20260919/ccpc2026preliminary.srk.json --contest-id ccpc2026preliminary --file-id 94747179192774656 --file-url https://cdn.algoux.cn/rankland/file/94747179192774656/ccpc2026preliminary.srk.json --sha256 ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2
 ```

@@ -57,7 +57,7 @@ python -m scripts.generate_preview_data --teams data-cache/pintia-investigate/ra
 
 `core.seasons.SEASON_2026_2027` 定义 `2026-2027` 系列，候选比赛来自 RankLand official collection 的 `icpc2026` 与 `ccpc2026`，沿用邀请赛排除、显式 include/exclude 覆盖和同日 CCPC 优先的排序规则。公开 API 为 `SEASON_2026_2027` 与 `load_2026_2027_season`。
 
-当前已发布“2026 ICPC Asia EC网络预选赛”第一场、第二场的选手 Rating，同时提供这两场及 CCPC 网络预选赛的三场赛前前瞻，并已发布第一场和第二场赛后复盘。站点索引在同一条记录提供 `path`、`previewPath`、`previews` 与 `reviewPath`；本赛季尚未发布题目难度数据。复盘规则、结果关联及全指标符合度对比见 [赛后复盘](post-contest-review.md)。
+当前已发布“2026 ICPC Asia EC网络预选赛”第一场、第二场的选手 Rating，同时提供这两场及 CCPC 网络预选赛的三场赛前前瞻，并已发布这三场赛后复盘（CCPC 复盘只包含 2169 支正式队伍）。站点索引在同一条记录提供 `path`、`previewPath`、`previews` 与 `reviewPath`；本赛季尚未发布题目难度数据。复盘规则、结果关联及全指标符合度对比见 [赛后复盘](post-contest-review.md)。
 
 2026-09-06 从 RankLand 获取 `icpc2026preliminary-1`，比赛时间为北京时间 13:00。上游共 2535 支正式队伍，排除 39 支无提交队伍后，2496 支队伍的 7380 个规范化选手身份参与计算。新赛季从空状态、初始 Rating 1400 开始，不继承上赛季评分；首次发布的最终 Rating 范围为 1334–1720。沿用学校与姓名身份规范化、成绩重建排名和重复身份取最好排名政策。
 
