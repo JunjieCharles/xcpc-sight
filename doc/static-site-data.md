@@ -4,6 +4,8 @@
 
 ## 文件与生成
 
+2026-09-19 根据修订后的两场 ICPC 网络赛榜单，定向更新 `series/2026-2027.json`、`reviews/2026-2027.json` 和 `previews/ccpc-2026-preliminary.json`；其他系列、两场 ICPC 前瞻及索引入口保持不变。本赛季累计 8399 人，CCPC 前瞻只更新本赛季评分。复盘 schema v1 新增可选 `resultStatus: "removed"`，该行 `hasActivity` / `actualRank` 为 null，区别于无提交；具体来源、统计与复现见赛季和复盘设计文档。
+
 ```bash
 python scripts/generate_static_data.py
 ```

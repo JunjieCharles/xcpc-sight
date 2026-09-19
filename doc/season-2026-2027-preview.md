@@ -1,5 +1,24 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-09-19 官方榜单修订（当前发布版本）
+
+按 [srk-collection PR #73](https://github.com/algoux/srk-collection/pull/73) 合并版本及已同步的 RankLand 数据，重新计算本赛季个人 Rating，并只刷新 CCPC 网络赛前瞻中的 `currentSeason`。不改评分算法，不把第二场赛后评分回填到两场 ICPC 赛前快照；第一场全部个人参赛历史与原发布结果逐项一致。第二场移除的队伍仍可能有有效的首场历史，不据此删除跨场身份。
+
+固定输入均核验实际下载字节 SHA-256，解析后的 JSON 与上游提交 `ae959416ef2955159f9affd45d4ab53bf299a98e` 一致：
+
+| 场次 | RankLand file ID | SHA-256 |
+| --- | --- | --- |
+| 第一场 | `94656957302009856` | `8ca3ddf111c255b352021678000f4bac0040aa3e3f2cd827fd2fdc260f0dbd0b` |
+| 第二场 | `94656957834690560` | `a501dca75c4814277ed6a7b897db379b5ee4b3b1b560be4bc0c2cc8c84fb3fc9` |
+
+下载路径为 `https://cdn.algoux.cn/rankland/file/{fileId}/icpc2026preliminary-{1或2}.srk.json`。仍通过 `normalize_srk_contest`（collection 为 `icpc2026`）→ `select_season(SEASON_2026_2027)` → `calculate_series_ratings` → `project_series_rating_data` 从空状态重算，两场分别有 7380 / 7464 个规范化选手身份；累计 **8399 人**，6445 人参加两场、1019 人第二场首次参赛、935 人仅参加第一场。最终 Rating 范围仍为 1283–1904；第二场有效提交队伍为 2521 支。
+
+CCPC 前瞻名单仍为 2173 队、6443 个成员条目；本赛季评分仍匹配 5878 个成员条目，418 个成员分和 152 支队伍归一化 LSE 分变化。采用原 `PersonIndex` 的学校/姓名规范化和最高分消歧策略，仅更新成员与队伍 `ratings.currentSeason` 及对应来源时间/匹配计数。来源比赛时间仍为 2026-09-12 13:00；综合战力由前端从修订后评分自动重算。名单、打星状态、其他来源评分、奖牌、历史战绩和来源日期均逐项核验不变；不擅自刷新外部 XCPC Rating/XCPC Elo。
+
+可用下文首次生成命令和保存的来源缓存重建 CCPC 前瞻：`--current-series` 使用修订后的 `static/data/series/2026-2027.json`，`--xcpc-elo-data` 使用 `data-cache/preview-sources-20260918-elo-refresh/xcpc-elo-data.js`，其余输入保持既有版本。数据快照日期仍指名单/外部源获取日期，本次修订时间由本节记录。
+
+离线回归覆盖新的赛季人数与跨场连续性，并逐一验证 CCPC 全部成员的本赛季评分来自修订后的已发布系列、未匹配值和完整 LSE 聚合。两场 ICPC 前瞻与其他赛季/题目 Rating 文件字节未变。2026-09-19 验证通过：209 项 Python 测试、70 项前端数据测试、Ruff 和差异空白检查；1920px/390px 浏览器中第二场复盘、CCPC 前瞻和本赛季 Rating 均正常加载，无脚本异常。第二场复盘的显式移除状态和新符合度基准见 [赛后复盘](post-contest-review.md#2026-09-19-官方结果修订当前发布版本)。下文 9 月 12 日的人数为首次发布时的历史记录，以本节为当前版本。
+
 ## 2026 CCPC 网络预选赛
 
 2026-09-18 按用户指定的 [Pintia 公开榜单](https://pintia.cn/rankings/2099750481526394880) 添加 `ccpc-2026-preliminary`，比赛时间为北京时间 2026-09-19 13:00–18:00。名单读取公开只读接口 `/api/competitions/2099750481526394880/xcpc-rankings/public`，保留返回顺序，共 2173 队、439 所学校、6443 个队员条目，其中 2169 队正式、4 队打星。不把无提交队伍过滤掉，不读取本场解题数或排名作为前瞻指标；仅代表获取时接口公开的名单，不保证覆盖未公开或后来变更的报名。

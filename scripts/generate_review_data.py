@@ -36,6 +36,10 @@ def main() -> None:
         "--overrides", type=Path, help="JSON mapping preview team ID to result team ID"
     )
     parser.add_argument("--output", type=Path, default=Path("static/data/reviews/2026-2027.json"))
+    parser.add_argument(
+        "--removed-results", type=Path,
+        help="JSON mapping explicitly removed preview team IDs to their old result IDs",
+    )
     args = parser.parse_args()
     if args.srk:
         raw = args.srk.read_bytes()
@@ -59,6 +63,10 @@ def main() -> None:
         contest,
         normalizer=DefaultNormalizer(school_aliases=aliases),
         overrides=overrides,
+        removed_results=(
+            json.loads(args.removed_results.read_text(encoding="utf-8"))
+            if args.removed_results else None
+        ),
     )
     document = {"schemaVersion": 1, "seriesId": preview["seriesId"], "contests": []}
     if args.output.exists():

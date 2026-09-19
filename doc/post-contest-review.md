@@ -49,17 +49,21 @@
 
 ## 静态契约与生成
 
+2026-09-19 官方结果修订：赛前名单保持不变；对经旧、新榜单差异确认移除的队伍，生成器通过显式 `--removed-results` JSON 映射（前瞻队伍 ID → 旧结果队伍 ID）登记。纯 API 对应参数为 `removed_results`。映射只能引用已知前瞻、唯一且非空的旧结果 ID，不能与 overrides 重叠，也不能指向当前仍存在的结果或当前仍可按身份匹配的队伍。未显式登记的匹配失败继续报错。
+
+schema v1 结果行新增可选 `resultStatus: "removed"`：保留旧 `resultTeamId` 供追溯，`hasActivity` 和 `actualRank` 必须为 null，表示正式结果已移除而非没有提交。正常行省略 `resultStatus`，沿用布尔活动状态。前端校验拒绝未知状态和移除状态携带名次/活动布尔值；这些记录不进入复盘样本、覆盖率分母及符合度，但仍覆盖原前瞻名单。移除不修改任何赛前评分或赛前综合战力排序。
+
 站点 schema v2 索引新增可选 `reviewPath`，相对站点索引解析。前瞻支持可选 `previews: [{id, path}]` 多场次入口，提供列表时它是完整目录，`previewPath` 如同时存在必须等于第一项路径；仅有旧 `previewPath` 仍正常加载。索引生成器收到同系列多份不同 ID 的前瞻会输出列表及首项兼容入口，拒绝同系列重复场次 ID。复盘引用必须对应已发布前瞻。
 
 `static/data/reviews/2026-2027.json` 为 schema v1，顶层包含 `schemaVersion`、`seriesId`、`contests[]`。每场包含：
 
 - `id`：实际比赛 ID；`previewId`：对应赛前快照 ID，不能通过标题猜测，两者允许不同。
 - `title`、`startAt`、`source`：来源标题、可打开的 RankLand `/ranklist/{contestId}` 链接；有 provenance 时还包含 `fileId`、`fileUrl`、`sha256`。
-- `teams[]`：`previewTeamId`、`resultTeamId`、布尔 `hasActivity`、`actualRank`。有活动时名次必须为正整数，无活动时必须为 `null`。
+- `teams[]`：`previewTeamId`、`resultTeamId`、`hasActivity`、`actualRank`。正常行的 `hasActivity` 为布尔值，有活动时名次必须为正整数，无活动时必须为 `null`；显式 `resultStatus: "removed"` 行的活动状态和名次均为 `null`。
 
 结果必须恰好覆盖对应快照中的每支队伍，各侧 ID 唯一；未知前瞻、重复关联、漏队、非法活动状态和名次会报出字段路径。源结果中未出现在前瞻中的队伍不加入复盘，其存在可能影响原实际名次，但筛选后名次会压缩。
 
-纯 Python API：`core.project_review_contest(preview, contest, *, normalizer=None, overrides=None)`。输入原前瞻映射和不可变 `Contest`，输出一场复盘映射，不访问网络或文件，不修改输入。先按规范化学校和队名唯一匹配，再用规范化学校及排序后的完整成员名单唯一匹配。学校、成员复用 `DefaultNormalizer`；队名仅进行 NFKC、大小写和空白归一化，保留标点，因为真实队名可能完全由标点组成。`overrides` 明确映射前瞻队伍 ID 到结果队伍 ID，并验证目标唯一且未被其他队伍使用。未匹配或歧义一律失败，不能视为无提交。
+纯 Python API：`core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None)`。输入原前瞻映射和不可变 `Contest`，输出一场复盘映射，不访问网络或文件，不修改输入。先按规范化学校和队名唯一匹配，再用规范化学校及排序后的完整成员名单唯一匹配。学校、成员复用 `DefaultNormalizer`；队名仅进行 NFKC、大小写和空白归一化，保留标点，因为真实队名可能完全由标点组成。`overrides` 明确映射前瞻队伍 ID 到结果队伍 ID，并验证目标唯一且未被其他队伍使用。除显式登记的 `removed_results` 外，未匹配或歧义一律失败，不能视为无提交。
 
 ```bash
 python scripts/generate_review_data.py
@@ -103,6 +107,32 @@ node --experimental-websocket --test tests/test_review_browser.mjs
 赛后复盘表格额外拉开三组奖牌的间隔：银、铜图标槽增至 1.6em 并右对齐，网格间距为 .2em；数量槽仍为 2ch，保持各组对齐。赛前前瞻和成员悬浮明细保留紧凑间距。
 
 ## 第二场数据与测试
+
+### 2026-09-19 官方结果修订（当前发布版本）
+
+上游 [srk-collection PR #73](https://github.com/algoux/srk-collection/pull/73) 已合并为 `ae959416ef2955159f9affd45d4ab53bf299a98e`。RankLand 当前第二场文件 ID 为 `94656957834690560`，SHA-256 为 `a501dca75c4814277ed6a7b897db379b5ee4b3b1b560be4bc0c2cc8c84fb3fc9`；已核验实际下载字节哈希，并确认解析后的 JSON 与该合并版本完全一致。
+
+第二场仍覆盖原 2636 支赛前队伍：2521 队有有效提交记录，101 队无提交，14 队标记为 `resultStatus: "removed"`。移除映射保存在 `config/review-removed-results/icpc2026preliminary-2.json`；依据官方公示与新旧榜单 ID 差异登记，不根据姓名跨场追溯删除。第一场复盘、两场 ICPC 前瞻的发布字节均不变。第二场覆盖率分母改为 2521，页面显示“官方结果已移除 14 支队伍”。
+
+| 指标 | 有效队伍 | Spearman ρ（显示精度） |
+| --- | ---: | ---: |
+| 综合战力 | 2389 | 0.798 |
+| XCPC Rating | 2386 | 0.820 |
+| XCPC Elo | 2376 | 0.814 |
+| 上赛季 Rating | 1307 | 0.666 |
+| 本赛季 Rating | 2212 | 0.809 |
+| CPC Finder | 991 | 0.651 |
+| 奖牌 | 991 | 0.663 |
+
+七项系数均经 SciPy `spearmanr` 独立复核。新增离线测试覆盖显式移除、未知或重复映射、与 override 冲突、当前仍存在/可匹配的结果、未登记的缺失继续报错、零题失败提交保留、CLI 确定性和哈希错误不覆盖、前端严格状态校验及移除后样本/覆盖率；完整快照回归更新了来源、14 队 ID 和七项基准。
+
+当前版本离线复现（先保存上述固定 URL 的 SRK）：
+
+```bash
+python scripts/generate_review_data.py --preview static/data/previews/icpc-2026-preliminary-2.json --srk data-cache/results-20260919/icpc2026preliminary-2.srk.json --contest-id icpc2026preliminary-2 --file-id 94656957834690560 --file-url https://cdn.algoux.cn/rankland/file/94656957834690560/icpc2026preliminary-2.srk.json --sha256 a501dca75c4814277ed6a7b897db379b5ee4b3b1b560be4bc0c2cc8c84fb3fc9 --removed-results config/review-removed-results/icpc2026preliminary-2.json
+```
+
+### 2026-09-12 首次发布（历史记录）
 
 2026-09-12 根据 [RankLand 第二场正式榜单](https://rl.algoux.cn/collection/official?rankId=icpc2026preliminary-2) 发布第二场复盘。比赛 ID `icpc2026preliminary-2` 对应前瞻 `icpc-2026-preliminary-2`，开赛时间为北京时间 2026-09-12 13:00。SRK 文件 ID 为 `92205039610843136`，SHA-256 为 `ab6a796e4ca65f1ba6dc8c9c87174a49aab7439cee6aacee17d3ce1285a9ceea`，下载字节与上游校验值一致。
 

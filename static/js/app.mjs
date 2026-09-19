@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260918-52";
+} from "./data.mjs?v=20260919-53";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260918-52";
+} from "./problem-rating.mjs?v=20260919-53";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -33,11 +33,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260918-52";
+} from "./preview.mjs?v=20260919-53";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260918-52";
+} from "./review.mjs?v=20260919-53";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1171,6 +1171,8 @@ async function showReview(query = {}, updateUrl = false) {
   const metricTitle = metrics.find(m => m.id === state.reviewMetric).title;
   elements.reviewAgreement.replaceChildren(node("strong", { text: `当前指标：${metricTitle} · 符合度 ${coefficient}` }));
   elements.reviewCoverage.textContent = `有效队伍：${analysis.rows.length} / ${analysis.activeCount} 支实际参赛前瞻队伍 · 覆盖率：${analysis.coverage === null ? "—" : `${(analysis.coverage * 100).toFixed(1)}%`}`;
+  const removedCount = state.reviewContest.teams.filter(t => t.resultStatus === "removed").length;
+  if (removedCount) elements.reviewCoverage.textContent += ` · 官方结果已移除 ${removedCount} 支队伍`;
   renderSourceLinks(elements.reviewSources, "数据来源：", [state.reviewContest.source, ...state.preview.metricSources]);
   renderReviewHeader();
   elements.status.hidden = true;

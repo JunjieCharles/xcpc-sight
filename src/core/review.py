@@ -22,10 +22,14 @@ def project_review_contest(
     *,
     normalizer: DefaultNormalizer | None = None,
     overrides: Mapping[str, str] | None = None,
+    removed_results: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Match each preview team exactly once; overrides map preview IDs to result IDs."""
+    """Match preview teams; removed_results explicitly maps IDs to removed result IDs."""
     normalizer = normalizer or DefaultNormalizer()
     overrides = overrides or {}
+    removed_results = {} if removed_results is None else removed_results
+    if not isinstance(removed_results, Mapping):
+        raise DataValidationError("removed_results must map preview IDs to old result IDs")
     results = [
         team
         for team in rebuild_competition_ranks(contest.teams, contest_id=contest.contest_id)
@@ -46,6 +50,17 @@ def project_review_contest(
         raise DataValidationError(f"preview {preview['id']}: duplicate team ID")
     if set(overrides) - roster_ids:
         raise DataValidationError(f"contest {contest.contest_id}: unknown override preview IDs")
+    if set(removed_results) - roster_ids:
+        raise DataValidationError(f"contest {contest.contest_id}: unknown removed preview IDs")
+    if set(removed_results) & set(overrides):
+        raise DataValidationError("removed_results and overrides must not overlap")
+    old_ids = list(removed_results.values())
+    if any(not isinstance(value, str) or not value.strip() for value in old_ids):
+        raise DataValidationError("removed_results requires nonempty string result IDs")
+    if len(set(old_ids)) != len(old_ids):
+        raise DataValidationError("removed_results contains duplicate old result IDs")
+    if set(old_ids) & {team.team_id for team in contest.teams}:
+        raise DataValidationError("removed_results references a result still present")
     used = set()
     rows = []
     for team in roster:
@@ -61,6 +76,19 @@ def project_review_contest(
         if team["id"] in overrides:
             target = by_id.get(overrides[team["id"]])
             candidates = [target] if target else []
+        if team["id"] in removed_results:
+            if candidates or names[(school, _team_name(team["name"]))]:
+                raise DataValidationError(
+                    f"preview team {team['id']}: removed result still matches current results"
+                )
+            rows.append({
+                "previewTeamId": team["id"],
+                "resultTeamId": removed_results[team["id"]],
+                "resultStatus": "removed",
+                "hasActivity": None,
+                "actualRank": None,
+            })
+            continue
         if len(candidates) != 1 or candidates[0].team_id in used:
             raise DataValidationError(
                 f"contest {contest.contest_id}, preview team {team['id']} "

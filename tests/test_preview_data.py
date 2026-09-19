@@ -17,6 +17,27 @@ from scripts.generate_preview_data import (
 )
 
 
+def test_ccpc_current_season_scores_match_corrected_published_series():
+    root = Path(__file__).parents[1]
+    document = json.loads((root / "static/data/previews/ccpc-2026-preliminary.json")
+                          .read_text(encoding="utf-8"))
+    records, source_at = generator.load_previous_series(root / "static/data/series/2026-2027.json")
+    normalizer = generator.load_normalizer(root / "config/school-aliases.json")
+    index = PersonIndex(records, normalizer)
+    matches = 0
+    for team in document["teams"]:
+        values = []
+        for member in team["members"]:
+            record = index.match(member["name"], team["school"])
+            assert member["ratings"]["currentSeason"] == (record.rating if record else None)
+            if record:
+                matches += 1
+                values.append(record.rating)
+        assert team["ratings"]["currentSeason"] == generator.normalized_lse_rating(values)
+    assert matches == document["matchingSummary"]["currentSeason"] == 5878
+    assert document["sourceSnapshots"]["currentSeason"] == source_at
+
+
 def test_competition_ranks_preserve_ties_and_skip_following_places() -> None:
     assert competition_ranks([600, 580, 600, 550, 580]) == [1, 3, 1, 5, 3]
 

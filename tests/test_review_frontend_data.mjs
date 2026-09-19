@@ -12,6 +12,30 @@ const review = validateReview(await read("./fixtures/review/results.json"), [pre
 const contest = review.contests[0];
 const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
 
+test("explicit removed results preserve roster coverage but leave all analysis cohorts", () => {
+  const revised = structuredClone(review);
+  const removed = revised.contests[0].teams[0];
+  Object.assign(removed, { resultStatus: "removed", hasActivity: null, actualRank: null });
+  validateReview(revised, [preview]);
+  for (const metric of ["power", ...preview.metricSources.map(s => s.id), "medals"]) {
+    const a = buildReviewAnalysis(preview, revised.contests[0], metric);
+    assert.equal(a.activeCount, 5);
+    assert.ok(a.rows.every(t => t.id !== removed.previewTeamId));
+    assert.equal(a.coverage, a.rows.length / 5);
+  }
+  for (const change of [
+    { resultStatus: "unknown" }, { resultStatus: null },
+    { hasActivity: false }, { hasActivity: true }, { actualRank: 1 },
+  ]) {
+    const invalid = structuredClone(revised);
+    Object.assign(invalid.contests[0].teams[0], change);
+    assert.throws(() => validateReview(invalid, [preview]), /resultStatus|removed results/);
+  }
+  const missing = structuredClone(revised);
+  missing.contests[0].teams.shift();
+  assert.throws(() => validateReview(missing, [preview]), /missing preview teams/);
+});
+
 test("two filters preserve original power order and compress both ranks with ties", () => {
   const analysis = buildReviewAnalysis(preview, contest);
   const rows = byId(analysis);
@@ -208,23 +232,28 @@ test("published second preliminary joins all teams and compares all seven pre-co
   const c = r.contests[1];
   assert.equal(c.previewId, p.id);
   assert.equal(c.startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(c.source.fileId, "92205039610843136");
-  assert.equal(c.source.sha256, "ab6a796e4ca65f1ba6dc8c9c87174a49aab7439cee6aacee17d3ce1285a9ceea");
+  assert.equal(c.source.fileId, "94656957834690560");
+  assert.equal(c.source.sha256, "a501dca75c4814277ed6a7b897db379b5ee4b3b1b560be4bc0c2cc8c84fb3fc9");
   assert.equal(c.teams.length, 2636);
-  assert.equal(c.teams.filter(t => t.hasActivity).length, 2535);
-  assert.equal(c.teams.filter(t => !t.hasActivity && t.actualRank === null).length, 101);
+  assert.equal(c.teams.filter(t => t.hasActivity).length, 2521);
+  assert.equal(c.teams.filter(t => t.hasActivity === false && t.actualRank === null).length, 101);
+  const removed = c.teams.filter(t => t.resultStatus === "removed");
+  assert.equal(removed.length, 14);
+  assert.ok(removed.every(t => t.hasActivity === null && t.actualRank === null));
+  assert.deepEqual(removed.map(t => t.resultTeamId).sort(),
+    ["1310", "1311", "1307", "1265", "323", "1305", "1301", "1303", "1306", "1266", "1308", "1264", "1302", "322"].sort());
   // Independently verified with scipy.stats.spearmanr on each filtered cohort.
   const expected = {
-    power: [2403, 0.7976612856593243], xcpcrating: [2400, 0.8205084976990384],
-    xcpcElo: [2390, 0.8137796644791935], previousSeason: [1312, 0.6667139073240879],
-    currentSeason: [2224, 0.8102420013496722], cpcfinder: [996, 0.6510521285590931],
-    medals: [996, 0.662419864427567],
+    power: [2389, 0.7979673905820589], xcpcrating: [2386, 0.820007206075806],
+    xcpcElo: [2376, 0.8137117635270318], previousSeason: [1307, 0.6663258603271373],
+    currentSeason: [2212, 0.8094589659447637], cpcfinder: [991, 0.6511412263831494],
+    medals: [991, 0.6627187012991854],
   };
   assert.deepEqual(["power", ...p.metricSources.map(m => m.id), "medals"], Object.keys(expected));
   for (const [metric, [count, rho]] of Object.entries(expected)) {
     const a = buildReviewAnalysis(p, c, metric);
     assert.equal(a.rows.length, count);
-    assert.equal(a.coverage, count / 2535);
+    assert.equal(a.coverage, count / 2521);
     assert.ok(Math.abs(a.agreement.value - rho) < 1e-12);
   }
 });

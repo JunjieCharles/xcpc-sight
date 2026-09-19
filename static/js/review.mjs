@@ -1,5 +1,5 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260918-52";
-import { buildPreviewPower, buildPreviewRanks, sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20260918-52";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-53";
+import { buildPreviewPower, buildPreviewRanks, sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20260919-53";
 
 const validated = new WeakMap();
 const analyses = new WeakMap();
@@ -38,6 +38,13 @@ export function validateReview(document, previews) {
         fail(teamPath, "missing or duplicate result team ID");
       }
       resultIds.add(team.resultTeamId);
+      if (Object.hasOwn(team, "resultStatus")) {
+        if (team.resultStatus !== "removed") fail(teamPath, "unknown resultStatus");
+        if (team.hasActivity !== null || team.actualRank !== null) {
+          fail(teamPath, "removed results require null activity and rank");
+        }
+        continue;
+      }
       if (typeof team.hasActivity !== "boolean") fail(teamPath, "expected hasActivity boolean");
       if (team.hasActivity
         ? !Number.isSafeInteger(team.actualRank) || team.actualRank < 1
@@ -120,7 +127,8 @@ export function buildReviewAnalysis(preview, contest, metric = "power") {
   const power = buildPreviewPower(preview.teams, metricIds);
   const originalRanks = metric === "power" ? null : buildPreviewRanks(preview.teams, metricIds);
   const results = new Map(contest.teams.map(t => [t.previewTeamId, t]));
-  const active = preview.teams.filter(t => results.get(t.id)?.hasActivity);
+  const active = preview.teams.filter(t => results.get(t.id)?.resultStatus !== "removed"
+    && results.get(t.id)?.hasActivity);
   const teams = active.filter(t => metric === "power"
     ? power.get(t.id).vector.some(value => value !== 0)
     : t.ratings[metric === "medals" ? "cpcfinder" : metric] != null);

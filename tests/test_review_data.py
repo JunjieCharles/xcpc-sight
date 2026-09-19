@@ -89,6 +89,55 @@ def test_unofficial_teams_never_match_and_input_is_not_mutated():
         project_review_contest(preview, replace(contest, teams=(unofficial, *contest.teams[1:])))
 
 
+def test_explicitly_removed_result_is_not_an_absence_and_ranks_are_rebuilt():
+    preview, contest = fixture()
+    original = copy.deepcopy(preview)
+    updated = replace(contest, teams=contest.teams[1:])
+    mapping = {"a": "result-a"}
+    projected = project_review_contest(preview, updated, removed_results=mapping)
+    assert projected["teams"][0] == {
+        "previewTeamId": "a", "resultTeamId": "result-a", "resultStatus": "removed",
+        "hasActivity": None, "actualRank": None,
+    }
+    assert projected["teams"][1]["hasActivity"] is False
+    assert projected["teams"][3]["actualRank"] == 2  # an unlisted team remains first
+    assert projected["teams"][2]["actualRank"] == 4  # previously fifth
+    assert projected["teams"][4]["hasActivity"] is True  # zero solves with activity
+    assert preview == original
+    assert mapping == {"a": "result-a"}
+    with pytest.raises(DataValidationError, match="expected unique unused result"):
+        project_review_contest(preview, updated)
+
+
+@pytest.mark.parametrize("mapping, message", [
+    ({"unknown": "old"}, "unknown removed"),
+    ({"a": ""}, "nonempty string"),
+    ({"a": 1}, "nonempty string"),
+    ({"a": "old", "b": "old"}, "duplicate old"),
+    ({"a": "result-b"}, "still present"),
+    ({"a": "result-a", "b": "old"}, "still matches"),
+    ([], "must map"),
+])
+def test_removed_results_reject_invalid_or_still_matching_entries(mapping, message):
+    preview, contest = fixture()
+    updated = replace(contest, teams=contest.teams[1:])
+    with pytest.raises(DataValidationError, match=message):
+        project_review_contest(preview, updated, removed_results=mapping)
+
+
+def test_removed_results_cannot_overlap_overrides_or_hide_unofficial_results():
+    preview, contest = fixture()
+    updated = replace(contest, teams=contest.teams[1:])
+    with pytest.raises(DataValidationError, match="overlap"):
+        project_review_contest(preview, updated, overrides={"a": "result-b"},
+                               removed_results={"a": "result-a"})
+    updated = replace(
+        contest, teams=(replace(contest.teams[0], official=False), *contest.teams[1:])
+    )
+    with pytest.raises(DataValidationError, match="still present"):
+        project_review_contest(preview, updated, removed_results={"a": "result-a"})
+
+
 def test_index_supports_multiple_previews_and_review_references():
     preview, contest = fixture()
     second = {**preview, "id": "preview-two", "sortAt": "2026-09-10T13:00:00+08:00"}
@@ -119,12 +168,24 @@ def test_index_supports_multiple_previews_and_review_references():
         )
 
 
-def test_offline_generator_is_deterministic_and_rejects_wrong_hash(tmp_path):
+@pytest.mark.parametrize("remove_result", [False, True])
+def test_offline_generator_is_deterministic_and_rejects_wrong_hash(tmp_path, remove_result):
     raw = (FIXTURES / "contest.srk.json").read_bytes()
+    srk_path = FIXTURES / "contest.srk.json"
+    removal_args = []
+    if remove_result:
+        document = json.loads(raw)
+        document["rows"] = [r for r in document["rows"] if r["user"]["id"] != "result-a"]
+        raw = json.dumps(document).encode()
+        srk_path = tmp_path / "updated.srk.json"
+        srk_path.write_bytes(raw)
+        mapping = tmp_path / "removed.json"
+        mapping.write_text(json.dumps({"a": "result-a"}), encoding="utf-8")
+        removal_args = ["--removed-results", str(mapping)]
     output = tmp_path / "review.json"
     command = [
         sys.executable, "scripts/generate_review_data.py",
-        "--srk", str(FIXTURES / "contest.srk.json"),
+        *removal_args, "--srk", str(srk_path),
         "--preview", str(FIXTURES / "preview.json"),
         "--contest-id", "actual-one", "--file-id", "fixture",
         "--file-url", "https://example.test/fixture.srk.json",
@@ -133,6 +194,10 @@ def test_offline_generator_is_deterministic_and_rejects_wrong_hash(tmp_path):
     root = Path(__file__).parents[1]
     subprocess.run(command, cwd=root, check=True, capture_output=True)
     first = output.read_bytes()
+    if remove_result:
+        removed = json.loads(first)["contests"][0]["teams"][0]
+        assert removed["resultStatus"] == "removed"
+        assert removed["hasActivity"] is None
     subprocess.run(command, cwd=root, check=True, capture_output=True)
     assert output.read_bytes() == first
     failed = subprocess.run([*command[:-1], "0" * 64], cwd=root, capture_output=True)
