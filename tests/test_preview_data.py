@@ -17,11 +17,23 @@ from scripts.generate_preview_data import (
 )
 
 
-def test_ccpc_current_season_scores_match_corrected_published_series():
+def test_ccpc_current_season_scores_match_pre_contest_history(tmp_path):
     root = Path(__file__).parents[1]
     document = json.loads((root / "static/data/previews/ccpc-2026-preliminary.json")
                           .read_text(encoding="utf-8"))
-    records, source_at = generator.load_previous_series(root / "static/data/series/2026-2027.json")
+    series = json.loads((root / "static/data/series/2026-2027.json").read_text(encoding="utf-8"))
+    series["contests"] = series["contests"][:2]
+    prior = []
+    for person in series["competitors"]:
+        history = [p for p in person["participations"] if p["contestIndex"] < 2]
+        if history:
+            prior.append({**person, "participations": history,
+                          "finalRating": history[-1]["after"],
+                          "contestsParticipated": len(history)})
+    series["competitors"] = prior
+    source = tmp_path / "pre-contest.json"
+    source.write_text(json.dumps(series), encoding="utf-8")
+    records, source_at = generator.load_previous_series(source)
     normalizer = generator.load_normalizer(root / "config/school-aliases.json")
     index = PersonIndex(records, normalizer)
     matches = 0

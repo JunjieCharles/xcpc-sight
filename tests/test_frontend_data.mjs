@@ -33,9 +33,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   )));
   assert.equal(series.contests[0].id, "icpc2026preliminary-1");
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
-  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2"]);
+  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary"]);
   assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(series.competitors.length, 8399);
+  assert.equal(series.competitors.length, 8929);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
   assert.equal(participants.length, 7380);
@@ -44,17 +44,29 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   const second = series.competitors.flatMap(person => person.participations)
     .filter(p => p.contestIndex === 1);
   assert.equal(second.length, 7464);
-  const both = series.competitors.filter(c => c.contestsParticipated === 2);
+  const both = series.competitors.filter(c => c.participations.some(p => p.contestIndex === 0)
+    && c.participations.some(p => p.contestIndex === 1));
   assert.equal(both.length, 6445);
   assert.ok(both.every(c => c.participations[1].before === c.participations[0].after));
   const newcomers = series.competitors.filter(c => c.participations[0].contestIndex === 1);
   assert.equal(newcomers.length, 1019);
   assert.ok(newcomers.every(c => c.participations[0].before === 1400));
-  const absent = series.competitors.filter(c => c.contestsParticipated === 1 && c.participations[0].contestIndex === 0);
+  const absent = series.competitors.filter(c => c.participations[0].contestIndex === 0
+    && !c.participations.some(p => p.contestIndex === 1));
   assert.equal(absent.length, 935);
-  assert.ok(absent.every(c => c.finalRating === c.participations[0].after));
-  assert.equal(Math.min(...series.competitors.map(c => c.finalRating)), 1283);
-  assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 1904);
+  assert.equal(series.contests[2].startAt, "2026-09-19T13:00:00+08:00");
+  const third = series.competitors.filter(c => c.participations.some(p => p.contestIndex === 2));
+  assert.equal(third.length, 6260);
+  const debut = third.filter(c => c.participations.length === 1);
+  assert.equal(debut.length, 530);
+  assert.ok(debut.every(c => c.participations[0].before === 1400));
+  for (const person of series.competitors) {
+    const history = person.participations;
+    for (let i = 1; i < history.length; i++) assert.equal(history[i].before, history[i - 1].after);
+    assert.equal(person.finalRating, history.at(-1).after);
+  }
+  assert.equal(Math.min(...series.competitors.map(c => c.finalRating)), 1247);
+  assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 1991);
 });
 
 test("header and favicon share an outlined SVG with the header background color", async () => {

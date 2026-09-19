@@ -1,6 +1,16 @@
 # 2026–2027 赛季与前瞻
 
-## 2026-09-19 官方榜单修订（当前发布版本）
+## 2026-09-19 CCPC 赛后 Rating（当前发布版本）
+
+本赛季个人 Rating 已计入 `ccpc2026preliminary`，共三场比赛。使用复盘同一份固定 SRK（文件 ID `94747179192774656`，SHA-256 `ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2`），与下节修订后的两场 ICPC SRK 一并核验哈希，经 `normalize_srk_contest`（CCPC collection 为 `ccpc2026`）→ `select_season(SEASON_2026_2027)` → `calculate_series_ratings` → `project_series_rating_data` 从空状态离线重算，沿用默认身份规范化与重复身份取最好排名规则。
+
+CCPC 的 2109 支有提交正式队伍对应 6260 个规范化个人身份，排除打星和无提交队伍；其中 5730 人接续既有评分、530 人首次从 1400 起算。本赛季累计 8929 人，最终 Rating 范围为 1247–1991。前两场全部 8399 人的历史逐项保持一致；未参加本场的 2669 人保持原分。
+
+只更新 `static/data/series/2026-2027.json`，从全部已发布系列、前瞻和复盘重投影索引后内容不变。三场前瞻和复盘保持原样，CCPC 前瞻的 `currentSeason` 仍为第二场结束时的评分，不能回填本场赛后分。前瞻回归从已发布系列截取前两场历史恢复赛前分后核验，而非使用最新 `finalRating`。首次生成前瞻的命令中的 `--current-series` 需指向截至第二场的历史快照。
+
+前端回归覆盖三场顺序、7380 / 7464 / 6260 人次、530 名新人的初始值、所有选手跨场连续性和最终评分范围。固定 SRK 缓存位于 `data-cache/results-20260919/`（ICPC 两场）与 `data-cache/review-20260919/`（CCPC）；算法、公开 API 和数据契约不变。
+
+## 2026-09-19 官方榜单修订（CCPC 计分前）
 
 按 [srk-collection PR #73](https://github.com/algoux/srk-collection/pull/73) 合并版本及已同步的 RankLand 数据，重新计算本赛季个人 Rating，并只刷新 CCPC 网络赛前瞻中的 `currentSeason`。不改评分算法，不把第二场赛后评分回填到两场 ICPC 赛前快照；第一场全部个人参赛历史与原发布结果逐项一致。第二场移除的队伍仍可能有有效的首场历史，不据此删除跨场身份。
 
@@ -57,7 +67,7 @@ python -m scripts.generate_preview_data --teams data-cache/pintia-investigate/ra
 
 `core.seasons.SEASON_2026_2027` 定义 `2026-2027` 系列，候选比赛来自 RankLand official collection 的 `icpc2026` 与 `ccpc2026`，沿用邀请赛排除、显式 include/exclude 覆盖和同日 CCPC 优先的排序规则。公开 API 为 `SEASON_2026_2027` 与 `load_2026_2027_season`。
 
-当前已发布“2026 ICPC Asia EC网络预选赛”第一场、第二场的选手 Rating，同时提供这两场及 CCPC 网络预选赛的三场赛前前瞻，并已发布这三场赛后复盘（CCPC 复盘只包含 2169 支正式队伍）。站点索引在同一条记录提供 `path`、`previewPath`、`previews` 与 `reviewPath`；本赛季尚未发布题目难度数据。复盘规则、结果关联及全指标符合度对比见 [赛后复盘](post-contest-review.md)。
+当前已发布 ICPC 网络预选赛第一场、第二场及 CCPC 网络预选赛的选手 Rating，同时提供这两场及 CCPC 网络预选赛的三场赛前前瞻，并已发布这三场赛后复盘（CCPC 复盘只包含 2169 支正式队伍）。站点索引在同一条记录提供 `path`、`previewPath`、`previews` 与 `reviewPath`；本赛季尚未发布题目难度数据。复盘规则、结果关联及全指标符合度对比见 [赛后复盘](post-contest-review.md)。
 
 2026-09-06 从 RankLand 获取 `icpc2026preliminary-1`，比赛时间为北京时间 13:00。上游共 2535 支正式队伍，排除 39 支无提交队伍后，2496 支队伍的 7380 个规范化选手身份参与计算。新赛季从空状态、初始 Rating 1400 开始，不继承上赛季评分；首次发布的最终 Rating 范围为 1334–1720。沿用学校与姓名身份规范化、成绩重建排名和重复身份取最好排名政策。
 

@@ -4,6 +4,8 @@
 
 ## 文件与生成
 
+2026-09-19 随后计入 CCPC 网络预选赛，当前本赛季累计 8929 人、三场比赛，仅更新 `series/2026-2027.json`；重投影索引内容不变，前瞻和复盘不回填赛后分。来源、校验和测试见 [赛季设计](season-2026-2027-preview.md)。下段记录本次计分前的榜单修订。
+
 2026-09-19 根据修订后的两场 ICPC 网络赛榜单，定向更新 `series/2026-2027.json`、`reviews/2026-2027.json` 和 `previews/ccpc-2026-preliminary.json`；其他系列、两场 ICPC 前瞻及索引入口保持不变。本赛季累计 8399 人，CCPC 前瞻只更新本赛季评分。复盘 schema v1 新增可选 `resultStatus: "removed"`，该行 `hasActivity` / `actualRank` 为 null，区别于无提交；具体来源、统计与复现见赛季和复盘设计文档。
 
 ```bash
