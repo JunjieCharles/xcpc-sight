@@ -35,7 +35,7 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
   assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary"]);
   assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(series.competitors.length, 8929);
+  assert.equal(series.competitors.length, 8926);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
   assert.equal(participants.length, 7380);
@@ -56,9 +56,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.equal(absent.length, 935);
   assert.equal(series.contests[2].startAt, "2026-09-19T13:00:00+08:00");
   const third = series.competitors.filter(c => c.participations.some(p => p.contestIndex === 2));
-  assert.equal(third.length, 6260);
+  assert.equal(third.length, 6251);
   const debut = third.filter(c => c.participations.length === 1);
-  assert.equal(debut.length, 530);
+  assert.equal(debut.length, 527);
   assert.ok(debut.every(c => c.participations[0].before === 1400));
   for (const person of series.competitors) {
     const history = person.participations;
@@ -67,6 +67,26 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   }
   assert.equal(Math.min(...series.competitors.map(c => c.finalRating)), 1247);
   assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 1991);
+  const removedOnly = [
+    "c_c439791f8573ea5031da75fcf95edbee77783ff94d187ce5b3087026d510ea2e",
+    "c_1fb32128d4959beb18b40384d92df5a893077874ddef65d3c3df82d6c61876ad",
+    "c_05f8600ba4bc226303dd830341bd90fa472da1a1fc948940a40fd6915d934d62",
+  ];
+  assert.ok(removedOnly.every(id => !series.competitors.some(c => c.id === id)));
+  // Removing this contest must preserve these six competitors' earlier ICPC results.
+  const retained = [
+    ["c_7127b42ea5c65c0ff84c1e5a95d418aeb194a66f72106cfe52accd865eb5318e", 1348],
+    ["c_c18c096fca4c6b2872d9d1c5e8c7894bfde1f3822a76aa81677c69d510e15abf", 1348],
+    ["c_e6e038b2b0a409d9a1980fd695f6ae031438a3aefd2e802ba7fe60996badc772", 1348],
+    ["c_79e7171285586b770bce9683d81f44b3e7ba36baedb8c4cfa100eb9e4df58bf3", 1323],
+    ["c_7fd032e5aaddac609ef3e9b99a8cbad3bc87b41379fd120ae4c5a7912e41c560", 1323],
+    ["c_deac00d2b066e85201025d2f91b9cf27243f295cd4daa06cda64c9ffdcdbaec2", 1323],
+  ];
+  for (const [id, rating] of retained) {
+    const person = series.competitors.find(c => c.id === id);
+    assert.deepEqual(person.participations.map(p => p.contestIndex), [0, 1]);
+    assert.equal(person.finalRating, rating);
+  }
 });
 
 test("header and favicon share an outlined SVG with the header background color", async () => {

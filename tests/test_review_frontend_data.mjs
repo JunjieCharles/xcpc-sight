@@ -302,25 +302,31 @@ test("published CCPC review covers only official teams and seven verified metric
   assert.equal(c.id, "ccpc2026preliminary");
   assert.equal(c.previewId, p.id);
   assert.equal(c.startAt, "2026-09-19T13:00:00+08:00");
-  assert.equal(c.source.fileId, "94747179192774656");
-  assert.equal(c.source.sha256, "ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2");
+  assert.equal(c.source.fileId, "95451702349623296");
+  assert.equal(c.source.sha256, "d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1");
   assert.equal(c.teams.length, 2169);
-  assert.equal(c.teams.filter(t => t.hasActivity).length, 2109);
-  assert.equal(c.teams.filter(t => !t.hasActivity && t.actualRank === null).length, 60);
+  assert.equal(c.teams.filter(t => t.hasActivity).length, 2106);
+  assert.equal(c.teams.filter(t => t.hasActivity === false && t.actualRank === null).length, 60);
+  const removed = c.teams.filter(t => t.resultStatus === "removed");
+  assert.deepEqual(removed.map(t => t.resultTeamId).sort(), ["6", "687", "769"]);
+  assert.ok(removed.every(t => t.hasActivity === null && t.actualRank === null));
+  const mapping = await read("../config/review-removed-results/ccpc2026preliminary.json");
+  assert.deepEqual(Object.fromEntries(removed.map(t => [t.previewTeamId, t.resultTeamId])), mapping);
   assert.deepEqual(new Set(c.teams.map(t => t.previewTeamId)), new Set(p.teams.filter(t => !t.excluded).map(t => t.id)));
   // Independently checked with scipy.stats.spearmanr, including tied ranks.
   const expected = {
-    power: [2046, 0.8250005735255763], xcpcrating: [2045, 0.8723800195576543],
-    xcpcElo: [2042, 0.8903748875289162], previousSeason: [1128, 0.7064603188205778],
-    currentSeason: [1966, 0.868999915214312], cpcfinder: [871, 0.6410781746824133],
+    power: [2044, 0.8251774661344153], xcpcrating: [2043, 0.8724886056691887],
+    xcpcElo: [2040, 0.8904363612890709], previousSeason: [1127, 0.706498663761117],
+    currentSeason: [1964, 0.8691749918667957], cpcfinder: [871, 0.6410781746824133],
     medals: [871, 0.6574826994852914],
   };
   for (const [metric, [count, rho]] of Object.entries(expected)) {
     const a = buildReviewAnalysis(p, c, metric);
     assert.equal(a.rows.length, count);
-    assert.equal(a.activeCount, 2109);
-    assert.equal(a.coverage, count / 2109);
+    assert.equal(a.activeCount, 2106);
+    assert.equal(a.coverage, count / 2106);
     assert.ok(a.rows.every(t => !t.excluded));
+    assert.ok(a.rows.every(t => !Object.hasOwn(mapping, t.id)));
     assert.ok(Math.abs(a.agreement.value - rho) < 1e-12);
   }
 });

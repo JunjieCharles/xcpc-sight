@@ -158,6 +158,34 @@ python scripts/generate_review_data.py --preview static/data/previews/icpc-2026-
 
 ## CCPC 网络预选赛（2026-09-19）
 
+### 2026-09-23 官方结果修订（当前发布版本）
+
+核对用户指定的 [RankLand 官方榜单](https://rl.algoux.cn/collection/official?rankId=ccpc2026preliminary)，当前文件 ID 为 `95451702349623296`，上游文件更新时间为北京时间 2026-09-21 17:30:59，SHA-256 为 `d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1`，已核验下载字节。与首次发布的 SRK 比较，移除结果 ID `6`、`687`、`769`，无新增队伍，其余 2170 行记录完全一致。
+
+移除映射保存在 `config/review-removed-results/ccpc2026preliminary.json`。复盘仍覆盖原前瞻的 2169 支正式队伍：2106 队有提交、60 队无提交、3 队标记 `resultStatus: "removed"`，页面沿用“官方结果已移除 3 支队伍”提示。被移除记录保留旧结果 ID，活动状态及名次为空，不进入指标样本和覆盖率分母；4 支打星队伍仍不进入复盘。三场前瞻评分与前两场复盘不变。
+
+| 指标 | 有效队伍 | Spearman ρ（显示精度） |
+| --- | ---: | ---: |
+| 综合战力 | 2044 | 0.825 |
+| XCPC Rating | 2043 | 0.872 |
+| XCPC Elo | 2040 | 0.890 |
+| 上赛季 Rating | 1127 | 0.706 |
+| 本赛季 Rating | 1964 | 0.869 |
+| CPC Finder | 871 | 0.641 |
+| 奖牌 | 871 | 0.657 |
+
+覆盖率分母更新为 2106。七项系数由 SciPy `spearmanr` 独立复核。完整快照回归固定新来源、三个移除 ID、无提交与移除的区别、七项样本/覆盖率/完整精度系数，并核验移除映射与发布数据一致。算法、API 和 schema 无变化，默认测试仍离线；榜单仅证明本场结果移除，不据此删除其他场次的历史。
+
+离线复现（先下载并保存固定 SRK，生成器核验哈希）：
+
+```bash
+python scripts/generate_review_data.py --preview static/data/previews/ccpc-2026-preliminary.json --srk data-cache/results-20260923/ccpc2026preliminary.srk.json --contest-id ccpc2026preliminary --file-id 95451702349623296 --file-url https://cdn.algoux.cn/rankland/file/95451702349623296/ccpc2026preliminary.srk.json --sha256 d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1 --removed-results config/review-removed-results/ccpc2026preliminary.json
+```
+
+本赛季个人 Rating 同步使用该 SRK 重算，见 [赛季数据](season-2026-2027-preview.md)。
+
+### 2026-09-19 首次发布（历史记录）
+
 根据 [RankLand 榜单](https://rl.algoux.cn/ranklist/ccpc2026preliminary) 新增第三场复盘。比赛 ID `ccpc2026preliminary` 对应前瞻 `ccpc-2026-preliminary`，开赛时间为北京时间 2026-09-19 13:00。文件 ID `94747179192774656`，SHA-256 为 `ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2`，已核验实际下载字节。
 
 按用户要求，复盘不包含 4 支打星队伍。投影在匹配前排除前瞻中 `excluded: true` 的队伍，不要求其结果存在；前端完整性校验只接受正式名单，所有指标的样本和覆盖率分母均排除打星队伍。无需新增结果字段或更改公开 API。原前瞻保留 2173 队及全部评分，复盘覆盖其中 2169 支正式队伍，全部自动唯一匹配，无人工覆盖；2109 队有提交，60 队无提交。正式队伍匹配失败仍报错，不当作缺席。两场 ICPC 复盘内容保持不变。

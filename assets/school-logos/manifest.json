@@ -1,0 +1,255 @@
+{
+  "source": "User-provided 2025/rating/logos",
+  "logos": [
+    {
+      "school": "清华大学",
+      "file": "清华大学.png",
+      "sha256": "3141eb124bef38775023c2b6507d985dab00d9d127e30c3b1585c1971e7a0ddc"
+    },
+    {
+      "school": "北京大学",
+      "file": "北京大学.png",
+      "sha256": "462b2736b883264cdab574afb944bc7fb5fbc2e0020931505bf43369f84f51d9"
+    },
+    {
+      "school": "复旦大学",
+      "file": "复旦大学.png",
+      "sha256": "63237b15958bd56750d41cd446249804b6e6200840158747e54070548b5decd1"
+    },
+    {
+      "school": "中山大学",
+      "file": "中山大学.png",
+      "sha256": "aaf4273afd4f65192e8b35d061adc737685837bc180920441d1a5aab90a22c14"
+    },
+    {
+      "school": "上海交通大学",
+      "file": "上海交通大学.png",
+      "sha256": "2981a0b71d451d90053ce5a8e47530dae6603579384abda36a66e53e3e406c12"
+    },
+    {
+      "school": "香港中文大学（深圳）",
+      "file": "香港中文大学深圳.png",
+      "sha256": "59afcdd79ab82c4792e6795a5e12c58ced40d01773d7041c15dcd8dcdb07af58"
+    },
+    {
+      "school": "浙江大学",
+      "file": "浙江大学.png",
+      "sha256": "7b059510690fb81a00a86c11afd6838bdfd2699c253982f15b98ead01dc1b746"
+    },
+    {
+      "school": "南方科技大学",
+      "file": "南方科技大学.png",
+      "sha256": "bc22632241a163bb847bef7bee67a9d35e212dd16c045c933248d8dd38606332"
+    },
+    {
+      "school": "香港中文大学",
+      "file": "香港中文大学.png",
+      "sha256": "59afcdd79ab82c4792e6795a5e12c58ced40d01773d7041c15dcd8dcdb07af58"
+    },
+    {
+      "school": "香港科技大学（广州）",
+      "file": "香港科技大学广州.png",
+      "sha256": "1dc370beff3578e09cc3934d5c6dbc8d24420a69286fed18541ca518d1aae33a"
+    },
+    {
+      "school": "中国科学技术大学",
+      "file": "中国科学技术大学.png",
+      "sha256": "7fbd23d209efcd6c9d08139c89b1d6f354736a0e5ac025fb3ea27ce9a129f550"
+    },
+    {
+      "school": "北京航空航天大学",
+      "file": "北京航空航天大学.png",
+      "sha256": "03c958d02f3f283b6665b91ba3151ffc2445a6d4443fa14cc85b86d723c65fef"
+    },
+    {
+      "school": "中国人民大学",
+      "file": "中国人民大学.png",
+      "sha256": "8cd18d2e4a36f33a34fb4850c07d65850e1579be2e52f5cd9115782487734d2b"
+    },
+    {
+      "school": "南京大学",
+      "file": "南京大学.png",
+      "sha256": "5172985ea29d44e597f7bd26031c5e527dd50fc8feae7d2cfc25af3ff7bcbb00"
+    },
+    {
+      "school": "西安交通大学",
+      "file": "西安交通大学.png",
+      "sha256": "09c59fb5806da6b79c1a021b19eaf80056d8d4495c04c16be46db1370bc9ea85"
+    },
+    {
+      "school": "东南大学",
+      "file": "东南大学.png",
+      "sha256": "60ac6bfc0f7c59c659127c20e88f41ef2f89fb5076ad011f366a454a708d0ba3"
+    },
+    {
+      "school": "杭州电子科技大学",
+      "file": "杭州电子科技大学.png",
+      "sha256": "db8d0333f03c93921774f97ffec94c78cb050de589146525e15e4e38139088f5"
+    },
+    {
+      "school": "武汉大学",
+      "file": "武汉大学.png",
+      "sha256": "5dae754e2cfe7485ab67d46b76cb8aa4fa6e5bec00d06a51002d15890aa3f884"
+    },
+    {
+      "school": "福州大学",
+      "file": "福州大学.png",
+      "sha256": "af806dccda1230c9ebcb9e7d6efd6830a9056322b555ded73c3bb976d8dd6a3b"
+    },
+    {
+      "school": "吉林大学",
+      "file": "吉林大学.png",
+      "sha256": "48d03436610622fd97a067a1570862da1f0d7eb782885db3e66bf050c3d464d8"
+    },
+    {
+      "school": "广东工业大学",
+      "file": "广东工业大学.png",
+      "sha256": "b6d46cc93ac2cfd8df4fe64141db60c7709a9f16b4898427049f7ae2a7a853db"
+    },
+    {
+      "school": "香港科技大学",
+      "file": "香港科技大学.png",
+      "sha256": "1dc370beff3578e09cc3934d5c6dbc8d24420a69286fed18541ca518d1aae33a"
+    },
+    {
+      "school": "电子科技大学",
+      "file": "电子科技大学.png",
+      "sha256": "718262ef915ceef27c2da1c42ed4c5049b8a595f7bc4f84c1a284070cf3abf3f"
+    },
+    {
+      "school": "中南大学",
+      "file": "中南大学.png",
+      "sha256": "ffa9e95ef08015db05dffd92569edce12f6c6373da9f4845aa6c012c710aa297"
+    },
+    {
+      "school": "北京师范大学",
+      "file": "北京师范大学.png",
+      "sha256": "e28a6176cc22df6177ea004aae35b44dd856cfcd15c18327903c2a9c2651c77a"
+    },
+    {
+      "school": "山东大学",
+      "file": "山东大学.png",
+      "sha256": "11f9944122037ba6320f1eb6799ad66c308add1ece0ac2d5e4f1274015dcc9a8"
+    },
+    {
+      "school": "东北大学秦皇岛分校",
+      "file": "东北大学秦皇岛分校.png",
+      "sha256": "3434ef13dbbc62bd9a0f2d3d844beef1f80e65da6e04492d403df0778436c0dd"
+    },
+    {
+      "school": "同济大学",
+      "file": "同济大学.png",
+      "sha256": "777810df8917a4fdd6d294717297e58a975073798e844c3fe7e1d4d741ea9784"
+    },
+    {
+      "school": "西北工业大学",
+      "file": "西北工业大学.png",
+      "sha256": "53fe9494280f4862ef386d6e3e9179b0f88c96b59b4444307a8b7d0c87492f7b"
+    },
+    {
+      "school": "哈尔滨工业大学",
+      "file": "哈尔滨工业大学.png",
+      "sha256": "571c5d3d7c1e836e01dfe7bb088d4da6eb6d04cbafc72f848fdd801a4cd387f5"
+    },
+    {
+      "school": "北京邮电大学",
+      "file": "北京邮电大学.png",
+      "sha256": "da21ed7efdc216e84ae34af784b297f81be1be674a03a774b1b1ef3c5e20a48f"
+    },
+    {
+      "school": "重庆邮电大学",
+      "file": "重庆邮电大学.png",
+      "sha256": "532a1cd4133c71878e1278ed7424e776cbb36fab91ea5f58ac69eb854ef0e4c5"
+    },
+    {
+      "school": "哈尔滨工业大学（威海）",
+      "file": "哈尔滨工业大学威海.png",
+      "sha256": "571c5d3d7c1e836e01dfe7bb088d4da6eb6d04cbafc72f848fdd801a4cd387f5"
+    },
+    {
+      "school": "重庆大学",
+      "file": "重庆大学.png",
+      "sha256": "06ddb4cdc7a266c7a938c1e38f504bd1231019b3d8a5c3a81afd52208f093ba7"
+    },
+    {
+      "school": "武汉理工大学",
+      "file": "武汉理工大学.png",
+      "sha256": "1042b4318420c469ba2088c5ea917da21dab0296e6c71399f0434994709b922a"
+    },
+    {
+      "school": "华中科技大学",
+      "file": "华中科技大学.png",
+      "sha256": "98a61674d96c2bf89a57306386f794fb6f65f2a335d96dbad416ef43c25f9fef"
+    },
+    {
+      "school": "浙江师范大学",
+      "file": "浙江师范大学.png",
+      "sha256": "7486655b4f39311ac74d55026b5b64e5d7e101511181d683d43629af29a5d8a8"
+    },
+    {
+      "school": "厦门大学",
+      "file": "厦门大学.png",
+      "sha256": "017ce7932c9934236d974a92c11b767ace2d02e72e219fdafaa018c2ee23c007"
+    },
+    {
+      "school": "杭州师范大学",
+      "file": "杭州师范大学.png",
+      "sha256": "a8cc6f247093128892771f5f9df6b3eb0578c78b8de8ad6590b50d131d1273e2"
+    },
+    {
+      "school": "北京工业大学",
+      "file": "北京工业大学.png",
+      "sha256": "89fa01d31286b223595e99c8e570ede84008a9ac68b40e867f561137b0e99fcf"
+    },
+    {
+      "school": "南京航空航天大学",
+      "file": "南京航空航天大学.png",
+      "sha256": "cac6ceb2d23e98fd56a97bd1b228812e6c3201c276aca2394ed0e8b6038166b7"
+    },
+    {
+      "school": "北京交通大学",
+      "file": "北京交通大学.png",
+      "sha256": "0751d262ea6b3e635088ad2dbe40ee18098c19b03c68a832efc08679900f88ae"
+    },
+    {
+      "school": "四川大学",
+      "file": "四川大学.png",
+      "sha256": "2d115985dfcf0f98c3f4b894a94f79b44fa76b3358ae4fd802a440be89db552d"
+    },
+    {
+      "school": "济南大学",
+      "file": "济南大学.png",
+      "sha256": "87049490e44b011b6bb7f791946d1782ba10a34bb0bd6b370a9160c23aa1869d"
+    },
+    {
+      "school": "华南农业大学",
+      "file": "华南农业大学.png",
+      "sha256": "c1396dd6b6542f538f952b173324cb59062510e4db8cfd866d0f5eac69a3c26a"
+    },
+    {
+      "school": "南京邮电大学",
+      "file": "南京邮电大学.png",
+      "sha256": "242611eac2115917faab4f186ce9d82bc8b5e3e1d274618d1b60f7b010a4b2df"
+    },
+    {
+      "school": "东北师范大学",
+      "file": "东北师范大学.png",
+      "sha256": "55fe1e42939af4be5d2c174c646befad2956f16cc010c00232471f677c8b89dd"
+    },
+    {
+      "school": "哈尔滨工业大学（深圳）",
+      "file": "哈尔滨工业大学深圳.png",
+      "sha256": "571c5d3d7c1e836e01dfe7bb088d4da6eb6d04cbafc72f848fdd801a4cd387f5"
+    },
+    {
+      "school": "中国科学院大学",
+      "file": "中国科学院大学.png",
+      "sha256": "0319ce7d975db835f7c8cb0acb2141604096842ac2c9b600dd4fb989e0d71a28"
+    },
+    {
+      "school": "国防科技大学",
+      "file": "国防科技大学.png",
+      "sha256": "b277c0baaee5298cb3efcad056e2243040092c79bfe09aa97c72aa5e3370d03c"
+    }
+  ]
+}

@@ -1,6 +1,48 @@
 # 2026–2027 赛季与前瞻
 
-## 2026-09-19 CCPC 赛后 Rating（当前发布版本）
+## 2026-09-23 CCPC 官方榜单修订（当前发布版本）
+
+使用 [RankLand 官方榜单](https://rl.algoux.cn/collection/official?rankId=ccpc2026preliminary) 的新 SRK（文件 ID `95451702349623296`，SHA-256 `d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1`），替换 9 月 19 日 CCPC 输入，沿用下文修订后的两场 ICPC 输入，从空状态重算三场 Rating。新旧榜单只差三支正式队伍，具体差异和复盘来源见 [赛后复盘](post-contest-review.md#2026-09-23-官方结果修订当前发布版本)。不变更算法、默认身份规范化、重复身份政策、API 或 schema。
+
+CCPC 有效队伍从 2109 减至 2106，计分个人从 6260 减至 **6251**，其中 5724 人接续评分、527 人首次计分。本赛季累计 **8926 人**，Rating 范围仍为 1247–1991。三支移除队伍涉及九人：六人保留前两场 ICPC 历史并恢复赛前分，三人没有其他有效历史，退出本赛季榜单；不按本场移除追溯删除其他比赛记录。前两场 8399 人的所有历史逐项核验不变，未计入本场的 2675 人沿用已有分数。保留身份中共 275 人的最终分数发生变化。
+
+更新 `static/data/series/2026-2027.json` 与 CCPC 复盘，从全部发布数据重投影索引后内容不变。三场前瞻、前两场复盘及其他系列保持原样，前瞻中的本赛季评分仍截止第二场。回归固定三场 7380 / 7464 / 6251 人次、527 名新人、8926 人总数、评分连续性，以及被移除的三名独有身份和保留历史的六人。
+
+固定输入缓存为 `data-cache/results-20260919/` 的 ICPC 两场和 `data-cache/results-20260923/` 的 CCPC。保存文档列出的固定 URL 文件后，可离线重算：
+
+```python
+import hashlib
+import json
+from pathlib import Path
+from core import SEASON_2026_2027, normalize_srk_contest, select_season
+from rating import calculate_series_ratings, project_series_rating_data
+from scripts.generate_static_data import write_json_atomic
+
+inputs = [
+    ("icpc2026preliminary-1", "results-20260919", "icpc2026",
+     "8ca3ddf111c255b352021678000f4bac0040aa3e3f2cd827fd2fdc260f0dbd0b"),
+    ("icpc2026preliminary-2", "results-20260919", "icpc2026",
+     "a501dca75c4814277ed6a7b897db379b5ee4b3b1b560be4bc0c2cc8c84fb3fc9"),
+    ("ccpc2026preliminary", "results-20260923", "ccpc2026",
+     "d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1"),
+]
+contests = []
+for contest_id, directory, collection, sha256 in inputs:
+    raw = Path(f"data-cache/{directory}/{contest_id}.srk.json").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != sha256:
+        raise ValueError(f"{contest_id}: SHA-256 mismatch")
+    contests.append(normalize_srk_contest(
+        json.loads(raw), contest_uk=contest_id, series=collection,
+    ))
+season = select_season(tuple(contests), SEASON_2026_2027)
+document = project_series_rating_data(
+    calculate_series_ratings(season.contests),
+    series_id="2026-2027", title="2026–2027 ICPC + CCPC",
+)
+write_json_atomic(Path("static/data/series/2026-2027.json"), document)
+```
+
+## 2026-09-19 CCPC 赛后 Rating（历史记录）
 
 本赛季个人 Rating 已计入 `ccpc2026preliminary`，共三场比赛。使用复盘同一份固定 SRK（文件 ID `94747179192774656`，SHA-256 `ae8673050d54cc9a793aee461ca74c5cba11948c5a3642d393f3249818687cf2`），与下节修订后的两场 ICPC SRK 一并核验哈希，经 `normalize_srk_contest`（CCPC collection 为 `ccpc2026`）→ `select_season(SEASON_2026_2027)` → `calculate_series_ratings` → `project_series_rating_data` 从空状态离线重算，沿用默认身份规范化与重复身份取最好排名规则。
 
