@@ -133,9 +133,10 @@ test('online schema rejects malformed ranks, wrong aggregation and invalid power
 
 test('preview medal colors use independently rounded quotas and global competition ranks', async () => {
   const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
-  const color = runInNewContext(
+  const classify = runInNewContext(
     source.match(/function previewRankMedalClass\([^]*?\n\}/)[0] + '\npreviewRankMedalClass',
   );
+  const color = (metric, rank, count, excluded = false) => classify(metric, rank, count, excluded, 'regional');
   for (const metric of ['power', 'onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']) {
     for (const [rank, expected] of [[1, 'gold'], [41, 'gold'], [42, 'silver'], [122, 'silver'], [123, 'bronze'], [243, 'bronze'], [244, null], [403, null]]) {
       assert.equal(color(metric, rank, 403), expected ? ' preview-medal-' + expected : '');
@@ -155,7 +156,23 @@ test('preview medal colors use independently rounded quotas and global competiti
   assert.match(source, /state\.preview\.teams\.filter\(team => !team\.excluded\)\.length/);
   assert.match(source, /previewRankMedalClass\("power", state\.previewPower\.get\(team\.id\)\.rank/);
   assert.match(source, /previewRankMedalClass\("onlineRanks", state\.previewRanks\.get\(team\.id\)\.onlineRanks/);
-  assert.match(source, /previewRankMedalClass\(source\.id, rank, teamCount, team\.excluded\)/);
+  assert.match(source, /previewRankMedalClass\(source\.id, rank, teamCount, team\.excluded, state\.preview\.contestStage\)/);
+  for (const stage of [undefined, 'preliminary']) {
+    for (const metric of ['power', 'onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']) {
+      for (const rank of [1, 42, 123]) assert.equal(classify(metric, rank, 403, false, stage), '');
+    }
+  }
+  const xianPreview = validatePreview(await xian());
+  assert.equal(xianPreview.contestStage, 'regional');
+  assert.equal(classify('power', 1, 403, false, xianPreview.contestStage), ' preview-medal-gold');
+  for (const file of ['2026-2027', 'icpc-2026-preliminary-2', 'ccpc-2026-preliminary']) {
+    const preview = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/' + file + '.json', import.meta.url), 'utf8')));
+    assert.equal(classify('power', 1, preview.teams.length, false, preview.contestStage), '');
+  }
+  for (const stage of [null, 'final', true]) {
+    const invalid = await xian(); invalid.contestStage = stage;
+    assert.throws(() => validatePreview(invalid), /contestStage/);
+  }
 });
 
 

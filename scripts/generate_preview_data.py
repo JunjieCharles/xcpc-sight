@@ -133,6 +133,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--snapshot-date", required=True)
     parser.add_argument("--preview-id", default=PREVIEW_ID)
     parser.add_argument("--preview-title", default=PREVIEW_TITLE)
+    parser.add_argument("--contest-stage", choices=("preliminary", "regional"),
+                        default="preliminary")
     parser.add_argument("--unlisted", action="store_true",
                         help="Keep accessible by URL but hide from the contest picker")
     parser.add_argument("--team-source-url", default=TEAM_SOURCE_URL)
@@ -461,6 +463,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
     return {
         "schemaVersion": 1,
         "ratingAggregation": "normalized-lse",
+        "contestStage": getattr(args, "contest_stage", "preliminary"),
         **({"unlisted": True} if getattr(args, "unlisted", False) else {}),
         **online_metadata,
         "seriesId": SERIES_ID,

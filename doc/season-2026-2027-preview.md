@@ -10,7 +10,7 @@
 
 前瞻表的 Rating 列展示顺序为 XCPC Rating、XCPC Elo、本赛季 Rating、上赛季 Rating、CPC Finder；未提供本赛季评分的旧场次保留原顺序。表头与数据单元格共用展示排序，不修改快照来源顺序、评分或综合战力。回归覆盖双赛季、单赛季和输入不变。
 
-前瞻中的综合战力、网络赛排名和各项 Rating（除 CPC Finder）单元格按该列全场队伍名次标注浅金、浅银、浅铜底色。基数为未筛选的正式队伍总数 N，各档名额分别为 ceil(N/10)、ceil(2N/10)、ceil(3N/10)，累计划分排名区间；西安 403 队对应 #1–41、#42–122、#123–243。按竞赛排名处理并列，同名次同色，因此边界并列可能增加实际着色队数。缺失名次和打星不标色，CPC Finder、奖牌及学校名次不标色。排序、筛选和悬浮不改变底色，网络赛列使用当前名单内的综合名次，不使用三场原始名次分别着色。这仅是前瞻档位提示，并非正式获奖结果。测试覆盖独立向上取整、各档边界、并列、缺失、打星、排除列和小规模名单。
+仅区域赛正赛前瞻中的综合战力、网络赛排名和各项 Rating（除 CPC Finder）单元格按该列全场队伍名次标注浅金、浅银、浅铜底色。基数为未筛选的正式队伍总数 N，各档名额分别为 ceil(N/10)、ceil(2N/10)、ceil(3N/10)，累计划分排名区间；西安 403 队对应 #1–41、#42–122、#123–243。按竞赛排名处理并列，同名次同色，因此边界并列可能增加实际着色队数。缺失名次和打星不标色，CPC Finder、奖牌及学校名次不标色。排序、筛选和悬浮不改变底色，网络赛列使用当前名单内的综合名次，不使用三场原始名次分别着色。这仅是前瞻档位提示，并非正式获奖结果。通过可选 `contestStage: "regional"` 显式启用标色；省略或 `"preliminary"` 不标色，三场网络赛均不标色。生成器 `--contest-stage regional` 用于区域赛，默认 preliminary；未知阶段或显式 null 拒绝。测试覆盖真实三场网络赛均无标色、西安保留标色、阶段校验、独立向上取整、各档边界、并列、缺失、打星、排除列和小规模名单。
 
 - 一个“网络赛排名”列按 ICPC1 / ICPC2 / CCPC 展示三场排名；悬浮或聚焦显示每名成员的三场记录。
 - 三场排名使用各 4ch 的固定数字槽，数字与缺失标记右对齐，斜线单独占固定居中槽；内部名次沿用独立排名槽并增加间距。副标题居中。队员明细使用相同网格，避免不同位数导致错位；渲染回归覆盖一位、四位及缺失值。排序、数据契约不变。
@@ -26,7 +26,7 @@ schema v1 新增可选 `onlineContests`（固定三场 ID 与标题），队伍�
 生成器新增 `--team-format xlsx`、`--online-series` 和 `--unlisted`。前瞻可选布尔字段 `unlisted` 省略时为 false，非布尔值拒绝；标记只影响页面比赛选项和默认选择，评分、排序和静态文件保持可用。回归覆盖隐藏场次不出现在选项、普通入口/无效 ID 默认公开场次、显式直达、仅隐藏场次列表以及标记类型验证。XLSX 使用可选依赖 `pip install -e ".[preview]"`，只支持本次中文身份表头；未知类型、缺失身份、重复 ID/成员和公式身份带行号报错。网络赛输入要求三场齐全且早于前瞻；新模式也拒绝不早于前瞻的外部 Rating/Elo 快照。
 
 ```bash
-python -m scripts.generate_preview_data --teams "C:/Downloads/西安报名强度表_final_20261006.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-10 --preview-id icpc-2026-xian --unlisted --preview-title "2026 ICPC 亚洲区域赛（西安）" --team-source-url ./data/rosters/icpc-2026-xian.json --sort-at 2026-10-18T09:00:00+08:00 --output static/data/previews/icpc-2026-xian.json
+python -m scripts.generate_preview_data --teams "C:/Downloads/西安报名强度表_final_20261006.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-10 --preview-id icpc-2026-xian --contest-stage regional --unlisted --preview-title "2026 ICPC 亚洲区域赛（西安）" --team-source-url ./data/rosters/icpc-2026-xian.json --sort-at 2026-10-18T09:00:00+08:00 --output static/data/previews/icpc-2026-xian.json
 ```
 
 离线回归覆盖身份列白名单、错误行号、跨校同名、学校别名、重复身份最好名次、重组与缺失成绩、来源时间、整份名单与本地评分、三层排名比较、全缺失双向置后、并列与打星、CPC Finder/奖牌不影响战力、schema 及旧快照兼容。新增测试位于 `tests/test_preview_roster.py`、`tests/test_online_preview.mjs`。本地 HTTP 服务验证返回 200；本次浏览器控制连接超时，未完成视觉验收。

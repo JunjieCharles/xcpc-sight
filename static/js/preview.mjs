@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261010-60";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261010-61";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -132,6 +132,9 @@ export function validatePreview(document) {
   if (validatedPreviews.has(document)) return document;
   integer(document.schemaVersion, "preview.schemaVersion", 1);
   if (document.schemaVersion !== SCHEMA_VERSION) fail("preview.schemaVersion", `unsupported version ${document.schemaVersion}`);
+  if (document.contestStage !== undefined && !["preliminary", "regional"].includes(document.contestStage)) {
+    fail("preview.contestStage", "expected preliminary or regional");
+  }
   if (document.unlisted !== undefined && typeof document.unlisted !== "boolean") {
     fail("preview.unlisted", "expected boolean");
   }
