@@ -286,8 +286,9 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
+        "icpc-2026-xian",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173]
+    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 403]
     for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]

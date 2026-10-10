@@ -161,6 +161,10 @@ def preview_specs() -> tuple[PreviewSpec, ...]:
             repository_root / "static/data/previews/ccpc-2026-preliminary.json",
             "previews/ccpc-2026-preliminary.json",
         ),
+        PreviewSpec(
+            repository_root / "static/data/previews/icpc-2026-xian.json",
+            "previews/icpc-2026-xian.json",
+        ),
     )
 
 
@@ -187,6 +191,12 @@ def generate_static_data(output_dir: Path) -> None:
     preview_publications = [
         (json.loads(spec.source.read_text(encoding="utf-8")), spec.path) for spec in preview_specs()
     ]
+    preview_ids = {document["id"] for document, _ in preview_publications}
+    roster_root = Path(__file__).resolve().parents[1] / "static/data/rosters"
+    roster_publications = [
+        (json.loads(path.read_text(encoding="utf-8")), f"rosters/{path.name}")
+        for path in sorted(roster_root.glob("*.json")) if path.stem in preview_ids
+    ]
     published_preview_series = {document["seriesId"] for document, _ in preview_publications}
     review_publications = [
         (document, spec.path)
@@ -202,6 +212,8 @@ def generate_static_data(output_dir: Path) -> None:
     for document, path in publications:
         write_json_atomic(output_dir / path, document)
     for document, path in preview_publications:
+        write_json_atomic(output_dir / path, document)
+    for document, path in roster_publications:
         write_json_atomic(output_dir / path, document)
     for document, path in review_publications:
         write_json_atomic(output_dir / path, document)

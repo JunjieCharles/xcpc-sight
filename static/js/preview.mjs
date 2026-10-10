@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20260919-54";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261010-60";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -132,6 +132,9 @@ export function validatePreview(document) {
   if (validatedPreviews.has(document)) return document;
   integer(document.schemaVersion, "preview.schemaVersion", 1);
   if (document.schemaVersion !== SCHEMA_VERSION) fail("preview.schemaVersion", `unsupported version ${document.schemaVersion}`);
+  if (document.unlisted !== undefined && typeof document.unlisted !== "boolean") {
+    fail("preview.unlisted", "expected boolean");
+  }
   const aggregation = document.ratingAggregation === undefined ? "max" : document.ratingAggregation;
   if (!["max", "normalized-lse"].includes(aggregation)) fail("preview.ratingAggregation", "unsupported aggregation");
   for (const key of ["seriesId", "seriesTitle", "id", "title", "sortAt", "snapshotDate", "matchingPolicy"]) {
@@ -150,6 +153,22 @@ export function validatePreview(document) {
     if (metricIds.has(source.id)) fail(`${path}.id`, "duplicate metric id");
     metricIds.add(source.id);
   });
+  if (document.onlineContests !== undefined) {
+    array(document.onlineContests, "preview.onlineContests");
+    const expected = ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary"];
+    if (document.onlineContests.length !== 3) fail("preview.onlineContests", "expected three contests");
+    document.onlineContests.forEach((contest, i) => {
+      object(contest, "preview.onlineContests.entry");
+      if (contest.id !== expected[i]) fail("preview.onlineContests", "expected ICPC1 / ICPC2 / CCPC order");
+      string(contest.title, "preview.onlineContests.title");
+    });
+  }
+  if (document.powerMetrics !== undefined) {
+    array(document.powerMetrics, "preview.powerMetrics");
+    const allowed = new Set([...metricIds, "medals", ...(document.onlineContests ? ["onlineRanks"] : [])]);
+    if (!document.powerMetrics.length || new Set(document.powerMetrics).size !== document.powerMetrics.length
+      || document.powerMetrics.some(id => !allowed.has(id))) fail("preview.powerMetrics", "invalid dimensions");
+  }
   array(document.teams, "preview.teams");
   if (!document.teams.length) fail("preview.teams", "expected at least one team");
   const teamIds = new Set();
@@ -212,6 +231,19 @@ export function validatePreview(document) {
       if (!matches) fail(`${path}.ratings.${id}`, useLse
         ? "must equal normalized LSE of member values" : "must equal the highest member value");
     }
+    if (document.onlineContests !== undefined) {
+      const checkRanks = (values, rankPath) => {
+        array(values, rankPath);
+        if (values.length !== 3) fail(rankPath, "expected three ranks");
+        values.forEach(value => { if (value !== null) integer(value, rankPath, 1); });
+      };
+      checkRanks(team.onlineRanks, `${path}.onlineRanks`);
+      team.members.forEach(member => checkRanks(member.onlineRanks, `${path}.members.onlineRanks`));
+      team.onlineRanks.forEach((rank, slot) => {
+        const values = team.members.map(member => member.onlineRanks[slot]).filter(value => value !== null);
+        if (rank !== (values.length ? Math.min(...values) : null)) fail(`${path}.onlineRanks`, "must equal best member rank");
+      });
+    }
     validateMedals(team.medals, `${path}.medals`);
     for (const medal of Object.keys(medalTotals)) {
       if (team.medals[medal] !== medalTotals[medal]) fail(`${path}.medals.${medal}`, "must equal the member total");
@@ -246,6 +278,23 @@ function comparePowerValues(left, right) {
   if (left === null) return -1;
   if (right === null) return 1;
   return left - right;
+}
+
+export function compareOnlineRanks(left, right) {
+  const values = ranks => (ranks ?? [null, null, null]).map(rank => rank ?? Infinity).sort((a, b) => a - b);
+  const a = values(left), b = values(right);
+  for (let i = 0; i < 3; i += 1) {
+    if (a[i] !== b[i]) return a[i] < b[i] ? 1 : -1;
+  }
+  return 0;
+}
+
+function onlineRankValue(team) {
+  return team.onlineRanks?.some(rank => rank !== null) ? team.onlineRanks : null;
+}
+
+export function previewPowerMetricIds(preview) {
+  return preview.powerMetrics ?? [...preview.metricSources.map(source => source.id), "medals"];
 }
 
 function compareMedals(left, right) {
@@ -294,9 +343,11 @@ export function buildPreviewRanks(teams, metricIds = Object.keys(teams[0]?.ratin
     competitionRanks(teams, (team) => team.ratings[id] ?? null, comparePowerValues, true),
   ]));
   const medalRanks = competitionRanks(teams, (team) => team.medals, compareMedals);
+  const onlineRanks = competitionRanks(teams, onlineRankValue, compareOnlineRanks, true);
   return new Map(teams.map((team) => [team.id, {
     ratings: Object.fromEntries(metricIds.map((id) => [id, ratingRanks.get(id).get(team.id)])),
     medals: medalRanks.get(team.id),
+    ...(team.onlineRanks === undefined ? {} : { onlineRanks: onlineRanks.get(team.id) }),
   }]));
 }
 
@@ -309,15 +360,12 @@ function comparePowerVectors(left, right, order = "desc") {
   return 0;
 }
 
-export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratings ?? {})) {
-  const dimensions = [
-    ...metricIds.map((id) => countStrictlyLower(
-      teams,
-      (team) => previewRatingValue(id, team.ratings[id] ?? null),
-      comparePowerValues,
-    )),
-    countStrictlyLower(teams, (team) => team.medals, compareMedals),
-  ];
+export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratings ?? {}), powerMetrics = [...metricIds, "medals"]) {
+  const dimensions = powerMetrics.map(id => {
+    if (id === "onlineRanks") return countStrictlyLower(teams, onlineRankValue, compareOnlineRanks);
+    if (id === "medals") return countStrictlyLower(teams, team => team.medals, compareMedals);
+    return countStrictlyLower(teams, team => previewRatingValue(id, team.ratings[id] ?? null), comparePowerValues);
+  });
   const power = new Map(teams.map((team) => {
     const counts = dimensions.map((values) => values.get(team.id));
     return [team.id, { counts, vector: [...counts].sort((left, right) => right - left), rank: null }];
@@ -331,8 +379,9 @@ export function buildPreviewPower(teams, metricIds = Object.keys(teams[0]?.ratin
   ranked.forEach((team, index) => {
     const entry = power.get(team.id);
     if (previousVector === null || comparePowerVectors(entry.vector, previousVector)) rank = index + 1;
-    const hasData = metricIds.some((id) => previewRatingValue(id, team.ratings[id] ?? null) !== null)
-      || ["gold", "silver", "bronze"].some((medal) => team.medals[medal] > 0);
+    const hasData = powerMetrics.some(id => id === "onlineRanks" ? onlineRankValue(team) !== null
+      : id === "medals" ? ["gold", "silver", "bronze"].some(medal => team.medals[medal] > 0)
+        : previewRatingValue(id, team.ratings[id] ?? null) !== null);
     entry.rank = hasData ? rank : null;
     previousVector = entry.vector;
   });
@@ -365,6 +414,13 @@ function comparePreviewSortKeys(left, right, sort, order, previewPower) {
     return left.members.map(({ name }) => name).join("/").localeCompare(
       right.members.map(({ name }) => name).join("/"), "zh-CN",
     ) * direction;
+  }
+  if (sort === "onlineRanks") {
+    const a = onlineRankValue(left), b = onlineRankValue(right);
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return compareOnlineRanks(a, b) * direction;
   }
   if (sort === "medals") return compareMedals(left.medals, right.medals) * direction;
   if (sort === "power") {

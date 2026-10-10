@@ -374,3 +374,12 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
 @media (forced-colors: active) { .chart-line, .chart-dot, .problem-curve-line { stroke: CanvasText; } }
+
+.preview-online-order { display: block; text-align: center; font-size: 0.66rem; font-weight: normal; white-space: nowrap; color: var(--muted); }
+.preview-online-values { display: inline-grid; grid-template-columns: 4ch 1.2ch 4ch 1.2ch 4ch; align-items: baseline; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.82rem; }
+.preview-online-rank { text-align: right; }
+.preview-online-separator { text-align: center; color: var(--muted); }
+.preview-online-ranks .preview-ranked-value { column-gap: .35rem; }
+.preview-table tbody tr td.preview-medal-gold { background-color: #fff0bc; }
+.preview-table tbody tr td.preview-medal-silver { background-color: #e8edf2; }
+.preview-table tbody tr td.preview-medal-bronze { background-color: #f3dfcd; }

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20260919-54";
+} from "./data.mjs?v=20261010-60";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20260919-54";
+} from "./problem-rating.mjs?v=20261010-60";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -29,15 +29,16 @@ import {
   createPreviewStore,
   listPreviewSchools,
   previewHistoryTitle,
+  previewPowerMetricIds,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20260919-54";
+} from "./preview.mjs?v=20261010-60";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20260919-54";
+} from "./review.mjs?v=20261010-60";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -100,7 +101,6 @@ const elements = {
   previewView: document.querySelector("#preview-view"),
   previewTitle: document.querySelector("#preview-title"),
   previewContestSelect: document.querySelector("#preview-contest-select"),
-  previewTeamSource: document.querySelector("#preview-team-source"),
   previewMetricSources: document.querySelector("#preview-metric-sources"),
   previewScroll: document.querySelector("#preview-scroll"),
   previewHead: document.querySelector("#preview-head"),
@@ -632,6 +632,16 @@ function attachPreviewTooltip(control, tooltip) {
   });
 }
 
+function previewOnlineRankNode(ranks) {
+  return node("span", {
+    className: "preview-online-values",
+    "aria-label": ranks.map((rank, i) => `${state.preview.onlineContests[i].title}：${rank ?? "无记录"}`).join("；"),
+  }, ranks.flatMap((rank, i) => [
+    ...(i ? [node("span", { className: "preview-online-separator", text: " / ", "aria-hidden": "true" })] : []),
+    node("span", { className: "preview-online-rank", text: String(rank ?? "—") }),
+  ]));
+}
+
 function previewMedalNode(medals) {
   const display = node("span", {
     className: "medal-values",
@@ -708,7 +718,8 @@ function radarPoints(counts, maximum, radius, centerX, centerY) {
 }
 
 function previewPowerRadar(power) {
-  const labels = [...state.preview.metricSources.map(({ title }) => title), "奖牌"];
+  const labels = previewPowerMetricIds(state.preview).map(id => id === "onlineRanks" ? "网络赛排名"
+    : id === "medals" ? "奖牌" : state.preview.metricSources.find(source => source.id === id).title);
   const maximum = Math.max(1, state.preview.teams.filter(team => !team.excluded).length - 1);
   const width = labels.length > 5 ? 340 : 300;
   const centerX = width / 2;
@@ -780,6 +791,27 @@ function previewPowerControl(team) {
   return control;
 }
 
+function previewColumnSources(sources) {
+  const ordered = [...sources];
+  const current = ordered.findIndex(source => source.id === "currentSeason");
+  const previous = ordered.findIndex(source => source.id === "previousSeason");
+  if (previous >= 0 && current > previous) {
+    ordered.splice(previous, 0, ordered.splice(current, 1)[0]);
+  }
+  return ordered;
+}
+
+function previewRankMedalClass(metric, rank, teamCount, excluded = false) {
+  if (excluded || metric === "cpcfinder" || metric === "medals"
+    || !Number.isInteger(rank) || rank < 1 || rank > teamCount) return "";
+  const goldEnd = Math.ceil(teamCount / 10);
+  const silverEnd = goldEnd + Math.ceil(teamCount * 2 / 10);
+  const bronzeEnd = silverEnd + Math.ceil(teamCount * 3 / 10);
+  const medal = rank <= goldEnd ? "gold" : rank <= silverEnd ? "silver"
+    : rank <= bronzeEnd ? "bronze" : null;
+  return medal ? ` preview-medal-${medal}` : "";
+}
+
 function renderPreviewRows() {
   if (!state.preview || state.view !== "preview") return;
   if (activePreviewTooltip) {
@@ -787,7 +819,8 @@ function renderPreviewRows() {
     activePreviewTooltip.remove();
     activePreviewTooltip = null;
   }
-  const columns = state.preview.metricSources.length + 5;
+  const columns = state.preview.metricSources.length + 5 + (state.preview.onlineContests ? 1 : 0);
+  const teamCount = state.preview.teams.filter(team => !team.excluded).length;
   renderVirtualRows({
     container: elements.previewScroll,
     body: elements.previewBody,
@@ -837,14 +870,23 @@ function renderPreviewRows() {
         className: "preview-members-cell",
         title: memberNames,
       }, memberChildren));
-      row.append(node("td", { className: "preview-metric-cell preview-power-cell" }, [
+      row.append(node("td", { className: "preview-metric-cell preview-power-cell"
+        + previewRankMedalClass("power", state.previewPower.get(team.id).rank, teamCount, team.excluded) }, [
         previewPowerControl(team),
       ]));
-      for (const source of state.preview.metricSources) {
+      if (state.preview.onlineContests) {
+        row.append(node("td", { className: "preview-metric-cell preview-online-ranks"
+          + previewRankMedalClass("onlineRanks", state.previewRanks.get(team.id).onlineRanks, teamCount, team.excluded) }, [
+          previewValueControl(team, team.onlineRanks, state.previewRanks.get(team.id).onlineRanks,
+            member => member.onlineRanks, previewOnlineRankNode),
+        ]));
+      }
+      for (const source of previewColumnSources(state.preview.metricSources)) {
         const value = team.ratings[source.id];
         const rank = state.previewRanks.get(team.id).ratings[source.id];
         row.append(node("td", {
-          className: `preview-metric-cell${value === null ? " preview-missing" : ""}`,
+          className: `preview-metric-cell${value === null ? " preview-missing" : ""}`
+            + previewRankMedalClass(source.id, rank, teamCount, team.excluded),
         }, [previewValueControl(
           team,
           value,
@@ -905,11 +947,17 @@ function renderPreviewHeader() {
     previewSortHeader("成员", "members"),
     previewSortHeader("综合战力", "power"),
   );
-  for (const source of state.preview.metricSources) row.append(previewSortHeader(source.title, source.id));
+  if (state.preview.onlineContests) {
+    const heading = previewSortHeader("网络赛排名", "onlineRanks");
+    heading.append(node("small", { className: "preview-online-order", text: "ICPC1 / ICPC2 / CCPC" }));
+    heading.title = "按当前队员各场最好正式排名汇总；比较最好、次好、第三好排名";
+    row.append(heading);
+  }
+  for (const source of previewColumnSources(state.preview.metricSources)) row.append(previewSortHeader(source.title, source.id));
   row.append(previewSortHeader("奖牌（三人总和）", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
-  const widths = [200, 170, 190, 96, ...state.preview.metricSources.map(() => 112), 150];
+  const widths = [200, 170, 190, 96, ...(state.preview.onlineContests ? [174] : []), ...state.preview.metricSources.map(() => 112), 150];
   table.style.setProperty("--preview-table-width", `${widths.reduce((sum, width) => sum + width, 0)}px`);
   table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((sum, width) => sum + width, 0)}px`);
   table.querySelector("colgroup")?.remove();
@@ -931,10 +979,12 @@ function renderSourceLinks(container, label, sources) {
 }
 
 function renderPreviewSources() {
-  renderSourceLinks(elements.previewTeamSource, "名单来源：", [state.preview.teamSource]);
-  renderSourceLinks(elements.previewMetricSources, "数据来源：", state.preview.metricSources);
+  renderSourceLinks(elements.previewMetricSources, "数据来源：", [
+    ...state.preview.metricSources,
+    ...(state.preview.onlineContests ? [{ title: "网络赛排名", url: "./?series=2026-2027" }] : []),
+  ]);
   if (state.preview.teams.some(team => team.excluded)) {
-    elements.previewTeamSource.append(node("span", {
+    elements.previewMetricSources.append(node("span", {
       className: "preview-excluded-label", text: " · ★ 打星队伍按指标排序，不计队伍及学校排名",
     }));
   }
@@ -958,8 +1008,11 @@ function showPreview(updateUrl = false) {
   elements.reviewView.hidden = true;
   updateSeriesMode();
   elements.previewTitle.textContent = state.preview.title;
-  elements.previewContestSelect.replaceChildren(...state.previews.map(p => node("option", { value: p.id, text: p.title })));
-  elements.previewContestSelect.value = state.preview.id;
+  elements.previewContestSelect.replaceChildren(
+    ...(state.preview.unlisted ? [node("option", { value: "", text: "切换比赛…", disabled: true })] : []),
+    ...listedPreviews(state.previews).map(p => node("option", { value: p.id, text: p.title })),
+  );
+  elements.previewContestSelect.value = state.preview.unlisted ? "" : state.preview.id;
   document.querySelector("#preview-time").textContent = state.preview.id === "icpc-2026-preliminary-1"
     ? "比赛时间：2026年9月6日 13:00-18:00"
     : `比赛时间：${new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "long", timeStyle: "short" }).format(new Date(state.preview.sortAt))}`;
@@ -969,9 +1022,14 @@ function showPreview(updateUrl = false) {
   setUrl(updateUrl ? "push" : "replace");
 }
 
+function listedPreviews(previews) {
+  return previews.filter(preview => !preview.unlisted);
+}
+
 function selectLatestContest(contests, requestedId, timeKey) {
   return contests.find(contest => contest.id === requestedId)
     ?? contests.reduce((latest, contest) => {
+      if (contest.unlisted) return latest;
       if (!latest) return contest;
       const difference = Date.parse(contest[timeKey]) - Date.parse(latest[timeKey]);
       return difference > 0 || (difference === 0 && contest.id < latest.id) ? contest : latest;
@@ -982,7 +1040,7 @@ function choosePreview(id, remember = true) {
   state.preview = selectLatestContest(state.previews, id, "sortAt");
   if (remember) state.previewContestId = state.preview.id;
   const metrics = state.preview.metricSources.map(s => s.id);
-  state.previewPower = buildPreviewPower(state.preview.teams, metrics);
+  state.previewPower = buildPreviewPower(state.preview.teams, metrics, previewPowerMetricIds(state.preview));
   state.previewRanks = buildPreviewRanks(state.preview.teams, metrics);
 }
 
@@ -1816,7 +1874,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.preview = preview;
   state.previewContestId = preview?.id ?? null;
   state.previewPower = preview
-    ? buildPreviewPower(preview.teams, preview.metricSources.map(({ id }) => id))
+    ? buildPreviewPower(preview.teams, preview.metricSources.map(({ id }) => id), previewPowerMetricIds(preview))
     : new Map();
   state.previewRanks = preview
     ? buildPreviewRanks(preview.teams, preview.metricSources.map(({ id }) => id))
@@ -1834,6 +1892,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.schools = requestedSchools.filter((school) => available.has(school));
   const previewSorts = new Set([
     "school", "name", "members", "power", "medals",
+    ...(state.preview?.onlineContests ? ["onlineRanks"] : []),
     ...(state.preview?.metricSources.map(({ id }) => id) ?? []),
   ]);
   state.previewSort = previewSorts.has(queryState.previewSort) ? queryState.previewSort : "power";

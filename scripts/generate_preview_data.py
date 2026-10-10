@@ -113,7 +113,7 @@ def parse_args() -> argparse.Namespace:
         description="Build a manually requested XCPC preview snapshot"
     )
     parser.add_argument("--teams", type=Path, required=True)
-    parser.add_argument("--team-format", choices=("registration", "pintia-public"),
+    parser.add_argument("--team-format", choices=("registration", "pintia-public", "xlsx"),
                         default="registration")
     parser.add_argument("--xcpcrating-data", type=Path, required=True)
     parser.add_argument("--xcpc-elo-data", type=Path, required=True)
@@ -121,6 +121,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--history-srk-root", type=Path,
                         help="Local SRK collection for previous-season team histories")
     parser.add_argument("--current-series", type=Path)
+    parser.add_argument("--online-series", type=Path,
+                        help="Local series containing the three preliminary results")
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
     parser.add_argument(
         "--school-aliases", type=Path,
@@ -131,6 +133,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--snapshot-date", required=True)
     parser.add_argument("--preview-id", default=PREVIEW_ID)
     parser.add_argument("--preview-title", default=PREVIEW_TITLE)
+    parser.add_argument("--unlisted", action="store_true",
+                        help="Keep accessible by URL but hide from the contest picker")
     parser.add_argument("--team-source-url", default=TEAM_SOURCE_URL)
     parser.add_argument("--sort-at", default="2026-09-06T13:00:00+08:00")
     parser.add_argument("--cpcfinder-snapshot-date")
@@ -351,11 +355,17 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         current_snapshots["currentSeason"] = current_at
     match_counts = dict.fromkeys(indexes, 0)
     teams = []
-    raw_teams = load_json(args.teams)
-    pintia = getattr(args, "team_format", "registration") == "pintia-public"
-    registered_teams = parse_pintia_teams(raw_teams) if pintia else [
-        parse_registered_team(row, index) for index, row in enumerate(raw_teams)
-    ]
+    team_format = getattr(args, "team_format", "registration")
+    pintia = team_format == "pintia-public"
+    if team_format == "xlsx":
+        from scripts.preview_roster import load_roster_xlsx
+
+        registered_teams = load_roster_xlsx(args.teams)
+    else:
+        raw_teams = load_json(args.teams)
+        registered_teams = parse_pintia_teams(raw_teams) if pintia else [
+            parse_registered_team(row, index) for index, row in enumerate(raw_teams)
+        ]
     for registered in registered_teams:
         source_index = registered.source_index
         team_name = registered.name
@@ -393,7 +403,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
             {
                 "id": stable_team_id(school, team_name, members),
                 "sourceIndex": source_index,
-                **({"excluded": registered.excluded} if pintia else {}),
+                **({"excluded": registered.excluded} if team_format != "registration" else {}),
                 "school": school,
                 "name": team_name,
                 "members": member_documents,
@@ -419,10 +429,40 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         history_index = build_history_index(history_series, args.history_srk_root, normalizer)
         for team in teams:
             team["previousSeasonHistory"] = team_history(team, history_index, normalizer)
+    online_metadata = {}
+    if getattr(args, "online_series", None):
+        from scripts.preview_roster import (
+            ONLINE_CONTEST_IDS,
+            ONLINE_LABELS,
+            attach_online_ranks,
+            online_rank_index,
+        )
+
+        online_series = load_json(args.online_series)
+        if online_series["id"] != SERIES_ID:
+            raise ValueError(f"{args.online_series}: expected series {SERIES_ID}")
+        for source_id, source_at in (("xcpcrating", xcpcrating_at), ("xcpcElo", xcpc_elo_at)):
+            if datetime.fromisoformat(source_at) >= datetime.fromisoformat(args.sort_at):
+                raise ValueError(f"{source_id}: source snapshot must precede the preview")
+        online_index = online_rank_index(online_series, normalizer, args.sort_at)
+        attach_online_ranks(teams, online_index, normalizer)
+        online_metadata = {
+            "onlineContests": [
+                {"id": contest_id, "title": title}
+                for contest_id, title in zip(ONLINE_CONTEST_IDS, ONLINE_LABELS, strict=True)
+            ],
+            "powerMetrics": [key for key in indexes if key != "cpcfinder"] + ["onlineRanks"],
+        }
+        current_snapshots["onlineRanks"] = max(
+            contest["startAt"] for contest in online_series["contests"]
+            if contest["id"] in ONLINE_CONTEST_IDS
+        )
     member_count = sum(len(team["members"]) for team in teams)
     return {
         "schemaVersion": 1,
         "ratingAggregation": "normalized-lse",
+        **({"unlisted": True} if getattr(args, "unlisted", False) else {}),
+        **online_metadata,
         "seriesId": SERIES_ID,
         "seriesTitle": SERIES_TITLE,
         "id": args.preview_id,
@@ -430,9 +470,12 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "sortAt": args.sort_at,
         "snapshotDate": args.snapshot_date,
         "teamSource": {
-            "title": "Pintia 公开榜单队伍名单" if pintia else "ICPC 报名系统队伍公示",
+            "title": (args.teams.name if team_format == "xlsx" else
+                      "Pintia 公开榜单队伍名单" if pintia else "ICPC 报名系统队伍公示"),
             "url": args.team_source_url,
             "note": (
+                "仅从工作簿首张表提取学校、队名、队员和类型；忽略所有已有评分、排名和奖牌。"
+                if team_format == "xlsx" else
                 "Pintia 公开榜单队伍静态快照，含公开的打星队伍；仅提取学校、队名和队员，"
                 "不使用本场成绩，不随比赛进程自动更新。" if pintia else
                 "外部报名名单静态快照；不来自 Pintia 比赛榜单，不随比赛进程自动更新。"

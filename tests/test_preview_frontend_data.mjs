@@ -12,6 +12,7 @@ import {
   achievementDisplayParts,
   createPreviewStore,
   previewRatingValue,
+  previewPowerMetricIds,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
@@ -28,7 +29,7 @@ test("loads all published previews from the index and preserves contest selectio
     json: async () => JSON.parse(await readFile(new URL(url), "utf8")),
   }));
   const previews = await store.getPreviews(entry);
-  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary"]);
+  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary", "icpc-2026-xian"]);
   const second = previews[1];
   assert.equal(previews[0].ratingAggregation, undefined);
   assert.equal(second.ratingAggregation, "normalized-lse");
@@ -186,7 +187,7 @@ test("review preview selection does not overwrite the remembered preview contest
   const newest = { id: "new", sortAt: "2026-09-12", teams: [], metricSources: [] };
   const state = { previews: [old, newest] };
   const choose = runInNewContext(`${functions}\nchoosePreview`, {
-    state, buildPreviewPower, buildPreviewRanks,
+    state, buildPreviewPower, buildPreviewRanks, previewPowerMetricIds,
   });
   choose();
   assert.equal(state.previewContestId, "new");
@@ -315,7 +316,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
   ]);
 
-  assert.match(indexHtml, /id="preview-team-source"/);
+  assert.doesNotMatch(indexHtml, /id="preview-team-source"/);
   assert.match(indexHtml, /id="preview-metric-sources"/);
   assert.match(indexHtml, /id="preview-contest-select"/);
   assert.doesNotMatch(indexHtml, /id="achievement-filter"/);
@@ -361,7 +362,8 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.doesNotMatch(appModule, /previewRatingValue/);
   assert.match(appModule, /renderValue\(memberValue\(member\), true\)/);
   assert.match(appModule, /elements\.seriesModeSwitch\.hidden = supportedCount === 0/);
-  assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源："/);
+  assert.doesNotMatch(appModule, /previewTeamSource|名单来源：/);
+  assert.match(appModule, /elements\.previewMetricSources\.append/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
   assert.match(appModule, /elements\.previewContestSelect\.replaceChildren/);
   assert.match(appModule, /const widths = \[200, 170, 190, 96,/);

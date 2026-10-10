@@ -15,7 +15,7 @@
 | IOI 中国选手成绩快照与校验 | [ioi-data.md](ioi-data.md) |
 | NOI 获奖名单缓存与标准化数据集 | [noi-data.md](noi-data.md) |
 | 2025–2026 赛季范围与排序 | [season-2025-2026.md](season-2025-2026.md) |
-| 2026–2027 赛季范围、外部名单前瞻与匹配口径 | [season-2026-2027-preview.md](season-2026-2027-preview.md) |
+| 2026–2027 赛季范围、外部/XLSX 名单前瞻、网络赛排名与战力 | [season-2026-2027-preview.md](season-2026-2027-preview.md) |
 
 开发已有功能前应先阅读对应文档；实现完成后必须回到文档同步行为、API、假设、限制与测试。
 

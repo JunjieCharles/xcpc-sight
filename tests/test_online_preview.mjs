@@ -1,0 +1,183 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+import { runInNewContext } from 'node:vm';
+import {
+  compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
+  sortPreviewTeams, validatePreview, previewPowerMetricIds, searchPreviewTeams,
+} from '../static/js/preview.mjs';
+
+function team(id, ranks, extra = {}) {
+  return { id, school: id, name: id, sourceIndex: 0, members: [],
+    onlineRanks: ranks, ratings: { currentSeason: null, cpcfinder: 0 },
+    medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
+}
+const dimensions = ['currentSeason', 'onlineRanks'];
+
+test('preview columns show current season before previous season without mutating sources', async () => {
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const order = runInNewContext(
+    `${source.match(/function previewColumnSources\([^]*?\n\}/)[0]}\npreviewColumnSources`,
+  );
+  for (const ids of [
+    ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'cpcfinder'],
+    ['xcpcrating', 'previousSeason', 'cpcfinder'],
+    ['currentSeason', 'previousSeason'],
+    ['currentSeason'],
+  ]) {
+    const sources = ids.map(id => ({ id }));
+    const actual = Array.from(order(sources), s => s.id);
+    const expected = ids.includes('currentSeason') && ids.includes('previousSeason')
+      ? ids.filter(id => id !== 'currentSeason').flatMap(id => id === 'previousSeason' ? ['currentSeason', id] : [id])
+      : ids;
+    assert.deepEqual(actual, expected);
+    assert.deepEqual(sources.map(s => s.id), ids);
+  }
+  assert.match(source, /for \(const source of previewColumnSources\(state.preview.metricSources\)\) \{/);
+  assert.match(source, /for \(const source of previewColumnSources\(state.preview.metricSources\)\) row.append/);
+});
+
+test('online ranks keep three fixed numeric slots and centered subtitle', async () => {
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const render = runInNewContext(
+    `${source.match(/function previewOnlineRankNode\([^]*?\n\}/)[0]}\npreviewOnlineRankNode`,
+    {
+      state: { preview: { onlineContests: ['ICPC1', 'ICPC2', 'CCPC'].map(title => ({ title })) } },
+      node: (tag, props, children = []) => ({ tag, ...props, children }),
+    },
+  );
+  for (const ranks of [[3, 8, 19], [1048, 7, 928], [null, 48, null]]) {
+    const rendered = render(ranks);
+    assert.equal(rendered.children.length, 5);
+    assert.deepEqual(Array.from(rendered.children.filter(c => c.className === 'preview-online-rank'), c => c.text), ranks.map(r => String(r ?? '—')));
+    assert.equal(rendered.children.map(c => c.text).join(''), ranks.map(r => r ?? '—').join(' / '));
+    assert.match(rendered['aria-label'], /ICPC1：.+；ICPC2：.+；CCPC：/);
+  }
+  const css = await readFile(new URL('../static/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.preview-online-values\s*\{[^}]*grid-template-columns:\s*4ch 1\.2ch 4ch 1\.2ch 4ch/);
+  assert.match(css, /\.preview-online-order\s*\{[^}]*text-align:\s*center/);
+});
+
+test('online ranks compare best, second best and third best independent of display order', () => {
+  assert.equal(compareOnlineRanks([30, 1, 20], [1, 20, 30]), 0);
+  assert.equal(compareOnlineRanks([2, 3, 4], [1, 999, null]), -1);
+  assert.equal(compareOnlineRanks([5, 10, 30], [10, 5, 40]), 1);
+  assert.equal(compareOnlineRanks([null, 5, 10], [5, 10, 30]), -1);
+  assert.equal(compareOnlineRanks([null, null, null], null), 0);
+});
+
+test('online column gives global competition ranks, skips excluded and keeps missing last both ways', () => {
+  const teams = [team('a', [1, 20, 30]), team('b', [20, 1, 30]),
+    team('c', [1, 20, 40]), team('d', [null, null, null]),
+    team('star', [1, 2, 3], { excluded: true })];
+  const ranks = buildPreviewRanks(teams);
+  assert.deepEqual(teams.map(t => ranks.get(t.id).onlineRanks), [1, 1, 3, null, null]);
+  assert.deepEqual(sortPreviewTeams(teams, 'onlineRanks').map(t => t.id), ['star', 'a', 'b', 'c', 'd']);
+  assert.deepEqual(sortPreviewTeams(teams, 'onlineRanks', 'asc').map(t => t.id), ['c', 'a', 'b', 'star', 'd']);
+  const schools = buildPreviewSchoolRanks(sortPreviewTeams(teams, 'onlineRanks'), 'onlineRanks');
+  assert.equal(schools.get('a'), 1);
+  assert.equal(schools.get('b'), 1);
+  assert.equal(schools.get('c'), 3);
+  assert.equal(schools.has('star'), false);
+});
+
+test('power uses online ranks and ignores CPC Finder and medals, including data availability', () => {
+  const teams = [team('a', [10, 20, 30]), team('b', [20, 30, 40]),
+    team('empty', [null, null, null]), team('star', [1, 2, 3], { excluded: true })];
+  const initial = buildPreviewPower(teams, undefined, dimensions);
+  assert.deepEqual(initial.get('a').counts, [0, 2]);
+  assert.equal(initial.get('a').rank, 1);
+  assert.equal(initial.get('b').rank, 2);
+  assert.equal(initial.get('star').rank, null);
+  teams[2].ratings.cpcfinder = 999999;
+  teams[2].medals.gold = 9999;
+  assert.deepEqual(buildPreviewPower(teams, undefined, dimensions), initial);
+  assert.equal(initial.get('empty').rank, null);
+  assert.equal(buildPreviewRanks(teams).get('empty').ratings.cpcfinder, 1);
+  assert.equal(buildPreviewRanks(teams).get('empty').medals, 1);
+  assert.deepEqual(searchPreviewTeams(teams, 'a').map(t => t.id), ['a', 'star']);
+});
+
+async function xian() {
+  return JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-xian.json', import.meta.url), 'utf8'));
+}
+
+test('Xian publication contains only roster identities and independently calculated five-dimensional power', async () => {
+  const preview = validatePreview(await xian());
+  assert.equal(preview.teams.length, 403);
+  assert.equal(new Set(preview.teams.map(t => t.school)).size, 227);
+  assert.equal(preview.teams.flatMap(t => t.members).length, 1208);
+  assert.deepEqual(preview.onlineContests.map(c => c.title), ['ICPC1', 'ICPC2', 'CCPC']);
+  assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'onlineRanks']);
+  const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);
+  assert.ok([...power.values()].every(p => p.counts.length === 5));
+  const first = preview.teams.find(t => t.name === '遥不可及' && t.school === '清华大学');
+  assert.deepEqual(first.onlineRanks, [2, 28, 20]);
+  for (const source of preview.metricSources) assert.ok(Date.parse(preview.sourceSnapshots[source.id]) < Date.parse(preview.sortAt));
+});
+
+test('online schema rejects malformed ranks, wrong aggregation and invalid power dimensions', async () => {
+  for (const mutate of [
+    p => { p.teams[0].onlineRanks[0] = 0; },
+    p => { p.teams[0].onlineRanks[0] = 99999; },
+    p => { p.teams[0].members[0].onlineRanks = [1, 2]; },
+    p => { p.onlineContests.reverse(); },
+    p => { p.powerMetrics = ['unknown']; },
+    p => { p.powerMetrics = ['onlineRanks', 'onlineRanks']; },
+  ]) {
+    const preview = await xian(); mutate(preview);
+    assert.throws(() => validatePreview(preview));
+  }
+});
+
+
+test('preview medal colors use independently rounded quotas and global competition ranks', async () => {
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const color = runInNewContext(
+    source.match(/function previewRankMedalClass\([^]*?\n\}/)[0] + '\npreviewRankMedalClass',
+  );
+  for (const metric of ['power', 'onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']) {
+    for (const [rank, expected] of [[1, 'gold'], [41, 'gold'], [42, 'silver'], [122, 'silver'], [123, 'bronze'], [243, 'bronze'], [244, null], [403, null]]) {
+      assert.equal(color(metric, rank, 403), expected ? ' preview-medal-' + expected : '');
+    }
+    assert.deepEqual([40, 41, 41, 43].map(rank => color(metric, rank, 403)),
+      [' preview-medal-gold', ' preview-medal-gold', ' preview-medal-gold', ' preview-medal-silver']);
+    for (const rank of [null, undefined, 0, -1, 1.5, 404]) assert.equal(color(metric, rank, 403), '');
+    assert.equal(color(metric, 1, 403, true), '');
+  }
+  for (const metric of ['cpcfinder', 'medals']) assert.equal(color(metric, 1, 403), '');
+  assert.equal(color('power', 1, 0), '');
+  assert.equal(color('power', 1, 1), ' preview-medal-gold');
+  assert.equal(color('power', 2, 11), ' preview-medal-gold');
+  assert.equal(color('power', 5, 11), ' preview-medal-silver');
+  assert.equal(color('power', 9, 11), ' preview-medal-bronze');
+  assert.equal(color('power', 10, 11), '');
+  assert.match(source, /state\.preview\.teams\.filter\(team => !team\.excluded\)\.length/);
+  assert.match(source, /previewRankMedalClass\("power", state\.previewPower\.get\(team\.id\)\.rank/);
+  assert.match(source, /previewRankMedalClass\("onlineRanks", state\.previewRanks\.get\(team\.id\)\.onlineRanks/);
+  assert.match(source, /previewRankMedalClass\(source\.id, rank, teamCount, team\.excluded\)/);
+});
+
+
+test('unlisted Xian stays out of the picker and default but remains accessible by explicit URL', async () => {
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const functions = ['listedPreviews', 'selectLatestContest'].map(name =>
+    source.match(new RegExp('function ' + name + '\\([^]*?\\n\\}'))[0]).join('\n');
+  const { listedPreviews, selectLatestContest } = runInNewContext(functions + '\n({ listedPreviews, selectLatestContest })');
+  const hidden = validatePreview(await xian());
+  assert.equal(hidden.unlisted, true);
+  const publicPreview = { id: 'ccpc-2026-preliminary', sortAt: '2026-09-19T13:00:00+08:00' };
+  const previews = [hidden, publicPreview];
+  assert.deepEqual(Array.from(listedPreviews(previews), p => p.id), [publicPreview.id]);
+  assert.equal(selectLatestContest(previews, undefined, 'sortAt'), publicPreview);
+  assert.equal(selectLatestContest(previews, 'unknown', 'sortAt'), publicPreview);
+  assert.equal(selectLatestContest(previews, hidden.id, 'sortAt'), hidden);
+  assert.equal(selectLatestContest([hidden], undefined, 'sortAt'), null);
+  assert.equal(selectLatestContest([hidden], hidden.id, 'sortAt'), hidden);
+  assert.match(source, /listedPreviews\(state\.previews\)\.map/);
+  assert.match(source, /previewContestSelect\.value = state\.preview\.unlisted \? "" : state\.preview\.id/);
+  for (const value of [null, 1, 'true']) {
+    const invalid = await xian(); invalid.unlisted = value;
+    assert.throws(() => validatePreview(invalid), /unlisted/);
+  }
+});

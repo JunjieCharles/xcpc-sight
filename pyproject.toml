@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+preview = ["openpyxl>=3.1,<4"]
 problem-rating = [
     "matplotlib>=3.8,<4",
     "numpy>=1.26,<3",
