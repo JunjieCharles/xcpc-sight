@@ -7,10 +7,28 @@ from scripts.preview_roster import (
     ONLINE_CONTEST_IDS,
     attach_online_ranks,
     online_rank_index,
+    parse_identity_roster,
     parse_roster_rows,
 )
 
 HEADERS = ["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID", "ICPC1"]
+
+
+def test_reviewed_identity_roster_keeps_eligibility_and_ignores_scores():
+    rows = [{"school": "学校", "name": "女队", "members": ["甲", "乙"],
+             "excluded": False, "ratings": {"untrusted": 9999}},
+            {"school": "学校", "name": "打星女队", "members": ["丙"], "excluded": True}]
+    parsed = parse_identity_roster({"teams": rows})
+    assert [t.excluded for t in parsed] == [False, True]
+    assert parsed[0].members == ("甲", "乙")
+    assert [t.source_index for t in parsed] == [0, 1]
+    with pytest.raises(ValueError, match="duplicate team identity"):
+        parse_identity_roster({"teams": [rows[0], rows[0]]})
+    for key, value in [("excluded", None), ("excluded", "女队"), ("members", []),
+                       ("members", ["甲", "甲"]), ("members", ["=BAD()"]),
+                       ("school", None), ("members", [""])]:
+        with pytest.raises(ValueError):
+            parse_identity_roster({"teams": [{**rows[0], key: value}]})
 
 CCPC_HEADERS = ["序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名", "教练姓名"]
 
@@ -170,6 +188,10 @@ def test_changchun_image_statuses_match_all_marked_teams():
     female = next(team for team in preview["teams"] if team["name"] == "力拔山兮")
     assert female["school"] == "长春工业大学"
     assert not female["excluded"]
+    hunan = next(team for team in preview["teams"] if team["school"] == "湖南农业大学")
+    assert hunan["name"] == "零罚时"
+    assert [m["name"] for m in hunan["members"]] == ["黄瑞莎", "周静", "颜诗祺"]
+    assert not hunan["excluded"]
 
 
 def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):

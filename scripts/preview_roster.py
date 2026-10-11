@@ -85,6 +85,31 @@ def load_roster_xlsx(path: Path):
         workbook.close()
 
 
+def parse_identity_roster(document):
+    """Read the reviewed, identity-only JSON snapshot including eligibility."""
+    teams = document.get("teams") if isinstance(document, dict) else None
+    if not isinstance(teams, list) or not teams:
+        raise ValueError("identity roster: expected nonempty teams")
+    rows = [["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID"]]
+    for index, team in enumerate(teams):
+        context = f"identity roster team {index + 1}"
+        if not isinstance(team, dict) or type(team.get("excluded")) is not bool:
+            raise ValueError(f"{context}: expected boolean excluded")
+        members = team.get("members")
+        if not isinstance(members, list) or not 1 <= len(members) <= 3:
+            raise ValueError(f"{context}: expected one to three members")
+        if any(not isinstance(m, str) or not m.strip() for m in members):
+            raise ValueError(f"{context}: invalid member")
+        rows.append([team.get("school"), team.get("name"),
+                     "打星" if team["excluded"] else "正式",
+                     *members, *([None] * (3 - len(members))), str(index)])
+    result = parse_roster_rows(rows)
+    keys = {(t.school, t.name, tuple(sorted(t.members))) for t in result}
+    if len(keys) != len(result):
+        raise ValueError("identity roster: duplicate team identity")
+    return result
+
+
 def online_rank_index(series: dict, normalizer: DefaultNormalizer, cutoff: str):
     """Index official participation ranks, resolving duplicate identities by best rank."""
     selected = {}

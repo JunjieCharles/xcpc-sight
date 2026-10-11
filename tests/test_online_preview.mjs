@@ -117,6 +117,7 @@ test('Changchun is a public regional preview with the complete roster and five p
   assert.equal(preview.teams.filter(t => t.excluded).length, 36);
   assert.equal(preview.teams.filter(t => !t.excluded).length, 300);
   assert.equal(preview.teams.find(t => t.school === '长春工业大学' && t.name === '力拔山兮').excluded, false);
+  assert.equal(preview.teams.find(t => t.school === '湖南农业大学' && t.name === '零罚时').excluded, false);
   assert.equal(preview.teams.find(t => t.school === '琼台师范学院' && t.name === '贪得吴彦组').excluded, true);
   assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'onlineRanks']);
   const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);

@@ -11,38 +11,18 @@
 XLSX 导入兼容原西安表头与本次 CCPC 导出表头；重复表头、序号、缺失身份、成员重复和公式身份带原始行号报错。名单、当前/上赛季评分及三场网络赛排名完整离线回归，前端验证 336 队 schema、五维战力、公开索引及时间隐藏/恢复；静态生成器测试覆盖名单和前瞻一并复制。公开 Python API 不变。
 
 ```bash
-python -m scripts.generate_preview_data --teams "C:/Downloads/参赛队伍-2026 CCPC国赛（长春）.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --preview-title "2026年CCPC国赛（长春）" --team-source-url ./data/rosters/ccpc-2026-changchun.json --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
+python -m scripts.generate_preview_data --teams static/data/rosters/ccpc-2026-changchun.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --preview-title "2026年CCPC国赛（长春）" --team-source-url ./data/rosters/ccpc-2026-changchun.json --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
 ```
 
 ### 图片名单参赛资格修订
 
-用户补充 10 张图片，覆盖图片序号 1–336。末张图明确说明：★为打星队伍，★★为女队，★★★为打星女队。仅单星与三星设为 `excluded: true`，双星女队保持正式。共匹配并更新 **36 支打星队伍、300 支正式队伍**；名单顺序、队名、队员、各项评分、网络赛成绩、历史履历和来源快照时间保持不变。前端沿用已有打星规则：保留展示评分，但不参与综合战力、列内名次、校排和区域赛奖牌色档的正式队伍基数。
+用户补充 10 张图片，覆盖图片序号 1–336。末张图明确说明：★为打星队伍，★★为女队，★★★为打星女队。仅单星与三星设为 `excluded: true`，双星女队保持正式。共匹配并更新 **36 支打星队伍、300 支正式队伍**；除下述湖南农业大学名单更正外，其他 335 队身份、评分、网络赛成绩和历史履历保持不变；全部来源快照时间不变。前端沿用已有打星规则：保留展示评分，但不参与综合战力、列内名次、校排和区域赛奖牌色档的正式队伍基数。
 
-图片与 XLSX 的排序不同，按学校、队名和队员身份核对，不直接套用图片序号。图片单星/三星队伍序号为 4、51–53、69–71、91–93、104、106–107、116、147–148、151–152、154–159、175–177、181、185、211–212、241、284–286、289。图片 287“力拔山兮”为双星正式女队，212“贪得吴彦组”为三星打星女队。另有湖南农业大学身份差异：XLSX 的“喝生椰就不会拿铁咯”和图片双星“零徊响”队名、三名队员均不同；此次仅同步打星，暂保留 XLSX 身份，仍为正式队伍，未将图片中的队员或评分移接到旧队。
+图片与 XLSX 的排序不同，按学校、队名和队员身份核对，不直接套用图片序号。图片单星/三星队伍序号为 4、51–53、69–71、91–93、104、106–107、116、147–148、151–152、154–159、175–177、181、185、211–212、241、284–286、289。图片 287“力拔山兮”为双星正式女队，212“贪得吴彦组”为三星打星女队。湖南农业大学按用户要求以图片为准，将 XLSX 的“喝生椰就不会拿铁咯”（李恩泽、邓从权、黄恩豪）替换为双星正式女队“零罚时”（黄瑞莎、周静、颜诗祺）。仅该队使用原有来源缓存重新匹配评分、奖牌、网络赛排名及历史记录，重建稳定队伍 ID，保留原来源顺序；不继承旧队成绩。匹配人数和总队数保持不变。
 
 `rosters/ccpc-2026-changchun.json` 的 `excluded` 是人工核对后的资格快照；`statusSources` 保存 10 张图片文件名及 SHA-256，`note` 记录标记含义。原图只用于本地核对，不加入站点。离线回归固定全部 36 个打星队名，校验名单与前瞻资格一致、双星女队仍正式、三星女队打星、打星无战力及网络赛列内名次。
 
-重新运行上方 XLSX 生成命令后，必须再从已提交的资格快照恢复标记（原 XLSX 本身没有打星信息）。以下步骤按完整身份匹配并拒绝缺失/重复身份，不依赖行号：
-
-```python
-import json
-from pathlib import Path
-from scripts.generate_static_data import write_json_atomic
-
-root = Path("static/data")
-roster = json.loads((root / "rosters/ccpc-2026-changchun.json").read_text("utf-8"))
-path = root / "previews/ccpc-2026-changchun.json"
-preview = json.loads(path.read_text("utf-8"))
-statuses = {(t["school"], t["name"], tuple(t["members"])): t["excluded"]
-            for t in roster["teams"]}
-keys = [(t["school"], t["name"], tuple(m["name"] for m in t["members"]))
-        for t in preview["teams"]]
-assert len(statuses) == len(roster["teams"]) == len(keys) == len(set(keys))
-assert set(keys) == set(statuses)
-for team, key in zip(preview["teams"], keys, strict=True):
-    team["excluded"] = statuses[key]
-write_json_atomic(path, preview)
-```
+后续生成使用上方 `--team-format roster` 命令，直接读取核对后的 `rosters/ccpc-2026-changchun.json`，同时保留修订身份和资格。导入器只读取学校、队名、1–3 名成员和布尔 `excluded`，忽略已有评分；校验非空身份、公式身份、重复成员、重复队伍和资格类型，保持来源顺序。原始 XLSX 不包含后续修订，不能直接用原 XLSX 重新覆盖发布数据。离线测试覆盖身份名单导入、资格保留、非法输入与名单全量评分/网络赛排名核对。
 
 默认静态生成器只复制本场已提交快照，不自动刷新评分。站点索引由既有已发布系列、全部前瞻与复盘离线重投影。
 

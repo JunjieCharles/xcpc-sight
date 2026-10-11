@@ -113,7 +113,8 @@ def parse_args() -> argparse.Namespace:
         description="Build a manually requested XCPC preview snapshot"
     )
     parser.add_argument("--teams", type=Path, required=True)
-    parser.add_argument("--team-format", choices=("registration", "pintia-public", "xlsx"),
+    parser.add_argument("--team-format",
+                        choices=("registration", "pintia-public", "xlsx", "roster"),
                         default="registration")
     parser.add_argument("--xcpcrating-data", type=Path, required=True)
     parser.add_argument("--xcpc-elo-data", type=Path, required=True)
@@ -369,6 +370,10 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         from scripts.preview_roster import load_roster_xlsx
 
         registered_teams = load_roster_xlsx(args.teams)
+    elif team_format == "roster":
+        from scripts.preview_roster import parse_identity_roster
+
+        registered_teams = parse_identity_roster(load_json(args.teams))
     else:
         raw_teams = load_json(args.teams)
         registered_teams = parse_pintia_teams(raw_teams) if pintia else [
@@ -481,10 +486,12 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         **({"hideContestTime": True} if getattr(args, "hide_contest_time", False) else {}),
         "snapshotDate": args.snapshot_date,
         "teamSource": {
-            "title": (args.teams.name if team_format == "xlsx" else
+            "title": (args.teams.name if team_format in ("xlsx", "roster") else
                       "Pintia 公开榜单队伍名单" if pintia else "ICPC 报名系统队伍公示"),
             "url": args.team_source_url,
             "note": (
+                "使用人工核对后的身份与参赛资格快照；评分由独立来源重新匹配。"
+                if team_format == "roster" else
                 "仅从工作簿首张表提取学校、队名、队员和类型；忽略所有已有评分、排名和奖牌。"
                 if team_format == "xlsx" else
                 "Pintia 公开榜单队伍静态快照，含公开的打星队伍；仅提取学校、队名和队员，"
