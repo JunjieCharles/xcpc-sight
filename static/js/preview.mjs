@@ -1,8 +1,22 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261010-61";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261011-63";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
 const ACHIEVEMENT_PRIORITY = { participant: 0, bronze: 1, silver: 2, gold: 3 };
+
+export function formatPreviewTime(preview) {
+  if (preview.hideContestTime) return "";
+  if (preview.id === "icpc-2026-preliminary-1") return "比赛时间：2026年9月6日 13:00-18:00";
+  const date = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "long" });
+  const time = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", timeStyle: "short" });
+  const start = new Date(preview.sortAt);
+  let label = `比赛时间：${date.format(start)} ${time.format(start)}`;
+  if (preview.endAt) {
+    const end = new Date(preview.endAt);
+    label += `–${date.format(start) === date.format(end) ? "" : date.format(end) + " "}${time.format(end)}`;
+  }
+  return label;
+}
 
 export function normalizedLseRating(values) {
   values.forEach((value, index) => {
@@ -138,12 +152,21 @@ export function validatePreview(document) {
   if (document.unlisted !== undefined && typeof document.unlisted !== "boolean") {
     fail("preview.unlisted", "expected boolean");
   }
+  if (document.hideContestTime !== undefined && typeof document.hideContestTime !== "boolean") {
+    fail("preview.hideContestTime", "expected boolean");
+  }
   const aggregation = document.ratingAggregation === undefined ? "max" : document.ratingAggregation;
   if (!["max", "normalized-lse"].includes(aggregation)) fail("preview.ratingAggregation", "unsupported aggregation");
   for (const key of ["seriesId", "seriesTitle", "id", "title", "sortAt", "snapshotDate", "matchingPolicy"]) {
     string(document[key], `preview.${key}`);
   }
   if (Number.isNaN(Date.parse(document.sortAt))) fail("preview.sortAt", "expected ISO date-time");
+  if (document.endAt !== undefined) {
+    string(document.endAt, "preview.endAt");
+    if (!Number.isFinite(Date.parse(document.endAt)) || Date.parse(document.endAt) <= Date.parse(document.sortAt)) {
+      fail("preview.endAt", "expected a date-time after sortAt");
+    }
+  }
   object(document.teamSource, "preview.teamSource");
   for (const key of ["title", "url", "note"]) string(document.teamSource[key], `preview.teamSource.${key}`);
   array(document.metricSources, "preview.metricSources");

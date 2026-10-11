@@ -29,7 +29,7 @@ test("loads all published previews from the index and preserves contest selectio
     json: async () => JSON.parse(await readFile(new URL(url), "utf8")),
   }));
   const previews = await store.getPreviews(entry);
-  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary", "icpc-2026-xian"]);
+  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary", "icpc-2026-xian", "ccpc-2026-changchun"]);
   const second = previews[1];
   assert.equal(previews[0].ratingAggregation, undefined);
   assert.equal(second.ratingAggregation, "normalized-lse");

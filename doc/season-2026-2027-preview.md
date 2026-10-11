@@ -1,5 +1,23 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-11 长春站名单前瞻
+
+新增公开前瞻 `ccpc-2026-changchun`，在比赛选择器中展示并成为默认公开场次。身份来源为用户提供的 `参赛队伍-2026 CCPC国赛（长春）.xlsx` 首张表，SHA-256 为 `dff68670a695d6aa600685d9fe90266d63f4e74d45179604273816fa0268a858`。保留来源顺序，共 336 队、209 校、1007 个成员条目；海南大学“主播我第一次打ccpc能不能赏我块牌啊”在原表仅两名队员，保持原样，不补人。只提取“所属学校”“中文队名”“队员1姓名”至“队员3姓名”，使用正整数“序号”检查重复；忽略教练列，不发布原始工作簿。来源没有类型列，确定性地全部按正式队伍处理，这不代表另行核实过打星资格。身份摘录保存为 `rosters/ccpc-2026-changchun.json`。
+
+根据用户提供的[盖章邀请函](https://ccpc.io/uploads/20260930/2026CCPC%E9%95%BF%E6%98%A5%E7%AB%99%E9%82%80%E8%AF%B7%E5%87%BD%E7%9B%96%E7%AB%A0%E6%B8%85%E6%99%B0%E7%89%88.pdf)，正式名称为“2026年中国大学生程序设计竞赛国赛（长春）”；页面按用户要求简写为“2026年CCPC国赛（长春）”，正式赛北京时间为 **2026-10-18 09:00–14:00**。已恢复时间展示，`sortAt` 为真实开赛时刻，新增可选 `endAt` 为结束时刻；前端统一按北京时间显示起止时间，同日只显示一次日期，跨日显示两端日期。邀请函第二页注明日程为草案，后续以赛事通知为准。生成器 `--end-at` 可指定结束时刻，要求晚于 `--sort-at`；前端校验日期有效性及先后关系。可选布尔字段 `hideContestTime` 和生成参数 `--hide-contest-time` 仍支持其他未确认时间的场次；省略或 false 显示时间，true 隐藏，切换场次恢复自身设置。公开 Python API 不变。
+
+评分沿用 10 月 10 日已下载的外部快照，不声称是 10 月 11 日最新线上值：XCPC Rating `2026-09-28T19:57:35.521003+00:00`、XCPC Elo `2026-09-28T13:47:09.716Z`、CPC Finder `2026-10-10`。分别匹配 929、948、437 个成员条目；上赛季 Rating 匹配 532 人，本赛季匹配 883 人。网络赛三场分别匹配 790 / 801 / 813 个成员条目，183 队关联上赛季区域赛/总决赛。NOI/IOI 和历史榜单沿用已有缓存。区域赛标色、归一化 LSE、CPC Finder 最高分、奖牌求和及五维综合战力均沿用西安站规则。旧场次与个人 Rating 文件保持原样。
+
+XLSX 导入兼容原西安表头与本次 CCPC 导出表头；重复表头、序号、缺失身份、成员重复和公式身份带原始行号报错。名单、当前/上赛季评分及三场网络赛排名完整离线回归，前端验证 336 队 schema、五维战力、公开索引及时间隐藏/恢复；静态生成器测试覆盖名单和前瞻一并复制。公开 Python API 不变。
+
+```bash
+python -m scripts.generate_preview_data --teams "C:/Downloads/参赛队伍-2026 CCPC国赛（长春）.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --preview-title "2026年CCPC国赛（长春）" --team-source-url ./data/rosters/ccpc-2026-changchun.json --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
+```
+
+默认静态生成器只复制本场已提交快照，不自动刷新评分。站点索引由既有已发布系列、全部前瞻与复盘离线重投影。
+
+本次验证：63 项相关 Python 测试、83 项前端测试、Ruff 和差异空白检查通过；复现命令输出逐字段一致，本地页面、索引、前瞻和名单 HTTP 均返回 200。浏览器控制连接失败，未完成桌面/移动端视觉验收。
+
 ## 2026-10-10 西安站名单前瞻
 
 保留 `icpc-2026-xian` 独立前瞻，设置 `unlisted: true`；主站比赛下拉框不显示西安站，未指定场次或场次无效时仍默认选择最新公开的 CCPC 网络赛。显式 `?series=2026-2027&view=preview&previewContest=icpc-2026-xian` 可直接访问，刷新和 URL 恢复继续保留西安站。直达页的选择器显示“切换比赛…”并仅提供公开比赛。静态索引仍登记其文件供链接解析和打包，隐藏仅影响导航，并非访问控制。仅从用户提供的 `西安报名强度表_final_20261006.xlsx` 首张表提取学校、中文队名、类型、队员及用于重复检查的队伍 ID，保持来源顺序。共 403 队、227 校、1208 个成员条目，全部正式。文件 SHA-256 为 `9eb9b7c0f8e6fc5933a5b27552680b3eee74d14a1546ff6ed99b6ea784b2c8be`。忽略表内全部评分、奖牌、排名和匹配说明，不读取其他工作表，不写回 XLSX。身份摘录保存为 `static/data/rosters/icpc-2026-xian.json`，静态生成器一并复制名单和前瞻。

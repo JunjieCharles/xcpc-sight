@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261010-61";
+} from "./data.mjs?v=20261011-63";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261010-61";
+} from "./problem-rating.mjs?v=20261011-63";
 import {
   achievementDisplayParts,
   buildPreviewPower,
@@ -27,6 +27,7 @@ import {
   buildPreviewSchoolRanks,
   bestAchievementMedal,
   createPreviewStore,
+  formatPreviewTime,
   listPreviewSchools,
   previewHistoryTitle,
   previewPowerMetricIds,
@@ -34,11 +35,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261010-61";
+} from "./preview.mjs?v=20261011-63";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261010-61";
+} from "./review.mjs?v=20261011-63";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1013,9 +1014,8 @@ function showPreview(updateUrl = false) {
     ...listedPreviews(state.previews).map(p => node("option", { value: p.id, text: p.title })),
   );
   elements.previewContestSelect.value = state.preview.unlisted ? "" : state.preview.id;
-  document.querySelector("#preview-time").textContent = state.preview.id === "icpc-2026-preliminary-1"
-    ? "比赛时间：2026年9月6日 13:00-18:00"
-    : `比赛时间：${new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "long", timeStyle: "short" }).format(new Date(state.preview.sortAt))}`;
+  document.querySelector("#preview-time").hidden = state.preview.hideContestTime === true;
+  document.querySelector("#preview-time").textContent = formatPreviewTime(state.preview);
   renderPreviewSources();
   renderPreviewHeader();
   applySearch({ resetScroll: false, updateUrl: false });

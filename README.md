@@ -15,7 +15,7 @@
 | 2026 牛客暑期多校训练营 | 第一至第十场报名实体 Rating、题目难度 |
 | 2026 HDU 暑期联赛 | CID 1229 至 1238 报名实体 Rating、题目难度 |
 
-2026–2027 的三场网络赛为 ICPC 网络赛第一、第二场及 CCPC 网络预选赛。西安站前瞻不在主站比赛选择器中展示，请使用[直达链接](https://junjiecharles.github.io/xcpc-sight/?series=2026-2027&view=preview&previewContest=icpc-2026-xian)。本赛季尚未发布题目难度。
+2026–2027 的三场网络赛为 ICPC 网络赛第一、第二场及 CCPC 网络预选赛。新增 [CCPC 长春站前瞻](https://junjiecharles.github.io/xcpc-sight/?series=2026-2027&view=preview&previewContest=ccpc-2026-changchun)，含 336 支队伍，正式赛时间为北京时间 2026 年 10 月 18 日 09:00–14:00（邀请函日程草案）。西安站前瞻不在主站比赛选择器中展示，请使用[直达链接](https://junjiecharles.github.io/xcpc-sight/?series=2026-2027&view=preview&previewContest=icpc-2026-xian)。本赛季尚未发布题目难度。
 
 前瞻支持排序、学校筛选，以及悬浮或键盘聚焦查看成员评分和历史战绩；复盘可切换指标查看预测与实际排名的符合度。前瞻为赛前静态快照，不会随赛后结果自动更新。不同场次的聚合口径见[前瞻说明](doc/season-2026-2027-preview.md)，复盘统计口径见[复盘说明](doc/post-contest-review.md)。
 

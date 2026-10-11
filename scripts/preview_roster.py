@@ -16,12 +16,16 @@ def parse_roster_rows(rows):
     """Read only identity columns; ignore every supplied score and rank."""
     from scripts.generate_preview_data import RegisteredTeam
 
+    rows = iter(rows)
     required = ("学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID")
+    ccpc_headers = ("序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名")
     header = None
     teams = []
     seen = set()
     for row_number, row in enumerate(rows, 1):
         if header is None:
+            if all(key in row for key in ccpc_headers):
+                return parse_ccpc_roster_rows(rows, row, row_number)
             if all(key in row for key in required):
                 if any(row.count(key) != 1 for key in required):
                     raise ValueError(f"roster row {row_number}: duplicate identity header")
@@ -50,6 +54,25 @@ def parse_roster_rows(rows):
     if not teams:
         raise ValueError("roster: missing identity headers or empty roster")
     return teams
+
+
+def parse_ccpc_roster_rows(rows, header_row, header_number):
+    """CCPC export has no team type; treat entries as official, ignoring coaches."""
+    keys = ("序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名")
+    if any(header_row.count(key) != 1 for key in keys):
+        raise ValueError(f"roster row {header_number}: duplicate identity header")
+    positions = [header_row.index(key) for key in keys]
+    converted = [["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID"]]
+    converted[:0] = [[None]] * (header_number - 1)
+    for row_number, row in enumerate(rows, header_number + 1):
+        if not any(value is not None for value in row):
+            converted.append([None])
+            continue
+        serial, school, name, *members = [row[i] if i < len(row) else None for i in positions]
+        if type(serial) is not int or serial < 1:
+            raise ValueError(f"roster row {row_number}: invalid 序号")
+        converted.append([school, name, "正式", *members, str(serial)])
+    return parse_roster_rows(converted)
 
 
 def load_roster_xlsx(path: Path):

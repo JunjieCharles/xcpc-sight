@@ -4,7 +4,7 @@ import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import {
   compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
-  sortPreviewTeams, validatePreview, previewPowerMetricIds, searchPreviewTeams,
+  sortPreviewTeams, validatePreview, previewPowerMetricIds, searchPreviewTeams, formatPreviewTime,
 } from '../static/js/preview.mjs';
 
 function team(id, ranks, extra = {}) {
@@ -101,6 +101,48 @@ test('power uses online ranks and ignores CPC Finder and medals, including data 
 async function xian() {
   return JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-xian.json', import.meta.url), 'utf8'));
 }
+
+test('Changchun is a public regional preview with the complete roster and five power dimensions', async () => {
+  const preview = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/ccpc-2026-changchun.json', import.meta.url), 'utf8')));
+  assert.equal(preview.teams.length, 336);
+  assert.equal(new Set(preview.teams.map(t => t.school)).size, 209);
+  assert.equal(preview.teams.flatMap(t => t.members).length, 1007);
+  assert.equal(preview.contestStage, 'regional');
+  assert.ok(!preview.hideContestTime);
+  assert.equal(preview.title, '2026年CCPC国赛（长春）');
+  assert.equal(preview.sortAt, '2026-10-18T09:00:00+08:00');
+  assert.equal(preview.endAt, '2026-10-18T14:00:00+08:00');
+  assert.equal(formatPreviewTime(preview), '比赛时间：2026年10月18日 09:00–14:00');
+  assert.ok(!preview.unlisted);
+  assert.ok(preview.teams.every(t => !t.excluded));
+  assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'onlineRanks']);
+  const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);
+  assert.equal(power.size, 336);
+  const index = JSON.parse(await readFile(new URL('../static/data/index.json', import.meta.url), 'utf8'));
+  assert.ok(index.series.find(s => s.id === preview.seriesId).previews.some(p => p.id === preview.id));
+});
+
+test('contest time visibility validates booleans and resets on contest switches', async () => {
+  const original = await xian();
+  assert.equal(formatPreviewTime(original), '比赛时间：2026年10月18日 09:00');
+  assert.equal(formatPreviewTime({ ...original, hideContestTime: true }), '');
+  assert.equal(formatPreviewTime({ ...original, endAt: '2026-10-19T06:00:00Z' }), '比赛时间：2026年10月18日 09:00–2026年10月19日 14:00');
+  for (const endAt of [null, 'bad', original.sortAt, '2026-10-17T14:00:00+08:00']) {
+    assert.throws(() => validatePreview({ ...original, endAt }));
+  }
+  for (const value of [null, 'true', 0]) {
+    const preview = await xian();
+    preview.hideContestTime = value;
+    assert.throws(() => validatePreview(preview));
+  }
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const assignment = source.match(/document.querySelector\("#preview-time"\).hidden = [^;]+;/)[0];
+  const time = { hidden: false };
+  for (const hideContestTime of [true, undefined, false]) {
+    runInNewContext(assignment, { document: { querySelector: () => time }, state: { preview: { hideContestTime } } });
+    assert.equal(time.hidden, hideContestTime === true);
+  }
+});
 
 test('Xian publication contains only roster identities and independently calculated five-dimensional power', async () => {
   const preview = validatePreview(await xian());

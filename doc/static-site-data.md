@@ -4,6 +4,8 @@
 
 ## 文件与生成
 
+2026-10-11 新增公开长春站前瞻，默认生成器复制 `previews/ccpc-2026-changchun.json` 和 `rosters/ccpc-2026-changchun.json`，索引登记第五场，页面默认选择长春站。该场按盖章邀请函并将赛事名简写为“2026年CCPC国赛（长春）”，显示北京时间 2026-10-18 09:00–14:00；可选 `endAt` 提供结束时刻。名单导入、来源快照与回归见[长春站前瞻](season-2026-2027-preview.md#2026-10-11-长春站名单前瞻)。
+
 2026-10-10 新增 403 队西安站前瞻。默认生成器复制 `previews/icpc-2026-xian.json` 与仅身份名单 `rosters/icpc-2026-xian.json`，索引保留第四场文件入口用于直达，但西安快照标记 `unlisted: true`，主站比赛选择与默认场次仅包含原三场；显式 `previewContest=icpc-2026-xian` 仍可访问。该场新增网络赛排名列与显式五维战力，CPC Finder 和奖牌仅保留展示与内部排名；旧三场维度保持原快照。可选 schema、来源、复现与测试见[西安站前瞻](season-2026-2027-preview.md#2026-10-10-西安站名单前瞻)。
 
 2026-09-23 同步 CCPC 官方榜单移除三队的修订，更新 `series/2026-2027.json`、`reviews/2026-2027.json` 及显式移除映射。本赛季累计 8926 人、三场比赛；CCPC 有效队伍 2106 支、计分个人 6251 人。复盘沿用 schema v1 的 `resultStatus: "removed"`，更新七项指标基准；前瞻、前两场复盘及其他系列不变，重投影索引内容不变。来源、离线复现和回归覆盖见 [赛季设计](season-2026-2027-preview.md) 与 [复盘设计](post-contest-review.md)。

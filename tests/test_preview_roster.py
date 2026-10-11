@@ -12,6 +12,30 @@ from scripts.preview_roster import (
 
 HEADERS = ["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID", "ICPC1"]
 
+CCPC_HEADERS = ["序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名", "教练姓名"]
+
+
+def test_ccpc_roster_ignores_coach_and_preserves_identities():
+    row = [1, "学校", "队伍", "张三", "李四", "王五", "=PRIVATE()"]
+    teams = parse_roster_rows([["标题"], CCPC_HEADERS, row])
+    assert len(teams) == 1
+    assert teams[0].members == ("张三", "李四", "王五")
+    assert teams[0].school == "学校"
+    assert teams[0].name == "队伍"
+    assert teams[0].source_index == 0
+    assert not teams[0].excluded
+    with pytest.raises(ValueError, match="row 4: duplicate team ID"):
+        parse_roster_rows([["标题"], CCPC_HEADERS, row, row])
+
+
+@pytest.mark.parametrize("column,value", [(0, None), (0, True), (0, 0), (1, None),
+                                          (3, "=BAD()"), (4, "张三")])
+def test_ccpc_roster_rejects_invalid_identity_with_source_row(column, value):
+    row = [1, "学校", "队伍", "张三", "李四", "王五", "教练"]
+    row[column] = value
+    with pytest.raises(ValueError, match="roster row 4"):
+        parse_roster_rows([["标题"], CCPC_HEADERS, [None], row])
+
 
 def test_roster_uses_only_identities_and_preserves_order():
     rows = [["title"], HEADERS, ["学校", "队伍", "正式", "张三", "李四", None, "id", "=1/0"]]
@@ -86,7 +110,9 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
         online_rank_index(series, DefaultNormalizer(), "2026-10-18T00:00:00+08:00")
 
 
-def test_published_xian_ranks_and_ratings_match_local_series():
+@pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 403),
+                                             ("ccpc-2026-changchun", 336)])
+def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count):
     import json
     from pathlib import Path
 
@@ -94,8 +120,8 @@ def test_published_xian_ranks_and_ratings_match_local_series():
     from scripts.generate_preview_data import PersonIndex, load_normalizer, load_previous_series
 
     root = Path(__file__).parents[1]
-    preview = json.loads((root / "static/data/previews/icpc-2026-xian.json").read_text("utf-8"))
-    roster = json.loads((root / "static/data/rosters/icpc-2026-xian.json").read_text("utf-8"))
+    preview = json.loads((root / f"static/data/previews/{contest_id}.json").read_text("utf-8"))
+    roster = json.loads((root / f"static/data/rosters/{contest_id}.json").read_text("utf-8"))
     normalizer = load_normalizer(root / "config/school-aliases.json")
     series = json.loads((root / "static/data/series/2026-2027.json").read_text("utf-8"))
     indexes = {
@@ -107,7 +133,7 @@ def test_published_xian_ranks_and_ratings_match_local_series():
     projected = deepcopy(preview["teams"])
     attach_online_ranks(projected, ranks, normalizer)
     assert projected == preview["teams"]
-    assert len(roster["teams"]) == len(projected) == 403
+    assert len(roster["teams"]) == len(projected) == count
     for team, identity in zip(projected, roster["teams"], strict=True):
         assert team["school"] == identity["school"]
         assert team["name"] == identity["name"]
@@ -133,3 +159,6 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     roster = json.loads((tmp_path / "rosters/icpc-2026-xian.json").read_text("utf-8"))
     assert len(roster["teams"]) == 403
     assert (tmp_path / "previews/icpc-2026-xian.json").is_file()
+    roster = json.loads((tmp_path / "rosters/ccpc-2026-changchun.json").read_text("utf-8"))
+    assert len(roster["teams"]) == 336
+    assert (tmp_path / "previews/ccpc-2026-changchun.json").is_file()

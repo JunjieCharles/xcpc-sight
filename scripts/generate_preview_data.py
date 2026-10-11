@@ -131,6 +131,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--noi-data", type=Path, default=Path("data-cache/noi/normalized"))
     parser.add_argument("--ioi-data", type=Path, default=Path("data-cache/ioi"))
     parser.add_argument("--snapshot-date", required=True)
+    parser.add_argument("--hide-contest-time", action="store_true",
+                        help="Hide the contest time when its exact start is unconfirmed")
     parser.add_argument("--preview-id", default=PREVIEW_ID)
     parser.add_argument("--preview-title", default=PREVIEW_TITLE)
     parser.add_argument("--contest-stage", choices=("preliminary", "regional"),
@@ -139,6 +141,7 @@ def parse_args() -> argparse.Namespace:
                         help="Keep accessible by URL but hide from the contest picker")
     parser.add_argument("--team-source-url", default=TEAM_SOURCE_URL)
     parser.add_argument("--sort-at", default="2026-09-06T13:00:00+08:00")
+    parser.add_argument("--end-at", help="Optional contest end time in ISO format")
     parser.add_argument("--cpcfinder-snapshot-date")
     parser.add_argument(
         "--output",
@@ -331,6 +334,9 @@ def parse_pintia_teams(document: object) -> list[RegisteredTeam]:
 
 
 def build_document(args: argparse.Namespace) -> dict[str, object]:
+    if (getattr(args, "end_at", None)
+            and datetime.fromisoformat(args.end_at) <= datetime.fromisoformat(args.sort_at)):
+        raise ValueError("end-at must follow sort-at")
     normalizer = load_normalizer(args.school_aliases)
     xcpcrating, xcpcrating_at = load_xcpcrating(args.xcpcrating_data)
     xcpc_elo, xcpc_elo_at = load_xcpc_elo(args.xcpc_elo_data)
@@ -471,6 +477,8 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "id": args.preview_id,
         "title": args.preview_title,
         "sortAt": args.sort_at,
+        **({"endAt": args.end_at} if getattr(args, "end_at", None) else {}),
+        **({"hideContestTime": True} if getattr(args, "hide_contest_time", False) else {}),
         "snapshotDate": args.snapshot_date,
         "teamSource": {
             "title": (args.teams.name if team_format == "xlsx" else

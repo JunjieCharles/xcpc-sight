@@ -230,7 +230,13 @@ def test_second_preview_metadata_and_cached_source_date(
             [PersonRecord("甲", "学校", 1600), PersonRecord("乙", "另一学校", 1700)]
             if path == current else [], "2026-09-06T13:00:00+08:00",
         ))
+    args.end_at = "2026-09-12T18:00:00+08:00"
     document = generator.build_document(args)
+    assert document["endAt"] == args.end_at
+    args.end_at = args.sort_at
+    with pytest.raises(ValueError, match="end-at must follow"):
+        generator.build_document(args)
+    args.end_at = None
 
     assert document["ratingAggregation"] == "normalized-lse"
     assert document["id"] == "icpc-2026-preliminary-2"
@@ -286,9 +292,9 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
-        "icpc-2026-xian",
+        "icpc-2026-xian", "ccpc-2026-changchun",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 403]
+    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 403, 336]
     for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]
