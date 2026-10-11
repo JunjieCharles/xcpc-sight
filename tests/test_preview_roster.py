@@ -137,6 +137,7 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
     for team, identity in zip(projected, roster["teams"], strict=True):
         assert team["school"] == identity["school"]
         assert team["name"] == identity["name"]
+        assert team.get("excluded", False) == identity["excluded"]
         assert [m["name"] for m in team["members"]] == identity["members"]
         for metric, index in indexes.items():
             values = []
@@ -146,6 +147,29 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
                 if match:
                     values.append(match.rating)
             assert team["ratings"][metric] == normalized_lse_rating(values)
+
+
+def test_changchun_image_statuses_match_all_marked_teams():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    path = root / "static/data/previews/ccpc-2026-changchun.json"
+    preview = json.loads(path.read_text("utf-8"))
+    expected = {
+        "该消息类型暂不支持查看", "兰德1队", "兰德2队", "兰德3队",
+        "SET.部乐俱技竞子电搏滔", "被孤立的退役老哥和前途无量的学弟学妹", "运行时叛逆者",
+        "德强", "平头弟", "平头哥", "哈理工202603CC", "征集雷霆队名",
+        "主播我第一次打ccpc能不能赏我块牌啊", "天青色等烟雨", "帮我开下A103",
+        "故障吉奇人", "卡卡", "没想好叫什么", "皮卡丘站起来是皮卡兵", "前有绝景",
+        "时代码戏团", "我也要AC吗", "倚兰", "追忆", "区↺凶", "辽实东师附中联队",
+        "我们常常追忆追忆", "网瘾战队", "掉进兔子洞", "默默不语", "贪得吴彦组",
+        "云斗学院-星火燎原", "doro骑士团", "吃不完三菜一汤", "和光同尘", "正在启动",
+    }
+    assert {team["name"] for team in preview["teams"] if team["excluded"]} == expected
+    female = next(team for team in preview["teams"] if team["name"] == "力拔山兮")
+    assert female["school"] == "长春工业大学"
+    assert not female["excluded"]
 
 
 def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):

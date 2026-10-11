@@ -114,10 +114,18 @@ test('Changchun is a public regional preview with the complete roster and five p
   assert.equal(preview.endAt, '2026-10-18T14:00:00+08:00');
   assert.equal(formatPreviewTime(preview), '比赛时间：2026年10月18日 09:00–14:00');
   assert.ok(!preview.unlisted);
-  assert.ok(preview.teams.every(t => !t.excluded));
+  assert.equal(preview.teams.filter(t => t.excluded).length, 36);
+  assert.equal(preview.teams.filter(t => !t.excluded).length, 300);
+  assert.equal(preview.teams.find(t => t.school === '长春工业大学' && t.name === '力拔山兮').excluded, false);
+  assert.equal(preview.teams.find(t => t.school === '琼台师范学院' && t.name === '贪得吴彦组').excluded, true);
   assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'onlineRanks']);
   const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);
   assert.equal(power.size, 336);
+  const ranks = buildPreviewRanks(preview.teams, preview.metricSources.map(s => s.id));
+  for (const team of preview.teams.filter(t => t.excluded)) {
+    assert.equal(power.get(team.id).rank, null);
+    assert.equal(ranks.get(team.id).onlineRanks, null);
+  }
   const index = JSON.parse(await readFile(new URL('../static/data/index.json', import.meta.url), 'utf8'));
   assert.ok(index.series.find(s => s.id === preview.seriesId).previews.some(p => p.id === preview.id));
 });

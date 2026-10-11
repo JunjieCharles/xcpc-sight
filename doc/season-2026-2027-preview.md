@@ -2,7 +2,7 @@
 
 ## 2026-10-11 长春站名单前瞻
 
-新增公开前瞻 `ccpc-2026-changchun`，在比赛选择器中展示并成为默认公开场次。身份来源为用户提供的 `参赛队伍-2026 CCPC国赛（长春）.xlsx` 首张表，SHA-256 为 `dff68670a695d6aa600685d9fe90266d63f4e74d45179604273816fa0268a858`。保留来源顺序，共 336 队、209 校、1007 个成员条目；海南大学“主播我第一次打ccpc能不能赏我块牌啊”在原表仅两名队员，保持原样，不补人。只提取“所属学校”“中文队名”“队员1姓名”至“队员3姓名”，使用正整数“序号”检查重复；忽略教练列，不发布原始工作簿。来源没有类型列，确定性地全部按正式队伍处理，这不代表另行核实过打星资格。身份摘录保存为 `rosters/ccpc-2026-changchun.json`。
+新增公开前瞻 `ccpc-2026-changchun`，在比赛选择器中展示并成为默认公开场次。身份来源为用户提供的 `参赛队伍-2026 CCPC国赛（长春）.xlsx` 首张表，SHA-256 为 `dff68670a695d6aa600685d9fe90266d63f4e74d45179604273816fa0268a858`。保留来源顺序，共 336 队、209 校、1007 个成员条目；海南大学“主播我第一次打ccpc能不能赏我块牌啊”在原表仅两名队员，保持原样，不补人。只提取“所属学校”“中文队名”“队员1姓名”至“队员3姓名”，使用正整数“序号”检查重复；忽略教练列，不发布原始工作簿。来源没有类型列，首次生成时全部按正式队伍处理；10 月 11 日后续按用户提供的图片修订参赛资格，见下文。身份摘录保存为 `rosters/ccpc-2026-changchun.json`。
 
 根据用户提供的[盖章邀请函](https://ccpc.io/uploads/20260930/2026CCPC%E9%95%BF%E6%98%A5%E7%AB%99%E9%82%80%E8%AF%B7%E5%87%BD%E7%9B%96%E7%AB%A0%E6%B8%85%E6%99%B0%E7%89%88.pdf)，正式名称为“2026年中国大学生程序设计竞赛国赛（长春）”；页面按用户要求简写为“2026年CCPC国赛（长春）”，正式赛北京时间为 **2026-10-18 09:00–14:00**。已恢复时间展示，`sortAt` 为真实开赛时刻，新增可选 `endAt` 为结束时刻；前端统一按北京时间显示起止时间，同日只显示一次日期，跨日显示两端日期。邀请函第二页注明日程为草案，后续以赛事通知为准。生成器 `--end-at` 可指定结束时刻，要求晚于 `--sort-at`；前端校验日期有效性及先后关系。可选布尔字段 `hideContestTime` 和生成参数 `--hide-contest-time` 仍支持其他未确认时间的场次；省略或 false 显示时间，true 隐藏，切换场次恢复自身设置。公开 Python API 不变。
 
@@ -12,6 +12,36 @@ XLSX 导入兼容原西安表头与本次 CCPC 导出表头；重复表头、序
 
 ```bash
 python -m scripts.generate_preview_data --teams "C:/Downloads/参赛队伍-2026 CCPC国赛（长春）.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --preview-title "2026年CCPC国赛（长春）" --team-source-url ./data/rosters/ccpc-2026-changchun.json --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
+```
+
+### 图片名单参赛资格修订
+
+用户补充 10 张图片，覆盖图片序号 1–336。末张图明确说明：★为打星队伍，★★为女队，★★★为打星女队。仅单星与三星设为 `excluded: true`，双星女队保持正式。共匹配并更新 **36 支打星队伍、300 支正式队伍**；名单顺序、队名、队员、各项评分、网络赛成绩、历史履历和来源快照时间保持不变。前端沿用已有打星规则：保留展示评分，但不参与综合战力、列内名次、校排和区域赛奖牌色档的正式队伍基数。
+
+图片与 XLSX 的排序不同，按学校、队名和队员身份核对，不直接套用图片序号。图片单星/三星队伍序号为 4、51–53、69–71、91–93、104、106–107、116、147–148、151–152、154–159、175–177、181、185、211–212、241、284–286、289。图片 287“力拔山兮”为双星正式女队，212“贪得吴彦组”为三星打星女队。另有湖南农业大学身份差异：XLSX 的“喝生椰就不会拿铁咯”和图片双星“零徊响”队名、三名队员均不同；此次仅同步打星，暂保留 XLSX 身份，仍为正式队伍，未将图片中的队员或评分移接到旧队。
+
+`rosters/ccpc-2026-changchun.json` 的 `excluded` 是人工核对后的资格快照；`statusSources` 保存 10 张图片文件名及 SHA-256，`note` 记录标记含义。原图只用于本地核对，不加入站点。离线回归固定全部 36 个打星队名，校验名单与前瞻资格一致、双星女队仍正式、三星女队打星、打星无战力及网络赛列内名次。
+
+重新运行上方 XLSX 生成命令后，必须再从已提交的资格快照恢复标记（原 XLSX 本身没有打星信息）。以下步骤按完整身份匹配并拒绝缺失/重复身份，不依赖行号：
+
+```python
+import json
+from pathlib import Path
+from scripts.generate_static_data import write_json_atomic
+
+root = Path("static/data")
+roster = json.loads((root / "rosters/ccpc-2026-changchun.json").read_text("utf-8"))
+path = root / "previews/ccpc-2026-changchun.json"
+preview = json.loads(path.read_text("utf-8"))
+statuses = {(t["school"], t["name"], tuple(t["members"])): t["excluded"]
+            for t in roster["teams"]}
+keys = [(t["school"], t["name"], tuple(m["name"] for m in t["members"]))
+        for t in preview["teams"]]
+assert len(statuses) == len(roster["teams"]) == len(keys) == len(set(keys))
+assert set(keys) == set(statuses)
+for team, key in zip(preview["teams"], keys, strict=True):
+    team["excluded"] = statuses[key]
+write_json_atomic(path, preview)
 ```
 
 默认静态生成器只复制本场已提交快照，不自动刷新评分。站点索引由既有已发布系列、全部前瞻与复盘离线重投影。
