@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "2026-2027",
+  "contests": [
+    {
+      "id": "icpc-2026-chengdu",
+      "title": "2026 ICPC 亚洲区域赛（成都）",
+      "contestStage": "regional",
+      "sortAt": "2026-10-25T09:00:00+08:00",
+      "hostSchool": "电子科技大学",
+      "cutoffs": {
+        "cup": 4,
+        "gold": 76,
+        "silver": 258,
+        "bronze": 574
+      },
+      "teamCount": 307,
+      "officialTeamCount": 305,
+      "excludedTeamCount": 2,
+      "matchedOfficialTeamCount": 297,
+      "sources": {
+        "rosterFile": "成都报名强度表_20261006.xlsx",
+        "rosterSheet": "成都报名强度表",
+        "rosterSha256": "9fa5927fcce18cb29c619cf6419b5eca2c29a28b0b9988d26451b31e27fb8f23",
+        "onlineSeriesSha256": "e0e4182fdc71c182c00db90f4d3e25ab70de7c012e64c03de9cc62d459398ebd",
+        "schoolAliasesSha256": "a320660b702782291084e0bc7e9346868781102bc71c5c962f442e46ef6e8d45",
+        "contestUrl": "https://icpc.pku.edu.cn/docs/2026-09/8bb3449cf16246568dbccbaa631cc242.pdf"
+      }
+    },
+    {
+      "id": "icpc-2026-wuhan",
+      "title": "2026 ICPC 亚洲区域赛（武汉）",
+      "contestStage": "regional",
+      "sortAt": "2026-11-01T09:00:00+08:00",
+      "hostSchool": "武汉大学",
+      "cutoffs": {
+        "cup": 13,
+        "gold": 113,
+        "silver": 279,
+        "bronze": 673
+      },
+      "teamCount": 412,
+      "officialTeamCount": 368,
+      "excludedTeamCount": 44,
+      "matchedOfficialTeamCount": 357,
+      "sources": {
+        "rosterFile": "武汉报名强度表_20261010.xlsx",
+        "rosterSheet": "武汉报名强度表",
+        "rosterSha256": "c1bea19761508b1d7396527d8ac6f12c2583f69a7641e1dab69027ed78893275",
+        "onlineSeriesSha256": "e0e4182fdc71c182c00db90f4d3e25ab70de7c012e64c03de9cc62d459398ebd",
+        "schoolAliasesSha256": "a320660b702782291084e0bc7e9346868781102bc71c5c962f442e46ef6e8d45",
+        "contestUrl": "https://icpc.pku.edu.cn/docs/2026-09/bb7392b3bfde45dda21e1975945e63bf.pdf"
+      }
+    }
+  ]
+}

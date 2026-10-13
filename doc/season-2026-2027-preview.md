@@ -1,5 +1,33 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-13 武汉、成都仅牌线摘要
+
+按用户要求，两站只加入赛站牌线汇总表，不生成完整前瞻、队伍评分或前瞻跳转。发布文件为 `static/data/regional-cutoffs/2026-2027.json`，schema v1 包含 `seriesId` 与 `contests`；每条包含 ID、标题、区域赛阶段、正式赛时间、承办学校、四条 `cutoffs`（正整数或 null）、总队数/正式队数/打星队数/至少匹配一场的正式队数，以及来源文件名、工作表名、名单/网络赛系列/学校别名文件 SHA-256 和官方公告附件 URL。不发布成员和逐队匹配明细；本地审计文件保留边界队伍和匹配明细。
+
+站点索引该系列新增可选 `regionalCutoffsPath`，由静态生成脚本复制已提交摘要并登记，不联网、不刷新名单。未配置该路径的系列无需额外请求。`createPreviewStore.getRegionalCutoffs` 独立加载并校验摘要，与完整前瞻列表分离；`previewNavigationGroups` 合并后沿用日期排序，摘要行无按钮、链接、点击处理或选中状态，也不影响默认比赛和 URL 前瞻选择。若以后发布同 ID 的完整前瞻，完整前瞻优先且不重复展示。公开 Python 包 API 不变。
+
+输入只使用学校、中文队名、正式/打星、队员及用于重复检查的队伍 ID；所有工作簿内网络赛名次、评分、奖牌和公式均忽略。武汉第一页是“强度分布”，明确读取“武汉报名强度表”工作表；成都读取“成都报名强度表”。按学校别名与规范化姓名重新匹配 `static/data/series/2026-2027.json` 的三场正式队伍排名，重组队伍逐场取当前成员最好值。缺失保持 null；同校同名仍无法区分。名单按给定表中的正式/打星资格纳入，不以原表评分或审核状态再筛选。捧杯按规范化学校取最强队伍后第三校，奖牌边界沿用本页既有逐档独立向上取整规则，不改变既有赛站口径。
+
+| 赛站 | 全部 / 正式 / 打星 | 匹配正式队 | 金银铜边界队排 | 捧杯 / 金 / 银 / 铜 |
+| --- | --- | --- | --- | --- |
+| ICPC 成都 | 307 / 305 / 2 | 297 | 31 / 92 / 184 | 4 / 76 / 258 / 574 |
+| ICPC 武汉 | 412 / 368 / 44 | 357 | 37 / 111 / 222 | 13 / 113 / 279 / 673 |
+
+武汉工作簿 SHA-256：`c1bea19761508b1d7396527d8ac6f12c2583f69a7641e1dab69027ed78893275`；成都：`9fa5927fcce18cb29c619cf6419b5eca2c29a28b0b9988d26451b31e27fb8f23`。网络赛系列 SHA-256：`e0e4182fdc71c182c00db90f4d3e25ab70de7c012e64c03de9cc62d459398ebd`。原工作簿保持不变，不作为测试依赖或随站点发布。
+
+2026-10-13 从 ICPC 官网下载并逐页查看官方附件：[成都邀请函与指南](https://icpc.pku.edu.cn/docs/2026-09/8bb3449cf16246568dbccbaa631cc242.pdf)，承办学校电子科技大学，正式赛为 2026-10-25 09:00；[武汉邀请函与指南](https://icpc.pku.edu.cn/docs/2026-09/bb7392b3bfde45dda21e1975945e63bf.pdf)，承办学校武汉大学，正式赛为 2026-11-01 09:00。均取第三页日程中的正式赛，而非前一天报到或热身赛；日程标为草案，后续以官方通知为准。
+
+定向离线重算（需要原工作簿及可选 preview 依赖）：
+
+```bash
+python -m scripts.generate_regional_cutoffs --teams "C:/Downloads/武汉报名强度表_20261010.xlsx" --sheet "武汉报名强度表" --series static/data/series/2026-2027.json --contest-id icpc-2026-wuhan --title "2026 ICPC 亚洲区域赛（武汉）" --sort-at 2026-11-01T09:00:00+08:00 --host-school "武汉大学" --source-url https://icpc.pku.edu.cn/docs/2026-09/bb7392b3bfde45dda21e1975945e63bf.pdf --output static/data/regional-cutoffs/2026-2027.json --audit-output data-cache/regional-cutoffs-20261013/wuhan-audit.json
+python -m scripts.generate_regional_cutoffs --teams "C:/Downloads/成都报名强度表_20261006.xlsx" --sheet "成都报名强度表" --series static/data/series/2026-2027.json --contest-id icpc-2026-chengdu --title "2026 ICPC 亚洲区域赛（成都）" --sort-at 2026-10-25T09:00:00+08:00 --host-school "电子科技大学" --source-url https://icpc.pku.edu.cn/docs/2026-09/8bb3449cf16246568dbccbaa631cc242.pdf --output static/data/regional-cutoffs/2026-2027.json --audit-output data-cache/regional-cutoffs-20261013/chengdu-audit.json
+```
+
+生成器只更新输出摘要中指定 ID，保留其他站；不注册完整前瞻。首次接入系列时由静态生成脚本在索引登记 `regionalCutoffsPath`，本次仅手工定向添加该索引字段，未运行联网的通用生成。可按上述命令重复生成相同摘要。
+
+验证：23 项相关 Python 测试、88 项前端离线测试、Ruff 通过；另用既有 JS `buildPreviewCutoffs` 对本地逐队审计重新计算，两站结果一致。回归覆盖打星剔除、取整、同校第三、学校别名与队员重组、缺失值、不修改输入、与西安/长春口径一致、摘要 schema/独立加载/去重、静态打包和不生成前瞻。Chrome 1440px/390px 检查四站顺序、显示与点击无跳转，截图目视通过。
+
 ## 2026-10-13 前瞻导航与网络赛牌线
 
 前瞻页移除比赛下拉框，顶部先展示紧凑的网络赛按钮，再展示赛站牌线表，最后展示当前比赛标题、时间和队伍明细。网络赛快照（含未声明阶段的旧快照）归入网络赛入口；`contestStage: "regional"` 归入赛站表。点击按钮或赛站行切换比赛并更新 URL；按钮支持键盘操作，当前场次高亮。没有对应场次时隐藏该分区。西安已移除 `unlisted`，和长春一起公开展示；通用隐藏能力仍保留。默认选择和历史导航沿用原规则，取代旧的“切换比赛…”占位选项。

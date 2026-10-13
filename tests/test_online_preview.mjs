@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import {
-  buildPreviewCutoffs, previewContestDate, previewOrganization, previewNavigationGroups, compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
+  createPreviewStore, validateRegionalCutoffs, buildPreviewCutoffs, previewContestDate, previewOrganization, previewNavigationGroups, compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
   sortPreviewTeams, validatePreview, previewPowerMetricIds, searchPreviewTeams, formatPreviewTime,
 } from '../static/js/preview.mjs';
 
@@ -303,5 +303,29 @@ test('regional navigation orders Beijing calendar dates then ICPC before CCPC wi
   assert.equal(changchun.hostSchool, '东北师范大学');
   for (const hostSchool of [null, '', '  ', 123]) {
     assert.throws(() => validatePreview({ ...xianPreview, hostSchool }), /hostSchool/);
+  }
+});
+
+test('summary-only stations validate, load independently, and yield to full previews', async () => {
+  const document = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8'));
+  validateRegionalCutoffs(document, '2026-2027');
+  const [chengdu, wuhan] = document.contests;
+  assert.deepEqual(chengdu.cutoffs, { cup: 4, gold: 76, silver: 258, bronze: 574 });
+  assert.deepEqual(wuhan.cutoffs, { cup: 13, gold: 113, silver: 279, bronze: 673 });
+  const groups = previewNavigationGroups([await xian()], 'icpc-2026-xian', document.contests);
+  assert.deepEqual(groups.regional.map(p => p.id), ['icpc-2026-xian', chengdu.id, wuhan.id]);
+  assert.equal(groups.regional[1].summaryOnly, true);
+  assert.equal(previewNavigationGroups([{ ...chengdu, teams: [] }], chengdu.id, document.contests).regional[0].summaryOnly, undefined);
+  const store = createPreviewStore('https://example.test/data/index.json', async url => {
+    assert.equal(url, 'https://example.test/data/regional-cutoffs/2026-2027.json');
+    return { ok: true, json: async () => document };
+  });
+  assert.deepEqual(await store.getRegionalCutoffs({ id: 'older' }), []);
+  assert.deepEqual(await store.getRegionalCutoffs({ id: '2026-2027', regionalCutoffsPath: 'regional-cutoffs/2026-2027.json' }), document.contests);
+  for (const edit of [d => { d.seriesId = 'other'; }, d => { d.contests.push(d.contests[0]); },
+    d => { d.contests[0].cutoffs.gold = 0; }, d => { d.contests[0].sortAt = 'invalid'; },
+    d => { d.contests[0].officialTeamCount = 999; }]) {
+    const invalid = structuredClone(document); edit(invalid);
+    assert.throws(() => validateRegionalCutoffs(invalid, '2026-2027'), /regionalCutoffs/);
   }
 });

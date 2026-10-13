@@ -208,3 +208,12 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     roster = json.loads((tmp_path / "rosters/ccpc-2026-changchun.json").read_text("utf-8"))
     assert len(roster["teams"]) == 336
     assert (tmp_path / "previews/ccpc-2026-changchun.json").is_file()
+    summaries = json.loads((tmp_path / "regional-cutoffs/2026-2027.json").read_text("utf-8"))
+    assert {c["id"] for c in summaries["contests"]} == {
+        "icpc-2026-chengdu", "icpc-2026-wuhan",
+    }
+    index = json.loads((tmp_path / "index.json").read_text("utf-8"))
+    entry = next(e for e in index["series"] if e["id"] == "2026-2027")
+    assert entry["regionalCutoffsPath"] == "regional-cutoffs/2026-2027.json"
+    assert not (tmp_path / "previews/icpc-2026-chengdu.json").exists()
+    assert not (tmp_path / "previews/icpc-2026-wuhan.json").exists()

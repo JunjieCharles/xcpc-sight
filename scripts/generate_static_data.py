@@ -213,6 +213,17 @@ def generate_static_data(output_dir: Path) -> None:
         preview_publications=preview_publications,
         review_publications=review_publications,
     )
+    # Summary-only stations are published independently of full preview snapshots.
+    cutoff_root = Path(__file__).resolve().parents[1] / "static/data/regional-cutoffs"
+    for entry in index["series"]:
+        source = cutoff_root / f"{entry['id']}.json"
+        if source.is_file():
+            path = f"regional-cutoffs/{source.name}"
+            document = json.loads(source.read_text(encoding="utf-8"))
+            if document["seriesId"] != entry["id"]:
+                raise ValueError(f"{source}: inconsistent series ID")
+            entry["regionalCutoffsPath"] = path
+            write_json_atomic(output_dir / path, document)
     for document, path in publications:
         write_json_atomic(output_dir / path, document)
     for document, path in preview_publications:

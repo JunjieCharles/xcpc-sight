@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261013-65";
+} from "./data.mjs?v=20261013-66";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261013-65";
+} from "./problem-rating.mjs?v=20261013-66";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -38,11 +38,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261013-65";
+} from "./preview.mjs?v=20261013-66";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261013-65";
+} from "./review.mjs?v=20261013-66";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1033,7 +1033,7 @@ function previewShortTitle(preview) {
 }
 
 function renderPreviewNavigation() {
-  const groups = previewNavigationGroups(state.previews, state.preview.id);
+  const groups = previewNavigationGroups(state.previews, state.preview.id, state.regionalCutoffs);
   const button = preview => node("button", {
     type: "button", "data-preview-id": preview.id,
     "aria-pressed": String(preview.id === state.preview.id),
@@ -1050,11 +1050,12 @@ function renderPreviewNavigation() {
     node("thead", {}, [node("tr", {}, ["赛站", "比赛日期", "承办学校", "捧杯线", "金牌线", "银牌线", "铜牌线"]
       .map(text => node("th", { scope: "col", text })))]),
     node("tbody", {}, groups.regional.map(preview => {
-      const cutoffs = buildPreviewCutoffs(preview);
+      const cutoffs = preview.summaryOnly ? preview.cutoffs : buildPreviewCutoffs(preview);
       const date = previewContestDate(preview);
-      return node("tr", { "data-preview-id": preview.id,
-        className: preview.id === state.preview.id ? "is-selected" : "" }, [
-        node("th", { scope: "row" }, [button(preview)]),
+      return node("tr", { ...(preview.summaryOnly ? {} : { "data-preview-id": preview.id }),
+        className: preview.summaryOnly ? "preview-summary-only" : preview.id === state.preview.id ? "is-selected" : "" }, [
+        node("th", { scope: "row" }, [preview.summaryOnly
+          ? node("span", { text: previewShortTitle(preview) }) : button(preview)]),
         node("td", { className: "preview-contest-date" }, date ? [
           node("time", { dateTime: date }, [
             node("span", { text: date.slice(0, 4) }),
@@ -1901,9 +1902,10 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.detailView.hidden = true;
   const entry = state.siteIndex.series.find((item) => item.id === seriesId);
   if (!entry) throw new Error(`Unknown series: ${seriesId}`);
-  const [loaded, previews] = await Promise.all([
+  const [loaded, previews, regionalCutoffs] = await Promise.all([
     entry.path ? store.getSeries(seriesId) : null,
     entry.previewPath || entry.previews ? previewStore.getPreviews(entry) : [],
+    previewStore.getRegionalCutoffs(entry),
   ]);
   if (loadVersion !== seriesLoadVersion) return;
   state.seriesId = entry.id;
@@ -1911,6 +1913,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.series = loaded?.series ?? null;
   state.index = loaded?.index ?? null;
   state.previews = previews;
+  state.regionalCutoffs = regionalCutoffs;
   state.review = null;
   state.reviewContest = null;
   state.reviewAnalysis = null;

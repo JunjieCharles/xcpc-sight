@@ -48,10 +48,18 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await waitFor(current('ccpc-2026-changchun'));
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
-      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr'), el => el.dataset.previewId)`),
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
         ['icpc-2026-xian', 'ccpc-2026-changchun']);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr'), el => [el.cells[1].textContent, el.cells[2].textContent])`),
-        [['2026-10-18', '西北工业大学'], ['2026-10-18', '东北师范大学']]);
+        [['2026-10-18', '西北工业大学'], ['2026-10-18', '东北师范大学'],
+          ['2026-10-25', '电子科技大学'], ['2026-11-01', '武汉大学']]);
+      assert.equal(await evaluate(`document.querySelectorAll('.preview-summary-only button, .preview-summary-only a, .preview-summary-only[data-preview-id]').length`), 0);
+      const beforeSummaryClick = await evaluate('location.href');
+      await evaluate(`document.querySelector('.preview-summary-only td').click()`);
+      assert.equal(await evaluate('location.href'), beforeSummaryClick);
+      assert.equal(await evaluate(current('ccpc-2026-changchun')), true);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-summary-only'), row => Array.from(row.querySelectorAll('.preview-cutoff-value'), el => el.textContent))`),
+        [['4', '76', '258', '574'], ['13', '113', '279', '673']]);
       assert.equal(await evaluate(`document.querySelector('[data-preview-id="icpc-2026-xian"]') !== null`), true);
       assert.equal(await evaluate(`(() => {
         const online = document.querySelector('#preview-online-navigation').getBoundingClientRect();

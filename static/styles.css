@@ -182,6 +182,9 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-cutoff-table thead th { font-size: .8rem; color: var(--muted); }
 .preview-cutoff-table tbody tr { cursor: pointer; }
 .preview-cutoff-table tbody tr:hover, .preview-cutoff-table .is-selected { background: var(--accent-soft); }
+.preview-cutoff-table .preview-summary-only { cursor: default; }
+.preview-cutoff-table .preview-summary-only:hover { background: transparent; }
+.preview-summary-only th span { word-break: keep-all; }
 .preview-cutoff-table button { padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .preview-cutoff-table button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 4px; }
 .preview-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

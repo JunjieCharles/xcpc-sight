@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261013-65";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261013-66";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -355,8 +355,10 @@ export function previewOrganization(preview) {
     ?? preview.title?.match(/ICPC|CCPC/i)?.[0].toUpperCase() ?? null;
 }
 
-export function previewNavigationGroups(previews, currentId) {
-  const visible = previews.filter(preview => !preview.unlisted || preview.id === currentId);
+export function previewNavigationGroups(previews, currentId, summaries = []) {
+  const ids = new Set(previews.map(p => p.id));
+  const visible = [...previews.filter(preview => !preview.unlisted || preview.id === currentId),
+    ...summaries.filter(summary => !ids.has(summary.id)).map(summary => ({ ...summary, summaryOnly: true }))];
   return {
     online: visible.filter(preview => preview.contestStage !== "regional"),
     regional: visible.filter(preview => preview.contestStage === "regional").sort((a, b) => {
@@ -563,6 +565,11 @@ export function writePreviewQuery(url, query) {
 
 export function createPreviewStore(indexUrl, fetchImpl = globalThis.fetch) {
   return {
+    async getRegionalCutoffs(entry) {
+      if (!entry.regionalCutoffsPath) return [];
+      const document = await fetchJson(resolveDataUrl(entry.regionalCutoffsPath, indexUrl), fetchImpl);
+      return validateRegionalCutoffs(document, entry.id).contests;
+    },
     async getPreviews(entry) {
       const entries = entry.previews ?? (entry.previewPath ? [{ path: entry.previewPath }] : []);
       if (!entries.length) throw new Error(`Series has no preview data: ${entry.id}`);
@@ -579,4 +586,30 @@ export function createPreviewStore(indexUrl, fetchImpl = globalThis.fetch) {
       return (await this.getPreviews(entry))[0];
     },
   };
+}
+
+export function validateRegionalCutoffs(document, seriesId) {
+  object(document, "regionalCutoffs");
+  if (document.schemaVersion !== 1 || document.seriesId !== seriesId) fail("regionalCutoffs", "invalid schema or series");
+  array(document.contests, "regionalCutoffs.contests");
+  const ids = new Set();
+  for (const contest of document.contests) {
+    const path = "regionalCutoffs.contest";
+    object(contest, path);
+    for (const key of ["id", "title", "hostSchool", "sortAt"]) string(contest[key], `${path}.${key}`);
+    if (!Number.isFinite(Date.parse(contest.sortAt))) fail(path, "invalid sortAt");
+    if (contest.contestStage !== "regional") fail(path, "expected regional stage");
+    if (ids.has(contest.id)) fail(path, "duplicate contest ID");
+    ids.add(contest.id);
+    object(contest.cutoffs, `${path}.cutoffs`);
+    for (const key of ["cup", "gold", "silver", "bronze"]) {
+      if (contest.cutoffs[key] !== null) integer(contest.cutoffs[key], `${path}.cutoffs.${key}`, 1);
+    }
+    for (const key of ["teamCount", "officialTeamCount", "excludedTeamCount", "matchedOfficialTeamCount"]) {
+      integer(contest[key], `${path}.${key}`, 0);
+    }
+    if (contest.officialTeamCount + contest.excludedTeamCount !== contest.teamCount
+      || contest.matchedOfficialTeamCount > contest.officialTeamCount) fail(path, "inconsistent team counts");
+  }
+  return document;
 }
