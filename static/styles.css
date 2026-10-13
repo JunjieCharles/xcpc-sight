@@ -168,7 +168,36 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-sources .review-ranking-note { color: inherit; }
 .preview-sources a { color: var(--accent); text-underline-offset: 3px; }
 .preview-school-rank-note { font-size: .78rem; }
-.preview-contest-picker { width: min(24rem, 100%); }
+.preview-navigation { margin-bottom: 1.5rem; }
+.preview-online-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.preview-navigation-label { font-size: .8rem; font-weight: 650; margin-right: .35rem; }
+.preview-online-navigation button { padding: .3rem .6rem; font-size: .8rem; border: 1px solid var(--line); border-radius: 6px; background: white; cursor: pointer; }
+.preview-online-navigation button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.preview-cutoff-table { width: 100%; max-width: 52rem; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.preview-cutoff-table caption { text-align: left; font-weight: 700; padding-bottom: .55rem; }
+.preview-cutoff-table th, .preview-cutoff-table td { padding: .65rem .35rem; text-align: center; border-bottom: 1px solid var(--line); }
+.preview-cutoff-table th:first-child { width: 18%; text-align: left; }
+.preview-cutoff-table th:nth-child(2) { width: 17%; }
+.preview-cutoff-table th:nth-child(3) { width: 21%; }
+.preview-cutoff-table thead th { font-size: .8rem; color: var(--muted); }
+.preview-cutoff-table tbody tr { cursor: pointer; }
+.preview-cutoff-table tbody tr:hover, .preview-cutoff-table .is-selected { background: var(--accent-soft); }
+.preview-cutoff-table button { padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
+.preview-cutoff-table button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 4px; }
+.preview-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.preview-cutoff-note { color: var(--muted); font-size: .75rem; line-height: 1.6; margin: .5rem 0 0; }
+@media (max-width: 600px) {
+  .preview-cutoff-table { font-size: .75rem; }
+  .preview-cutoff-table th:first-child { width: 17%; }
+  .preview-cutoff-table th:nth-child(2) { width: 18%; }
+  .preview-cutoff-table th:nth-child(3) { width: 24%; }
+  .preview-cutoff-table button { word-break: keep-all; }
+  .preview-date-separator { display: none; }
+  .preview-date-month-day { display: block; white-space: nowrap; }
+  .preview-cutoff-table th, .preview-cutoff-table td { padding: .6rem .2rem; }
+  .preview-cutoff-table thead th { font-size: .75rem; }
+  .preview-cutoff-table thead th:nth-child(n+4) { font-size: .65rem; padding-inline: .1rem; }
+}
 .review-pickers { display: flex; flex-wrap: wrap; gap: .75rem; max-width: 100%; }
 .review-pickers label { min-width: 0; max-width: 100%; }
 .review-pickers select { max-width: 100%; }
@@ -318,7 +347,6 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
   .controls { grid-template-columns: 1fr; }
   .result-count { margin: 0; }
   .detail-grid { grid-template-columns: 1fr; }
-  .preview-contest-picker { width: 100%; }
 }
 @container (max-width: 924px) {
   .wide-table { --series-rank-width: min(62px, 20cqw); --series-person-width: min(220px, 30cqw); }

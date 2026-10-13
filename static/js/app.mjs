@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261011-63";
+} from "./data.mjs?v=20261013-65";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,9 +19,12 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261011-63";
+} from "./problem-rating.mjs?v=20261013-65";
 import {
   achievementDisplayParts,
+  buildPreviewCutoffs,
+  previewNavigationGroups,
+  previewContestDate,
   buildPreviewPower,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
@@ -35,11 +38,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261011-63";
+} from "./preview.mjs?v=20261013-65";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261011-63";
+} from "./review.mjs?v=20261013-65";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -101,7 +104,9 @@ const elements = {
   problemRatingSortIndicator: document.querySelector("#problem-rating-sort-indicator"),
   previewView: document.querySelector("#preview-view"),
   previewTitle: document.querySelector("#preview-title"),
-  previewContestSelect: document.querySelector("#preview-contest-select"),
+  previewNavigation: document.querySelector("#preview-navigation"),
+  previewOnlineNavigation: document.querySelector("#preview-online-navigation"),
+  previewRegionalNavigation: document.querySelector("#preview-regional-navigation"),
   previewMetricSources: document.querySelector("#preview-metric-sources"),
   previewScroll: document.querySelector("#preview-scroll"),
   previewHead: document.querySelector("#preview-head"),
@@ -155,7 +160,7 @@ function node(tag, properties = {}, children = []) {
   for (const [key, value] of Object.entries(properties)) {
     if (key === "className") element.className = value;
     else if (key === "text") element.textContent = value;
-    else if (key.startsWith("aria-")) element.setAttribute(key, value);
+    else if (key.startsWith("aria-") || key.startsWith("data-")) element.setAttribute(key, value);
     else element[key] = value;
   }
   for (const child of children) element.append(child);
@@ -1009,11 +1014,7 @@ function showPreview(updateUrl = false) {
   elements.reviewView.hidden = true;
   updateSeriesMode();
   elements.previewTitle.textContent = state.preview.title;
-  elements.previewContestSelect.replaceChildren(
-    ...(state.preview.unlisted ? [node("option", { value: "", text: "切换比赛…", disabled: true })] : []),
-    ...listedPreviews(state.previews).map(p => node("option", { value: p.id, text: p.title })),
-  );
-  elements.previewContestSelect.value = state.preview.unlisted ? "" : state.preview.id;
+  renderPreviewNavigation();
   document.querySelector("#preview-time").hidden = state.preview.hideContestTime === true;
   document.querySelector("#preview-time").textContent = formatPreviewTime(state.preview);
   renderPreviewSources();
@@ -1022,8 +1023,54 @@ function showPreview(updateUrl = false) {
   setUrl(updateUrl ? "push" : "replace");
 }
 
-function listedPreviews(previews) {
-  return previews.filter(preview => !preview.unlisted);
+function previewShortTitle(preview) {
+  if (preview.id === "icpc-2026-preliminary-1") return "ICPC 第一场";
+  if (preview.id === "icpc-2026-preliminary-2") return "ICPC 第二场";
+  if (preview.id === "ccpc-2026-preliminary") return "CCPC";
+  const organization = preview.title.match(/ICPC|CCPC/i)?.[0];
+  const site = preview.title.match(/[（(]([^）)]+)[）)]/)?.[1];
+  return organization && site ? `${organization} ${site}` : preview.title;
+}
+
+function renderPreviewNavigation() {
+  const groups = previewNavigationGroups(state.previews, state.preview.id);
+  const button = preview => node("button", {
+    type: "button", "data-preview-id": preview.id,
+    "aria-pressed": String(preview.id === state.preview.id),
+    text: previewShortTitle(preview), title: preview.title,
+  });
+  elements.previewOnlineNavigation.hidden = !groups.online.length;
+  elements.previewOnlineNavigation.replaceChildren(
+    node("span", { className: "preview-navigation-label", text: "网络赛前瞻" }),
+    ...groups.online.map(button),
+  );
+  elements.previewRegionalNavigation.hidden = !groups.regional.length;
+  const table = node("table", { className: "preview-cutoff-table" }, [
+    node("caption", { text: "赛站前瞻 · 网络赛排名牌线" }),
+    node("thead", {}, [node("tr", {}, ["赛站", "比赛日期", "承办学校", "捧杯线", "金牌线", "银牌线", "铜牌线"]
+      .map(text => node("th", { scope: "col", text })))]),
+    node("tbody", {}, groups.regional.map(preview => {
+      const cutoffs = buildPreviewCutoffs(preview);
+      const date = previewContestDate(preview);
+      return node("tr", { "data-preview-id": preview.id,
+        className: preview.id === state.preview.id ? "is-selected" : "" }, [
+        node("th", { scope: "row" }, [button(preview)]),
+        node("td", { className: "preview-contest-date" }, date ? [
+          node("time", { dateTime: date }, [
+            node("span", { text: date.slice(0, 4) }),
+            node("span", { className: "preview-date-separator", text: "-" }),
+            node("span", { className: "preview-date-month-day", text: date.slice(5) }),
+          ]),
+        ] : ["—"]),
+        node("td", { text: preview.hostSchool ?? "—" }),
+        ...["cup", "gold", "silver", "bronze"].map(key =>
+          node("td", { className: "preview-cutoff-value", text: cutoffs[key] === null ? "—" : String(cutoffs[key]) })),
+      ]);
+    })),
+  ]);
+  elements.previewRegionalNavigation.replaceChildren(table,
+    node("p", { className: "preview-cutoff-note",
+      text: "取三场网络赛最好名次；捧杯取校排第 3，金银铜按正式队伍 10% / 20% / 30% 分档。仅供前瞻参考。" }));
 }
 
 function selectLatestContest(contests, requestedId, timeKey) {
@@ -1996,8 +2043,11 @@ elements.previewTab.addEventListener("click", () => {
   choosePreview(state.previewContestId);
   showPreview(true);
 });
-elements.previewContestSelect.addEventListener("change", () => {
-  choosePreview(elements.previewContestSelect.value);
+elements.previewNavigation.addEventListener("click", event => {
+  const target = event.target.closest("[data-preview-id]");
+  if (!target || !elements.previewNavigation.contains(target)) return;
+  if (target.dataset.previewId === state.preview.id) return;
+  choosePreview(target.dataset.previewId);
   elements.previewScroll.scrollTop = 0;
   showPreview(true);
 });

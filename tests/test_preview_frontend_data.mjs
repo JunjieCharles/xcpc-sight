@@ -318,7 +318,9 @@ test("renders the compact preview table without snapshot prose or hint icons", a
 
   assert.doesNotMatch(indexHtml, /id="preview-team-source"/);
   assert.match(indexHtml, /id="preview-metric-sources"/);
-  assert.match(indexHtml, /id="preview-contest-select"/);
+  assert.match(indexHtml, /id="preview-navigation"/);
+  assert.ok(indexHtml.indexOf('id="preview-online-navigation"') < indexHtml.indexOf('id="preview-regional-navigation"'));
+  assert.doesNotMatch(indexHtml, /id="preview-contest-select"/);
   assert.doesNotMatch(indexHtml, /id="achievement-filter"/);
   assert.doesNotMatch(indexHtml, /id="achievement-options"/);
   assert.match(indexHtml, /学校排名随表格当前排序方式变化。NOI\/IOI成绩仅按姓名匹配，可能存在重名情况。/);
@@ -365,7 +367,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.doesNotMatch(appModule, /previewTeamSource|名单来源：/);
   assert.match(appModule, /elements\.previewMetricSources\.append/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
-  assert.match(appModule, /elements\.previewContestSelect\.replaceChildren/);
+  assert.match(appModule, /renderPreviewNavigation\(\)/);
   assert.match(appModule, /const widths = \[200, 170, 190, 96,/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-table-width"/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-non-frozen-width"/);

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import {
-  compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
+  buildPreviewCutoffs, previewContestDate, previewOrganization, previewNavigationGroups, compareOnlineRanks, buildPreviewPower, buildPreviewRanks, buildPreviewSchoolRanks,
   sortPreviewTeams, validatePreview, previewPowerMetricIds, searchPreviewTeams, formatPreviewTime,
 } from '../static/js/preview.mjs';
 
@@ -227,25 +227,81 @@ test('preview medal colors use independently rounded quotas and global competiti
 });
 
 
-test('unlisted Xian stays out of the picker and default but remains accessible by explicit URL', async () => {
+test('unlisted previews stay out of navigation and default but remain accessible by explicit URL', async () => {
   const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
-  const functions = ['listedPreviews', 'selectLatestContest'].map(name =>
+  const functions = ['selectLatestContest'].map(name =>
     source.match(new RegExp('function ' + name + '\\([^]*?\\n\\}'))[0]).join('\n');
-  const { listedPreviews, selectLatestContest } = runInNewContext(functions + '\n({ listedPreviews, selectLatestContest })');
-  const hidden = validatePreview(await xian());
-  assert.equal(hidden.unlisted, true);
+  const { selectLatestContest } = runInNewContext(functions + '\n({ selectLatestContest })');
+  const hidden = validatePreview({ ...await xian(), unlisted: true });
   const publicPreview = { id: 'ccpc-2026-preliminary', sortAt: '2026-09-19T13:00:00+08:00' };
   const previews = [hidden, publicPreview];
-  assert.deepEqual(Array.from(listedPreviews(previews), p => p.id), [publicPreview.id]);
+  assert.deepEqual(previewNavigationGroups(previews, publicPreview.id).regional, []);
+  assert.deepEqual(previewNavigationGroups(previews, hidden.id).regional, [hidden]);
+  assert.deepEqual(previewNavigationGroups(previews, hidden.id).online, [publicPreview]);
   assert.equal(selectLatestContest(previews, undefined, 'sortAt'), publicPreview);
   assert.equal(selectLatestContest(previews, 'unknown', 'sortAt'), publicPreview);
   assert.equal(selectLatestContest(previews, hidden.id, 'sortAt'), hidden);
   assert.equal(selectLatestContest([hidden], undefined, 'sortAt'), null);
   assert.equal(selectLatestContest([hidden], hidden.id, 'sortAt'), hidden);
-  assert.match(source, /listedPreviews\(state\.previews\)\.map/);
-  assert.match(source, /previewContestSelect\.value = state\.preview\.unlisted \? "" : state\.preview\.id/);
   for (const value of [null, 1, 'true']) {
     const invalid = await xian(); invalid.unlisted = value;
     assert.throws(() => validatePreview(invalid), /unlisted/);
+  }
+});
+
+
+test('cutoffs use school third, official quotas, best of three, and missing results', () => {
+  const teams = Array.from({ length: 11 }, (_, i) => team(String(i), [100 + i, i + 1, null],
+    { school: i < 2 ? 'same school' : String(i) }));
+  const preview = { teams: [team('star', [1, 1, 1], { excluded: true }), ...teams] };
+  const original = structuredClone(preview);
+  assert.deepEqual(buildPreviewCutoffs(preview), { cup: 4, gold: 2, silver: 5, bronze: 9 });
+  assert.deepEqual(preview, original);
+  assert.deepEqual(buildPreviewCutoffs({ teams: [] }), { cup: null, gold: null, silver: null, bronze: null });
+  teams.forEach(t => { t.onlineRanks = [null, null, null]; });
+  teams[0].onlineRanks = [null, 7, null];
+  assert.deepEqual(buildPreviewCutoffs(preview), { cup: null, gold: null, silver: null, bronze: null });
+  assert.deepEqual(buildPreviewCutoffs({ teams: [teams[0]] }), { cup: null, gold: 7, silver: null, bronze: null });
+});
+
+test('cutoff ties retain the best rank and school deduplication', () => {
+  const teams = [team('a', [10, 5, null]), team('b', [5, 9, null]),
+    team('c', [5, 9, null]), team('d', [8, null, null])];
+  assert.deepEqual(buildPreviewCutoffs({ teams }), { cup: 5, gold: 5, silver: 5, bronze: 8 });
+});
+
+test('published regional cutoff snapshots', async () => {
+  assert.deepEqual(buildPreviewCutoffs(await xian()), { cup: 11, gold: 117, silver: 288, bronze: 658 });
+  const changchun = JSON.parse(await readFile(new URL('../static/data/previews/ccpc-2026-changchun.json', import.meta.url), 'utf8'));
+  assert.deepEqual(buildPreviewCutoffs(changchun), { cup: 10, gold: 84, silver: 252, bronze: 576 });
+});
+
+test('regional navigation orders Beijing calendar dates then ICPC before CCPC without mutating inputs', async () => {
+  const regional = (id, sortAt, extra = {}) => ({ id, sortAt, contestStage: 'regional', ...extra });
+  const previews = [
+    regional('ccpc-late', '2026-10-19T01:00:00Z'),
+    regional('ccpc-same', '2026-10-18T00:00:00Z'),
+    regional('icpc-same', '2026-10-18T10:00:00Z'),
+    regional('ccpc-earlier', '2026-10-16T16:00:00Z'),
+    regional('icpc-midnight', '2026-10-17T16:30:00Z'),
+    regional('icpc-unknown', '2026-10-01T00:00:00Z', { hideContestTime: true }),
+  ];
+  const original = structuredClone(previews);
+  assert.deepEqual(previewNavigationGroups(previews).regional.map(p => p.id),
+    ['ccpc-earlier', 'icpc-midnight', 'icpc-same', 'ccpc-same', 'ccpc-late', 'icpc-unknown']);
+  assert.deepEqual(previews, original);
+  assert.equal(previewContestDate(previews[4]), '2026-10-18');
+  assert.equal(previewContestDate(previews[5]), null);
+  assert.equal(previewOrganization(previews[0]), 'CCPC');
+  assert.equal(previewOrganization({ id: 'other', title: 'Other event' }), null);
+  const xianPreview = validatePreview(await xian());
+  assert.equal(xianPreview.unlisted, undefined);
+  assert.equal(xianPreview.hostSchool, '西北工业大学');
+  const changchun = JSON.parse(await readFile(new URL('../static/data/previews/ccpc-2026-changchun.json', import.meta.url), 'utf8'));
+  assert.deepEqual(previewNavigationGroups([changchun, xianPreview], changchun.id).regional.map(p => p.id),
+    [xianPreview.id, changchun.id]);
+  assert.equal(changchun.hostSchool, '东北师范大学');
+  for (const hostSchool of [null, '', '  ', 123]) {
+    assert.throws(() => validatePreview({ ...xianPreview, hostSchool }), /hostSchool/);
   }
 });

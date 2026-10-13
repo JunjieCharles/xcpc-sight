@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261011-63";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261013-65";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -151,6 +151,10 @@ export function validatePreview(document) {
   }
   if (document.unlisted !== undefined && typeof document.unlisted !== "boolean") {
     fail("preview.unlisted", "expected boolean");
+  }
+  if (document.hostSchool !== undefined) {
+    string(document.hostSchool, "preview.hostSchool");
+    if (!document.hostSchool.trim()) fail("preview.hostSchool", "expected non-blank school name");
   }
   if (document.hideContestTime !== undefined && typeof document.hideContestTime !== "boolean") {
     fail("preview.hideContestTime", "expected boolean");
@@ -313,6 +317,54 @@ export function compareOnlineRanks(left, right) {
     if (a[i] !== b[i]) return a[i] < b[i] ? 1 : -1;
   }
   return 0;
+}
+
+// Quotas use all official teams; missing results never become a numeric cutoff.
+export function buildPreviewCutoffs(preview) {
+  const teams = preview.teams.filter(team => !team.excluded)
+    .sort((a, b) => -compareOnlineRanks(a.onlineRanks, b.onlineRanks));
+  const schools = new Set();
+  const schoolTeams = teams.filter(team => {
+    if (schools.has(team.school)) return false;
+    schools.add(team.school);
+    return true;
+  });
+  const best = team => {
+    const ranks = (team?.onlineRanks ?? []).filter(rank => rank !== null);
+    return ranks.length ? Math.min(...ranks) : null;
+  };
+  const n = teams.length;
+  const gold = Math.ceil(n / 10);
+  const silver = gold + Math.ceil(n * 2 / 10);
+  const bronze = silver + Math.ceil(n * 3 / 10);
+  return {
+    cup: best(schoolTeams[2]), gold: best(teams[gold - 1]),
+    silver: best(teams[silver - 1]), bronze: best(teams[bronze - 1]),
+  };
+}
+
+export function previewContestDate(preview) {
+  if (preview.hideContestTime) return null;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(preview.sortAt));
+}
+
+export function previewOrganization(preview) {
+  return preview.id.match(/^(icpc|ccpc)-/i)?.[1].toUpperCase()
+    ?? preview.title?.match(/ICPC|CCPC/i)?.[0].toUpperCase() ?? null;
+}
+
+export function previewNavigationGroups(previews, currentId) {
+  const visible = previews.filter(preview => !preview.unlisted || preview.id === currentId);
+  return {
+    online: visible.filter(preview => preview.contestStage !== "regional"),
+    regional: visible.filter(preview => preview.contestStage === "regional").sort((a, b) => {
+      const date = (previewContestDate(a) ?? "9999").localeCompare(previewContestDate(b) ?? "9999");
+      const priority = preview => ({ ICPC: 0, CCPC: 1 })[previewOrganization(preview)] ?? 2;
+      return date || priority(a) - priority(b) || a.id.localeCompare(b.id);
+    }),
+  };
 }
 
 function onlineRankValue(team) {

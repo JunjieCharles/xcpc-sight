@@ -231,7 +231,14 @@ def test_second_preview_metadata_and_cached_source_date(
             if path == current else [], "2026-09-06T13:00:00+08:00",
         ))
     args.end_at = "2026-09-12T18:00:00+08:00"
+    args.host_school = " 承办大学 "
     document = generator.build_document(args)
+    assert document["hostSchool"] == "承办大学"
+    args.host_school = "  "
+    with pytest.raises(ValueError, match="host-school"):
+        generator.build_document(args)
+    args.host_school = None
+    assert "hostSchool" not in generator.build_document(args)
     assert document["endAt"] == args.end_at
     args.end_at = args.sort_at
     with pytest.raises(ValueError, match="end-at must follow"):

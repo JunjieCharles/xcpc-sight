@@ -136,6 +136,7 @@ def parse_args() -> argparse.Namespace:
                         help="Hide the contest time when its exact start is unconfirmed")
     parser.add_argument("--preview-id", default=PREVIEW_ID)
     parser.add_argument("--preview-title", default=PREVIEW_TITLE)
+    parser.add_argument("--host-school", help="Hosting university for the regional table")
     parser.add_argument("--contest-stage", choices=("preliminary", "regional"),
                         default="preliminary")
     parser.add_argument("--unlisted", action="store_true",
@@ -335,6 +336,9 @@ def parse_pintia_teams(document: object) -> list[RegisteredTeam]:
 
 
 def build_document(args: argparse.Namespace) -> dict[str, object]:
+    host_school = getattr(args, "host_school", None)
+    if host_school is not None and not host_school.strip():
+        raise ValueError("host-school must be a non-blank school name")
     if (getattr(args, "end_at", None)
             and datetime.fromisoformat(args.end_at) <= datetime.fromisoformat(args.sort_at)):
         raise ValueError("end-at must follow sort-at")
@@ -481,6 +485,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "seriesTitle": SERIES_TITLE,
         "id": args.preview_id,
         "title": args.preview_title,
+        **({"hostSchool": host_school.strip()} if host_school is not None else {}),
         "sortAt": args.sort_at,
         **({"endAt": args.end_at} if getattr(args, "end_at", None) else {}),
         **({"hideContestTime": True} if getattr(args, "hide_contest_time", False) else {}),

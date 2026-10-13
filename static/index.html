@@ -6,7 +6,7 @@
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="./assets/xcpc-sight.svg">
-  <link rel="stylesheet" href="./styles.css?v=20261011-63">
+  <link rel="stylesheet" href="./styles.css?v=20261013-65">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -84,16 +84,16 @@
       </section>
 
       <section id="preview-view" hidden aria-labelledby="preview-title">
+        <nav id="preview-navigation" class="preview-navigation" aria-label="选择前瞻比赛">
+          <div id="preview-online-navigation" class="preview-online-navigation"></div>
+          <div id="preview-regional-navigation" class="preview-regional-navigation"></div>
+        </nav>
         <div class="section-heading">
           <div>
             <p class="eyebrow">PREVIEW</p>
             <h2 id="preview-title"></h2>
             <p class="section-note" id="preview-time"></p>
           </div>
-          <label class="preview-contest-picker">
-            <span>选择比赛</span>
-            <select id="preview-contest-select" aria-label="选择前瞻比赛"></select>
-          </label>
         </div>
         <div class="preview-sources">
           <p id="preview-metric-sources"></p>
@@ -211,6 +211,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20261011-63"></script>
+  <script type="module" src="./js/app.mjs?v=20261013-65"></script>
 </body>
 </html>
