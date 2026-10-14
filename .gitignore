@@ -11,7 +11,7 @@ build/
 dist/
 .cache/
 data-cache/
-video-scripts/
+video/
 *.log
 .env
 /outputs/

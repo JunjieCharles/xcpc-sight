@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261014-69";
+} from "./data.mjs?v=20261014-70";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,10 +19,11 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261014-69";
+} from "./problem-rating.mjs?v=20261014-70";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
+  previewOfficialTeamCount,
   previewNavigationGroups,
   previewContestDate,
   selectPreviewContest,
@@ -39,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261014-69";
+} from "./preview.mjs?v=20261014-70";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261014-69";
+} from "./review.mjs?v=20261014-70";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1056,7 +1057,7 @@ function renderPreviewNavigation() {
   elements.previewRegionalNavigation.hidden = !groups.regional.length;
   const table = node("table", { className: "preview-cutoff-table" }, [
     node("caption", { text: "赛站前瞻 · 网络赛排名牌线" }),
-    node("thead", {}, [node("tr", {}, ["赛站", "比赛日期", "承办学校", "捧杯线", "金牌线", "银牌线", "铜牌线"]
+    node("thead", {}, [node("tr", {}, ["赛站", "比赛日期", "承办学校", "正式队伍数", "捧杯线", "金牌线", "银牌线", "铜牌线"]
       .map(text => node("th", { scope: "col", text })))]),
     node("tbody", {}, groups.regional.map(preview => {
       const cutoffs = preview.summaryOnly ? preview.cutoffs : buildPreviewCutoffs(preview);
@@ -1073,6 +1074,7 @@ function renderPreviewNavigation() {
           ]),
         ] : ["—"]),
         node("td", { text: preview.hostSchool ?? "—" }),
+        node("td", { className: "preview-official-count", text: String(previewOfficialTeamCount(preview)) }),
         ...["cup", "gold", "silver", "bronze"].map(key =>
           node("td", { className: "preview-cutoff-value", text: cutoffs[key] === null ? "—" : String(cutoffs[key]) })),
       ]);

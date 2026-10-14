@@ -173,12 +173,13 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-navigation-label { font-size: .8rem; font-weight: 650; margin-right: .35rem; }
 .preview-online-navigation button { padding: .3rem .6rem; font-size: .8rem; border: 1px solid var(--line); border-radius: 6px; background: white; cursor: pointer; }
 .preview-online-navigation button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.preview-cutoff-table { width: 100%; max-width: 52rem; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.preview-cutoff-table { width: 100%; max-width: 60rem; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
 .preview-cutoff-table caption { text-align: left; font-weight: 700; padding-bottom: .55rem; }
 .preview-cutoff-table th, .preview-cutoff-table td { padding: .65rem .35rem; text-align: center; border-bottom: 1px solid var(--line); }
-.preview-cutoff-table th:first-child { width: 18%; text-align: left; }
-.preview-cutoff-table th:nth-child(2) { width: 17%; }
-.preview-cutoff-table th:nth-child(3) { width: 21%; }
+.preview-cutoff-table th:first-child { width: 16%; text-align: left; }
+.preview-cutoff-table th:nth-child(2) { width: 16%; }
+.preview-cutoff-table th:nth-child(3) { width: 20%; }
+.preview-cutoff-table th:nth-child(4) { width: 12%; }
 .preview-cutoff-table thead th { font-size: .8rem; color: var(--muted); }
 .preview-cutoff-table tbody tr { cursor: pointer; }
 .preview-cutoff-table tbody tr:hover, .preview-cutoff-table .is-selected { background: var(--accent-soft); }
@@ -191,9 +192,9 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-cutoff-note { color: var(--muted); font-size: .75rem; line-height: 1.6; margin: .5rem 0 0; }
 @media (max-width: 600px) {
   .preview-cutoff-table { font-size: .75rem; }
-  .preview-cutoff-table th:first-child { width: 17%; }
-  .preview-cutoff-table th:nth-child(2) { width: 18%; }
-  .preview-cutoff-table th:nth-child(3) { width: 24%; }
+  .preview-cutoff-table th:first-child { width: 16%; }
+  .preview-cutoff-table th:nth-child(2) { width: 16%; }
+  .preview-cutoff-table th:nth-child(3) { width: 20%; }
   .preview-cutoff-table button { word-break: keep-all; }
   .preview-date-separator { display: none; }
   .preview-date-month-day { display: block; white-space: nowrap; }

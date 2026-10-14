@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-69";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-70";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -322,6 +322,11 @@ export function compareOnlineRanks(left, right) {
 }
 
 // Quotas use all official teams; missing results never become a numeric cutoff.
+export function previewOfficialTeamCount(preview) {
+  return preview.summaryOnly ? preview.officialTeamCount
+    : preview.teams.filter(team => !team.excluded).length;
+}
+
 export function buildPreviewCutoffs(preview) {
   const teams = preview.teams.filter(team => !team.excluded)
     .sort((a, b) => -compareOnlineRanks(a.onlineRanks, b.onlineRanks));

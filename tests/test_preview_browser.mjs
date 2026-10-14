@@ -108,6 +108,8 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await evaluate('window.scrollTo(0, 0)');
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '305', '368']);
+      assert.equal(await evaluate(`document.querySelectorAll('.preview-cutoff-table thead th').length`), 8);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
         ['icpc-2026-xian', 'ccpc-2026-changchun']);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr'), el => [el.cells[1].textContent, el.cells[2].textContent])`),

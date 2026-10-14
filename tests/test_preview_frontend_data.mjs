@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 
 import {
   buildPreviewPower,
+  previewOfficialTeamCount,
   normalizedLseRating,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
@@ -20,6 +21,16 @@ import {
   validatePreview,
   writePreviewQuery,
 } from "../static/js/preview.mjs";
+
+test("official team count includes unmatched teams and uses summary counts", async () => {
+  assert.equal(previewOfficialTeamCount({ teams: [{}, { excluded: false }, { excluded: true }] }), 2);
+  assert.equal(previewOfficialTeamCount({ teams: [] }), 0);
+  assert.equal(previewOfficialTeamCount({ summaryOnly: true, officialTeamCount: 305, teamCount: 307 }), 305);
+  for (const [id, expected] of [["icpc-2026-xian", 403], ["ccpc-2026-changchun", 300]]) {
+    const preview = JSON.parse(await readFile(new URL(`../static/data/previews/${id}.json`, import.meta.url), "utf8"));
+    assert.equal(previewOfficialTeamCount(preview), expected);
+  }
+});
 
 test("loads all published previews from the index and preserves contest selection", async () => {
   const root = new URL("../static/data/", import.meta.url);
