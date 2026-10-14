@@ -301,7 +301,7 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
         "icpc-2026-xian", "ccpc-2026-changchun",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 403, 336]
+    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 418, 336]
     for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]

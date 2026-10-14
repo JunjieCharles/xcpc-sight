@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261013-66";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-68";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -287,11 +287,13 @@ export function listPreviewSchools(teams) {
   return [...new Set(teams.map(({ school }) => school))].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
 
-export function searchPreviewTeams(teams, query, schools = []) {
+export function searchPreviewTeams(teams, query, schools = [], teamType = "all") {
   const terms = query.trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
   const selectedSchools = new Set(schools);
-  if (!terms.length && !selectedSchools.size) return teams;
+  if (!terms.length && !selectedSchools.size && !["official", "starred"].includes(teamType)) return teams;
   return teams.filter((team) => {
+    if (teamType === "official" && team.excluded) return false;
+    if (teamType === "starred" && !team.excluded) return false;
     if (selectedSchools.size && !selectedSchools.has(team.school)) return false;
     const text = `${team.school}\n${team.name}\n${team.members.map(({ name }) => name).join("\n")}`.toLocaleLowerCase();
     return terms.every((term) => text.includes(term));
@@ -543,13 +545,15 @@ export function readPreviewQuery(url) {
     previewSort: params.get("previewSort") || "power",
     previewOrder: params.get("previewOrder") === "asc" ? "asc" : "desc",
     previewContest: params.get("previewContest") || "",
+    previewTeamType: ["official", "starred"].includes(params.get("previewTeamType"))
+      ? params.get("previewTeamType") : "all",
   };
 }
 
 export function writePreviewQuery(url, query) {
   const next = new URL(url, "http://localhost/");
   if (query.view !== "preview") {
-    for (const key of ["previewSort", "previewOrder", "previewContest", "achievement"]) next.searchParams.delete(key);
+    for (const key of ["previewSort", "previewOrder", "previewContest", "previewTeamType", "achievement"]) next.searchParams.delete(key);
     return next;
   }
   next.searchParams.set("view", "preview");
@@ -560,6 +564,8 @@ export function writePreviewQuery(url, query) {
   if (query.order === "asc") next.searchParams.set("previewOrder", "asc");
   else next.searchParams.delete("previewOrder");
   next.searchParams.delete("achievement");
+  if (["official", "starred"].includes(query.teamType)) next.searchParams.set("previewTeamType", query.teamType);
+  else next.searchParams.delete("previewTeamType");
   return next;
 }
 

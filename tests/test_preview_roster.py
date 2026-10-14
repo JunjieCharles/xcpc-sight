@@ -128,7 +128,7 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
         online_rank_index(series, DefaultNormalizer(), "2026-10-18T00:00:00+08:00")
 
 
-@pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 403),
+@pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 418),
                                              ("ccpc-2026-changchun", 336)])
 def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count):
     import json
@@ -167,6 +167,60 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
             assert team["ratings"][metric] == normalized_lse_rating(values)
 
 
+def test_xian_manual_starred_teams_and_two_member_team():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    preview = json.loads((root / "static/data/previews/icpc-2026-xian.json").read_text("utf-8"))
+    assert [team["name"] for team in preview["teams"] if team["excluded"]] == [
+        "梦熊-PKU-1", "突然的陀螺", "梦熊信奥-D 类参赛", "动态仙人掌批发",
+        "2026 感受内训 ACM 组队", "注意力大赛注意力战队", "海底小纵队", "不知道",
+        "常常一等", "葫芦娃救爷爷", "没有赵哥的日子", "照输君", "信竞少女の廻天",
+        "向着星辰与深渊", "西河谷底的发条公主",
+    ]
+    assert all(not team["excluded"] for team in preview["teams"][:403])
+    assert all(team["excluded"] for team in preview["teams"][403:])
+    assert [team["sourceIndex"] for team in preview["teams"]] == list(range(418))
+    assert len({team["id"] for team in preview["teams"]}) == 418
+    foshan = next(team for team in preview["teams"] if team["school"] == "佛山大学")
+    assert [m["name"] for m in foshan["members"]] == ["刘骏学", "陈凯鹏"]
+    assert preview["matchingSummary"]["members"] == 1253
+    for metric in preview["metricSources"]:
+        key = metric["id"]
+        assert preview["matchingSummary"][key] == sum(
+            member["ratings"][key] is not None
+            for team in preview["teams"] for member in team["members"]
+        )
+
+
+def test_published_official_sources_match_reviewed_files():
+    import hashlib
+    import json
+    from pathlib import Path
+
+    static = Path(__file__).parents[1] / "static"
+    xian = json.loads((static / "data/previews/icpc-2026-xian.json").read_text("utf-8"))
+    roster = json.loads((static / "data/rosters/icpc-2026-xian.json").read_text("utf-8"))
+    pdf = static / xian["teamSource"]["url"].removeprefix("./")
+    assert pdf.suffix == ".pdf"
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == roster["sourceSha256"]
+    changchun = json.loads((static / "data/previews/ccpc-2026-changchun.json").read_text("utf-8"))
+    roster = json.loads((static / "data/rosters/ccpc-2026-changchun.json").read_text("utf-8"))
+    gallery = static / changchun["teamSource"]["url"].removeprefix("./")
+    html = (gallery / "index.html").read_text("utf-8")
+    assert len(roster["statusSources"]) == html.count("<img ") == 10
+    assert not list(gallery.glob("*.xlsx"))
+    assert ".xlsx" not in html
+    offsets = []
+    for page in [7, 9, 4, 1, 6, 3, 5, 2, 8, 10]:
+        source = roster["statusSources"][page - 1]
+        digest = hashlib.sha256((gallery / source["file"]).read_bytes()).hexdigest()
+        assert digest == source["sha256"]
+        offsets.append(html.index(f'src="{source["file"]}"'))
+    assert offsets == sorted(offsets)
+
+
 def test_changchun_image_statuses_match_all_marked_teams():
     import json
     from pathlib import Path
@@ -203,7 +257,7 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     monkeypatch.setattr(generate_static_data, "review_specs", lambda: ())
     generate_static_data.generate_static_data(tmp_path)
     roster = json.loads((tmp_path / "rosters/icpc-2026-xian.json").read_text("utf-8"))
-    assert len(roster["teams"]) == 403
+    assert len(roster["teams"]) == 418
     assert (tmp_path / "previews/icpc-2026-xian.json").is_file()
     roster = json.loads((tmp_path / "rosters/ccpc-2026-changchun.json").read_text("utf-8"))
     assert len(roster["teams"]) == 336

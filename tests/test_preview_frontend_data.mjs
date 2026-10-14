@@ -316,7 +316,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
     readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8"),
   ]);
 
-  assert.doesNotMatch(indexHtml, /id="preview-team-source"/);
+  assert.match(indexHtml, /id="preview-team-source"/);
   assert.match(indexHtml, /id="preview-metric-sources"/);
   assert.match(indexHtml, /id="preview-navigation"/);
   assert.ok(indexHtml.indexOf('id="preview-online-navigation"') < indexHtml.indexOf('id="preview-regional-navigation"'));
@@ -364,7 +364,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.doesNotMatch(appModule, /previewRatingValue/);
   assert.match(appModule, /renderValue\(memberValue\(member\), true\)/);
   assert.match(appModule, /elements\.seriesModeSwitch\.hidden = supportedCount === 0/);
-  assert.doesNotMatch(appModule, /previewTeamSource|名单来源：/);
+  assert.match(appModule, /renderSourceLinks\(elements\.previewTeamSource, "名单来源：", \[state\.preview\.teamSource\]\)/);
   assert.match(appModule, /elements\.previewMetricSources\.append/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
   assert.match(appModule, /renderPreviewNavigation\(\)/);
@@ -790,11 +790,13 @@ test("round trips preview sorting through URL state", () => {
   assert.equal(next.searchParams.get("view"), "preview");
   assert.deepEqual(readPreviewQuery(next), {
     previewSort: "medals",
+    previewTeamType: "all",
     previewOrder: "asc",
     previewContest: "",
   });
   assert.deepEqual(readPreviewQuery("https://example.test/"), {
     previewSort: "power",
+    previewTeamType: "all",
     previewOrder: "desc",
     previewContest: "",
   });
@@ -803,6 +805,28 @@ test("round trips preview sorting through URL state", () => {
       .searchParams.has("achievement"),
     false,
   );
+});
+
+test("team eligibility combines with search and schools without changing the roster", () => {
+  const teams = [
+    { id: 'a', school: '甲', name: '同名', members: [] },
+    { id: 'b', school: '甲', name: '同名', members: [], excluded: true },
+    { id: 'c', school: '乙', name: '其他', members: [], excluded: false },
+  ];
+  const before = structuredClone(teams);
+  assert.deepEqual(searchPreviewTeams(teams, '', [], 'all'), teams);
+  assert.deepEqual(searchPreviewTeams(teams, '', [], 'official').map(t => t.id), ['a', 'c']);
+  assert.deepEqual(searchPreviewTeams(teams, '同名', ['甲'], 'starred').map(t => t.id), ['b']);
+  assert.deepEqual(searchPreviewTeams(teams, '其他', [], 'starred'), []);
+  assert.deepEqual(searchPreviewTeams(teams, '', [], 'invalid'), teams);
+  assert.deepEqual(teams, before);
+  for (const teamType of ['all', 'official', 'starred']) {
+    const url = writePreviewQuery('https://example.test/', { view: 'preview', teamType });
+    assert.equal(readPreviewQuery(url).previewTeamType, teamType);
+    assert.equal(url.searchParams.has('previewTeamType'), teamType !== 'all');
+    assert.equal(writePreviewQuery(url, {view: 'rating'}).searchParams.has('previewTeamType'), false);
+  }
+  assert.equal(readPreviewQuery('https://example.test/?previewTeamType=invalid').previewTeamType, 'all');
 });
 
 test("loads preview relative to the site index", async () => {

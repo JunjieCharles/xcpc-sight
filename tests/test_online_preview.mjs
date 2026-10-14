@@ -155,9 +155,12 @@ test('contest time visibility validates booleans and resets on contest switches'
 
 test('Xian publication contains only roster identities and independently calculated five-dimensional power', async () => {
   const preview = validatePreview(await xian());
-  assert.equal(preview.teams.length, 403);
-  assert.equal(new Set(preview.teams.map(t => t.school)).size, 227);
-  assert.equal(preview.teams.flatMap(t => t.members).length, 1208);
+  assert.equal(preview.teams.length, 418);
+  const official = preview.teams.filter(t => !t.excluded);
+  assert.equal(official.length, 403);
+  assert.equal(new Set(official.map(t => t.school)).size, 227);
+  assert.equal(preview.teams.flatMap(t => t.members).length, 1253);
+  assert.equal(official.flatMap(t => t.members).length, 1208);
   assert.deepEqual(preview.onlineContests.map(c => c.title), ['ICPC1', 'ICPC2', 'CCPC']);
   assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'previousSeason', 'currentSeason', 'onlineRanks']);
   const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);

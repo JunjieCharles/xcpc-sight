@@ -281,8 +281,11 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-history-rank.silver { color: #808080; }
 .preview-history-rank.bronze { color: #a56836; }
 .preview-members-cell { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.preview-member-control { position: relative; display: inline-block; color: inherit; cursor: default; outline-offset: 2px; }
-.preview-member-name { position: relative; display: inline-block; line-height: 1.05; }
+.preview-team-filter { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0; }
+.preview-team-filter button { padding: .4rem .75rem; font: inherit; font-size: .85rem; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); cursor: pointer; }
+.preview-team-filter button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.preview-member-control { position: relative; display: inline; color: inherit; cursor: default; outline-offset: 2px; }
+.preview-member-name { position: relative; display: inline; line-height: 1.05; }
 .preview-member-name::before, .preview-member-name::after { position: absolute; right: 0; left: 0; height: 3px; border-radius: 1.5px; content: ""; }
 .preview-member-name.has-noi::after { bottom: -5px; background: var(--noi-achievement-color); }
 .preview-member-name.has-ioi::before { bottom: -10px; background: var(--ioi-achievement-color); }

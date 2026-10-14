@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261013-66";
+} from "./data.mjs?v=20261014-68";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261013-66";
+} from "./problem-rating.mjs?v=20261014-68";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -38,11 +38,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261013-66";
+} from "./preview.mjs?v=20261014-68";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261013-66";
+} from "./review.mjs?v=20261014-68";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -108,6 +108,7 @@ const elements = {
   previewOnlineNavigation: document.querySelector("#preview-online-navigation"),
   previewRegionalNavigation: document.querySelector("#preview-regional-navigation"),
   previewMetricSources: document.querySelector("#preview-metric-sources"),
+  previewTeamSource: document.querySelector("#preview-team-source"),
   previewScroll: document.querySelector("#preview-scroll"),
   previewHead: document.querySelector("#preview-head"),
   previewBody: document.querySelector("#preview-body"),
@@ -149,6 +150,7 @@ const state = {
   previewRanks: new Map(),
   previewSchoolRanks: new Map(),
   previewSort: "power",
+  previewTeamType: "all",
   previewOrder: "desc",
   previewRenderFrame: 0,
 };
@@ -224,6 +226,7 @@ function setUrl(mode = "replace") {
   url = writePreviewQuery(url, {
     view: state.view,
     sort: state.previewSort,
+    teamType: state.previewTeamType,
     order: state.previewOrder,
     contest: state.preview?.id,
   });
@@ -454,7 +457,11 @@ function applySearch({ resetScroll = true, updateUrl = true } = {}) {
       sortedTeams,
       state.query,
       state.schools,
+      state.previewTeamType,
     );
+    document.querySelectorAll('#preview-team-filter button').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.teamType === state.previewTeamType));
+    });
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
   } else {
     state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
@@ -985,6 +992,7 @@ function renderSourceLinks(container, label, sources) {
 }
 
 function renderPreviewSources() {
+  renderSourceLinks(elements.previewTeamSource, "名单来源：", [state.preview.teamSource]);
   renderSourceLinks(elements.previewMetricSources, "数据来源：", [
     ...state.preview.metricSources,
     ...(state.preview.onlineContests ? [{ title: "网络赛排名", url: "./?series=2026-2027" }] : []),
@@ -1946,6 +1954,7 @@ async function loadSeries(seriesId, queryState = {}) {
     ...(state.preview?.metricSources.map(({ id }) => id) ?? []),
   ]);
   state.previewSort = previewSorts.has(queryState.previewSort) ? queryState.previewSort : "power";
+  state.previewTeamType = queryState.previewTeamType || "all";
   state.previewOrder = queryState.previewOrder === "asc" ? "asc" : "desc";
   elements.searchInput.value = state.query;
   renderSchoolControls();
@@ -2014,6 +2023,13 @@ async function initialize() {
 }
 
 elements.searchInput.addEventListener("input", () => applySearch());
+document.querySelector('#preview-team-filter').addEventListener('click', event => {
+  const button = event.target.closest('button[data-team-type]');
+  if (!button || button.dataset.teamType === state.previewTeamType) return;
+  state.previewTeamType = button.dataset.teamType;
+  applySearch({ updateUrl: false });
+  setUrl('push');
+});
 elements.clearSearchButton.addEventListener("click", () => {
   elements.searchInput.value = "";
   elements.schoolFilterSearch.value = "";

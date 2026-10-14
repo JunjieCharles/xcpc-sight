@@ -46,6 +46,48 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
       await waitFor(current('ccpc-2026-changchun'));
+      assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/ccpc-2026-changchun/');
+      const firstPower = await evaluate(`document.querySelector('#preview-body .preview-power-cell')?.textContent`);
+      for (const [type, count] of [['official', 300], ['starred', 36], ['all', 336]]) {
+        await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);
+        await waitFor(`document.querySelector('#result-count').textContent === '${count} 支队伍'`);
+        await waitFor(`document.querySelector('.preview-table').getAttribute('aria-rowcount') === '${count + 1}'`);
+        assert.equal(await evaluate(`document.querySelector('#preview-team-filter [aria-pressed="true"]').dataset.teamType`), type);
+        if (type === 'official') assert.equal(await evaluate(`document.querySelector('#preview-body .preview-power-cell')?.textContent`), firstPower);
+      }
+      await evaluate('history.back()');
+      await waitFor(`document.querySelector('#result-count').textContent === '36 支队伍'`);
+      await evaluate('history.forward()');
+      await waitFor(`document.querySelector('#result-count').textContent === '336 支队伍'`);
+      assert.equal(await evaluate(`document.querySelector('#preview-team-filter').getBoundingClientRect().right <= innerWidth`), true);
+      // A long second name must remain text that the cell can clip partway through,
+      // including when its achievements make it a focusable tooltip trigger.
+      await evaluate(`document.querySelector('#preview-body .preview-members-cell').scrollIntoView({block: 'center', inline: 'center'})`);
+      await new Promise(resolve => setTimeout(resolve, 150));
+      for (const achievements of [false, true]) {
+        const result = await evaluate(`(() => {
+          const cell = document.querySelector('#preview-body .preview-members-cell');
+          cell.innerHTML = '<span class="preview-member-name">名字</span> / '
+            + (${achievements} ? '<span class="preview-member-control" tabindex="0">' : '')
+            + '<span class="preview-member-name">较长的名字很长很长很长</span>'
+            + (${achievements} ? '</span>' : '') + ' / <span class="preview-member-name">名字</span>';
+          const name = cell.querySelectorAll('.preview-member-name')[1];
+          const range = document.createRange();
+          range.setStart(name.firstChild, 0); range.setEnd(name.firstChild, 3);
+          return {nameDisplay: getComputedStyle(name).display,
+            controlDisplay: cell.querySelector('.preview-member-control')
+              ? getComputedStyle(cell.querySelector('.preview-member-control')).display : 'inline',
+            prefixFits: range.getBoundingClientRect().right < cell.getBoundingClientRect().right - 15,
+            overflows: cell.scrollWidth > cell.clientWidth};
+        })()`);
+        assert.deepEqual(result, {nameDisplay: 'inline', controlDisplay: 'inline', prefixFits: true, overflows: true});
+      }
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        await mkdir(process.env.PREVIEW_SCREENSHOT_DIR, { recursive: true });
+        const shot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/members-${width}.png`, Buffer.from(shot.data, 'base64'));
+      }
+      await evaluate('window.scrollTo(0, 0)');
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
@@ -83,6 +125,11 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await waitFor(current('ccpc-2026-changchun'));
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview&previewContest=icpc-2026-xian` });
       await waitFor(current('icpc-2026-xian'));
+      assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/icpc-2026-xian-manual.pdf');
+      for (const [type, count] of [['official', 403], ['starred', 15], ['all', 418]]) {
+        await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);
+        await waitFor(`document.querySelector('#result-count').textContent === '${count} 支队伍'`);
+      }
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="icpc-2026-xian"] .preview-cutoff-value'), el => el.textContent)`), ['11', '117', '288', '658']);
       await evaluate('window.previewReloadMarker = true');
       await send('Page.reload');
@@ -95,6 +142,22 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
       await waitFor(current('ccpc-2026-changchun'));
       assert.equal(await evaluate(`document.querySelector('[data-preview-id="icpc-2026-xian"]') !== null`), true);
+    }
+    for (const width of [1440, 390]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
+      await send('Page.navigate', { url: `${siteUrl}sources/ccpc-2026-changchun/` });
+      await waitFor(`document.querySelectorAll('figure img').length === 10 && document.querySelector('img').naturalWidth > 0`);
+      assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true);
+      assert.equal(await evaluate(`document.querySelectorAll('a[href$=".xlsx"]').length`), 0);
+      assert.equal(await evaluate(`Array.from(document.querySelectorAll('figure img')).every(img => img.parentElement.tagName === 'A' && img.parentElement.href === img.src)`), true);
+      assert.equal(await evaluate(`document.querySelectorAll('figcaption a').length`), 0);
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        const shot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/sources-${width}.png`, Buffer.from(shot.data, 'base64'));
+      }
+      const originalImage = await evaluate(`document.querySelector('figure img').src`);
+      await evaluate(`document.querySelector('figure img').click()`);
+      await waitFor(`location.href === ${JSON.stringify(originalImage)}`);
     }
     assert.deepEqual(errors, []);
   } finally {
