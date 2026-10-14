@@ -41,9 +41,27 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
   const current = id => `document.querySelector('#preview-navigation button[aria-pressed="true"]')?.dataset.previewId === '${id}'`;
   try {
     await send('Page.enable');
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: `{
+      const OriginalDate = Date;
+      const now = OriginalDate.parse('2026-10-14T12:00:00+08:00');
+      window.Date = class extends OriginalDate {
+        constructor(...args) { super(...(args.length ? args : [now])); }
+        static now() { return now; }
+      };
+    }` });
     await send('Runtime.enable');
     for (const width of [1440, 390]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
+      await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
+      await waitFor(`document.querySelector('#preview-navigation button[aria-pressed="true"]') !== null`);
+      await evaluate(`localStorage.removeItem('xcpc-sight:preview-contest:2026-2027')`);
+      await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
+      await waitFor(current('icpc-2026-xian'));
+      assert.equal(await evaluate(`localStorage.getItem('xcpc-sight:preview-contest:2026-2027')`), null);
+      await evaluate(`document.querySelector('tr[data-preview-id="ccpc-2026-changchun"] td').click()`);
+      await waitFor(current('ccpc-2026-changchun'));
+      assert.equal(await evaluate(`localStorage.getItem('xcpc-sight:preview-contest:2026-2027')`), 'ccpc-2026-changchun');
+      // Reopen the bare preview URL: restore the manual choice across page loads.
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
       await waitFor(current('ccpc-2026-changchun'));
       assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/ccpc-2026-changchun/');

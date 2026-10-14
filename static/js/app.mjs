@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261014-68";
+} from "./data.mjs?v=20261014-69";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,12 +19,13 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261014-68";
+} from "./problem-rating.mjs?v=20261014-69";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
   previewNavigationGroups,
   previewContestDate,
+  selectPreviewContest,
   buildPreviewPower,
   buildPreviewRanks,
   buildPreviewSchoolRanks,
@@ -38,11 +39,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261014-68";
+} from "./preview.mjs?v=20261014-69";
 
 import {
   createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261014-68";
+} from "./review.mjs?v=20261014-69";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -1092,8 +1093,18 @@ function selectLatestContest(contests, requestedId, timeKey) {
     }, null);
 }
 
+function previewPreference(id) {
+  try {
+    const key = `xcpc-sight:preview-contest:${state.seriesId}`;
+    if (id !== undefined) localStorage.setItem(key, id);
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 function choosePreview(id, remember = true) {
-  state.preview = selectLatestContest(state.previews, id, "sortAt");
+  state.preview = selectPreviewContest(state.previews, id, previewPreference());
   if (remember) state.previewContestId = state.preview.id;
   const metrics = state.preview.metricSources.map(s => s.id);
   state.previewPower = buildPreviewPower(state.preview.teams, metrics, previewPowerMetricIds(state.preview));
@@ -1928,7 +1939,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.reviewMetric = queryState.reviewMetric ?? "power";
   state.reviewSort = queryState.reviewSort ?? "actualRank";
   state.reviewOrder = queryState.reviewOrder ?? "asc";
-  const preview = selectLatestContest(previews, queryState.previewContest, "sortAt");
+  const preview = selectPreviewContest(previews, queryState.previewContest, previewPreference());
   state.preview = preview;
   state.previewContestId = preview?.id ?? null;
   state.previewPower = preview
@@ -2067,6 +2078,7 @@ elements.previewNavigation.addEventListener("click", event => {
   if (!target || !elements.previewNavigation.contains(target)) return;
   if (target.dataset.previewId === state.preview.id) return;
   choosePreview(target.dataset.previewId);
+  previewPreference(state.preview.id);
   elements.previewScroll.scrollTop = 0;
   showPreview(true);
 });

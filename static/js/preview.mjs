@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-68";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-69";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -355,6 +355,24 @@ export function previewContestDate(preview) {
 export function previewOrganization(preview) {
   return preview.id.match(/^(icpc|ccpc)-/i)?.[1].toUpperCase()
     ?? preview.title?.match(/ICPC|CCPC/i)?.[0].toUpperCase() ?? null;
+}
+
+export function selectPreviewContest(previews, requestedId, rememberedId, now = new Date()) {
+  for (const id of [requestedId, rememberedId]) {
+    const selected = previews.find(preview => preview.id === id);
+    if (selected) return selected;
+  }
+  const visible = previews.filter(preview => !preview.unlisted);
+  const today = previewContestDate({ sortAt: now });
+  const priority = preview => ({ ICPC: 0, CCPC: 1 })[previewOrganization(preview)] ?? 2;
+  const tie = (a, b) => priority(a) - priority(b) || a.id.localeCompare(b.id);
+  const dated = visible.filter(preview => previewContestDate(preview));
+  const upcoming = dated.filter(preview => previewContestDate(preview) >= today);
+  if (upcoming.length) return upcoming.sort((a, b) =>
+    previewContestDate(a).localeCompare(previewContestDate(b)) || tie(a, b))[0];
+  if (dated.length) return dated.sort((a, b) =>
+    previewContestDate(b).localeCompare(previewContestDate(a)) || tie(a, b))[0];
+  return visible.sort(tie)[0] ?? null;
 }
 
 export function previewNavigationGroups(previews, currentId, summaries = []) {

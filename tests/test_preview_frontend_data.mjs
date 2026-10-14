@@ -15,6 +15,7 @@ import {
   previewPowerMetricIds,
   readPreviewQuery,
   searchPreviewTeams,
+  selectPreviewContest,
   sortPreviewTeams,
   validatePreview,
   writePreviewQuery,
@@ -180,7 +181,7 @@ test("preview and review default to the latest timestamp and preserve explicit c
 
 test("review preview selection does not overwrite the remembered preview contest", async () => {
   const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
-  const functions = ["selectLatestContest", "choosePreview"].map(name =>
+  const functions = ["previewPreference", "choosePreview"].map(name =>
     source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`))[0],
   ).join("\n");
   const old = { id: "old", sortAt: "2026-09-06", teams: [], metricSources: [] };
@@ -188,6 +189,7 @@ test("review preview selection does not overwrite the remembered preview contest
   const state = { previews: [old, newest] };
   const choose = runInNewContext(`${functions}\nchoosePreview`, {
     state, buildPreviewPower, buildPreviewRanks, previewPowerMetricIds,
+    selectPreviewContest: (previews, id, saved) => selectPreviewContest(previews, id, saved, new Date('2026-10-14T00:00:00+08:00')),
   });
   choose();
   assert.equal(state.previewContestId, "new");
@@ -197,6 +199,55 @@ test("review preview selection does not overwrite the remembered preview contest
   assert.equal(state.previewContestId, "old");
   choose(state.previewContestId);
   assert.equal(state.preview, old);
+});
+
+test("default preview uses Beijing today and upcoming dates, preferring ICPC on the same date", () => {
+  const past = {id: 'icpc-past', sortAt: '2026-10-13T23:00:00+08:00'};
+  const ccpc = {id: 'ccpc-near', sortAt: '2026-10-18T08:00:00+08:00'};
+  const icpc = {id: 'icpc-near', sortAt: '2026-10-18T12:00:00+08:00'};
+  const later = {id: 'icpc-later', sortAt: '2026-10-25T09:00:00+08:00'};
+  const hidden = {id: 'icpc-hidden', sortAt: '2026-10-14T09:00:00+08:00', unlisted: true};
+  const unknown = {id: 'icpc-unknown', sortAt: '2026-10-14', hideContestTime: true};
+  const previews = [later, ccpc, unknown, past, icpc, hidden];
+  const before = structuredClone(previews);
+  const select = (items, time, requested, saved) => selectPreviewContest(items, requested, saved, new Date(time));
+  assert.equal(select(previews, '2026-10-14T00:00:00+08:00'), icpc);
+  // Today remains eligible even after its start time; client timezone is irrelevant.
+  assert.equal(select(previews, '2026-10-18T15:59:59Z'), icpc);
+  assert.equal(select(previews, '2026-10-18T16:00:00Z'), later);
+  assert.equal(select(previews, '2026-10-26T00:00:00+08:00'), later);
+  assert.equal(select(previews, '2026-10-14', undefined, past.id), past);
+  assert.equal(select(previews, '2026-10-14', ccpc.id, past.id), ccpc);
+  assert.equal(select(previews, '2026-10-14', 'invalid', 'removed'), icpc);
+  assert.equal(select(previews, '2026-10-14', hidden.id), hidden);
+  assert.equal(select([hidden], '2026-10-14'), null);
+  assert.equal(select([], '2026-10-14'), null);
+  assert.equal(select([unknown], '2026-10-14'), unknown);
+  const tie = {...icpc, id: 'icpc-a'};
+  assert.equal(select([icpc, tie, ccpc], '2026-10-14'), tie);
+  assert.deepEqual(previews, before);
+});
+
+test("preview preference persists per series and tolerates unavailable storage", async () => {
+  const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
+  const fn = source.match(/function previewPreference\([^]*?\n\}/)[0];
+  const stored = new Map();
+  const state = {seriesId: '2026-2027'};
+  const preference = runInNewContext(`${fn}\npreviewPreference`, {state, localStorage: {
+    getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value),
+  }});
+  assert.equal(preference(), null);
+  preference('ccpc-near');
+  assert.equal(preference(), 'ccpc-near');
+  state.seriesId = 'other';
+  assert.equal(preference(), null);
+  state.seriesId = '2026-2027';
+  assert.equal(preference(), 'ccpc-near');
+  const blocked = runInNewContext(`${fn}\npreviewPreference`, {state, localStorage: {
+    getItem() {throw new Error('blocked');}, setItem() {throw new Error('blocked');},
+  }});
+  assert.equal(blocked(), null);
+  assert.equal(blocked('test'), null);
 });
 
 test("unawarded IOI rows show only the competition without separators", async () => {
