@@ -11,17 +11,17 @@
       "cutoffs": {
         "cup": 4,
         "gold": 76,
-        "silver": 258,
-        "bronze": 574
+        "silver": 268,
+        "bronze": 599
       },
-      "teamCount": 307,
-      "officialTeamCount": 305,
-      "excludedTeamCount": 2,
-      "matchedOfficialTeamCount": 297,
+      "teamCount": 328,
+      "officialTeamCount": 319,
+      "excludedTeamCount": 9,
+      "matchedOfficialTeamCount": 310,
       "sources": {
-        "rosterFile": "成都报名强度表_20261006.xlsx",
-        "rosterSheet": "成都报名强度表",
-        "rosterSha256": "9fa5927fcce18cb29c619cf6419b5eca2c29a28b0b9988d26451b31e27fb8f23",
+        "rosterFile": "成都最终强度表_20261012.xlsx",
+        "rosterSheet": "成都最终强度表",
+        "rosterSha256": "565da30b119eb38d3c07ada1909cfed9817c0622645c695a35e51a679a680b90",
         "onlineSeriesSha256": "e0e4182fdc71c182c00db90f4d3e25ab70de7c012e64c03de9cc62d459398ebd",
         "schoolAliasesSha256": "a320660b702782291084e0bc7e9346868781102bc71c5c962f442e46ef6e8d45",
         "contestUrl": "https://icpc.pku.edu.cn/docs/2026-09/8bb3449cf16246568dbccbaa631cc242.pdf"

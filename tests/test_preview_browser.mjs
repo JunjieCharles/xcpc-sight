@@ -108,7 +108,7 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await evaluate('window.scrollTo(0, 0)');
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
-      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '305', '368']);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '368']);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-cutoff-table thead th').length`), 8);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
         ['icpc-2026-xian', 'ccpc-2026-changchun']);
@@ -121,7 +121,7 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       assert.equal(await evaluate('location.href'), beforeSummaryClick);
       assert.equal(await evaluate(current('ccpc-2026-changchun')), true);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-summary-only'), row => Array.from(row.querySelectorAll('.preview-cutoff-value'), el => el.textContent))`),
-        [['4', '76', '258', '574'], ['13', '113', '279', '673']]);
+        [['4', '76', '268', '599'], ['13', '113', '279', '673']]);
       assert.equal(await evaluate(`document.querySelector('[data-preview-id="icpc-2026-xian"]') !== null`), true);
       assert.equal(await evaluate(`(() => {
         const online = document.querySelector('#preview-online-navigation').getBoundingClientRect();

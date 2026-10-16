@@ -313,7 +313,10 @@ test('summary-only stations validate, load independently, and yield to full prev
   const document = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8'));
   validateRegionalCutoffs(document, '2026-2027');
   const [chengdu, wuhan] = document.contests;
-  assert.deepEqual(chengdu.cutoffs, { cup: 4, gold: 76, silver: 258, bronze: 574 });
+  assert.deepEqual(chengdu.cutoffs, { cup: 4, gold: 76, silver: 268, bronze: 599 });
+  assert.deepEqual([chengdu.teamCount, chengdu.officialTeamCount, chengdu.excludedTeamCount, chengdu.matchedOfficialTeamCount], [328, 319, 9, 310]);
+  assert.equal(chengdu.sources.rosterFile, '成都最终强度表_20261012.xlsx');
+  assert.equal(chengdu.sources.rosterSha256, '565da30b119eb38d3c07ada1909cfed9817c0622645c695a35e51a679a680b90');
   assert.deepEqual(wuhan.cutoffs, { cup: 13, gold: 113, silver: 279, bronze: 673 });
   const groups = previewNavigationGroups([await xian()], 'icpc-2026-xian', document.contests);
   assert.deepEqual(groups.regional.map(p => p.id), ['icpc-2026-xian', chengdu.id, wuhan.id]);
