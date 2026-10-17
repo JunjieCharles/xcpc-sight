@@ -144,7 +144,7 @@ series 文件顶层包含 `schemaVersion`、`seriesId`、`title`、`modelId` 和
 
 前瞻默认选择规则于 2026-10-14 更新：有效 URL 场次优先，其次恢复按赛季保存的手动选择；首次进入按北京时间取今天或未来最近日期，同日优先 ICPC，全部已过去则取最近过去场次。此前“默认最新/长春”的描述为历史行为。存储降级、隐藏场次与测试规则见[静态契约、限制与测试](season-2026-2027-preview.md#静态契约限制与测试)。
 
-两站正式名单附件位于 `static/sources/`：西安为 PDF 手册，长春为 10 张图片及其浏览页。前瞻在“名单来源”链接展示 `teamSource`，附件随整个 `static/` 部署；队员姓名支持在长名字内部截断，并保留完整内容及奖项提示。来源范围与验证见[正式名单来源与姓名截断](season-2026-2027-preview.md#正式名单来源与姓名截断)。
+两站正式名单附件位于 `static/sources/`：西安、长春均为 PDF 手册；长春旧版 10 张图片及浏览页保留供历史链接使用。前瞻在“名单来源”链接展示 `teamSource`，附件随整个 `static/` 部署；队员姓名支持在长名字内部截断，并保留完整内容及奖项提示。来源范围与验证见[正式名单来源与姓名截断](season-2026-2027-preview.md#正式名单来源与姓名截断)。
 
 前端入口为 `static/index.html`，样式和原生 ES modules 位于 `static/styles.css`、`static/js/data.mjs`、`static/js/problem-rating.mjs`、`static/js/preview.mjs` 和 `static/js/review.mjs` 和 `static/js/app.mjs`。入口 CSS、应用模块及其依赖使用同一查询版本标识；数据 JSON 继续由 `cache: "no-cache"` 请求并重新验证。它不使用第三方依赖、包管理器或构建步骤，所有数据 URL 均相对于入口索引或模块解析。
 

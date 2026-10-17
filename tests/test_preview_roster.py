@@ -207,7 +207,18 @@ def test_published_official_sources_match_reviewed_files():
     assert hashlib.sha256(pdf.read_bytes()).hexdigest() == roster["sourceSha256"]
     changchun = json.loads((static / "data/previews/ccpc-2026-changchun.json").read_text("utf-8"))
     roster = json.loads((static / "data/rosters/ccpc-2026-changchun.json").read_text("utf-8"))
-    gallery = static / changchun["teamSource"]["url"].removeprefix("./")
+    pdf = static / changchun["teamSource"]["url"].removeprefix("./")
+    assert pdf.name == "ccpc-2026-changchun-manual.pdf"
+    assert changchun["teamSource"]["title"] == roster["source"]
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == roster["sourceSha256"] == (
+        "386f3093f33ad88fe16d9f47d71f42815325e808cdf13dc4900312613f9d7497"
+    )
+    tianjin = next(t for t in roster["teams"] if t["school"] == "天津商业大学")
+    assert tianjin["members"] == ["肖卫东", "魏泽鸣", "李洳帆"]
+    assert sum(not t["excluded"] for t in roster["teams"]) == 300
+    assert sum(len(t["members"]) for t in roster["teams"]) == 1007
+    # Historical image sources remain available for existing links.
+    gallery = static / "sources/ccpc-2026-changchun"
     html = (gallery / "index.html").read_text("utf-8")
     assert len(roster["statusSources"]) == html.count("<img ") == 10
     assert not list(gallery.glob("*.xlsx"))

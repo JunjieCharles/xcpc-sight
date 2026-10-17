@@ -64,7 +64,7 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       // Reopen the bare preview URL: restore the manual choice across page loads.
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
       await waitFor(current('ccpc-2026-changchun'));
-      assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/ccpc-2026-changchun/');
+      assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/ccpc-2026-changchun-manual.pdf');
       const firstPower = await evaluate(`document.querySelector('#preview-body .preview-power-cell')?.textContent`);
       for (const [type, count] of [['official', 300], ['starred', 36], ['all', 336]]) {
         await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);

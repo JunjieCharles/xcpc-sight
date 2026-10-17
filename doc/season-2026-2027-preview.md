@@ -1,5 +1,13 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-17 长春正式手册名单校对
+
+长春站“名单来源”改为用户提供的 `2026年中国大学生程序设计竞赛（长春站）参赛手册.pdf`，原文件发布在 `static/sources/ccpc-2026-changchun-manual.pdf`，SHA-256 为 `386f3093f33ad88fe16d9f47d71f42815325e808cdf13dc4900312613f9d7497`。以后重建保留此 PDF URL 和正式手册标题；旧图片页保留供历史链接使用，名单 JSON 的 `statusSources` 仅记录历史图片校对来源。
+
+逐项提取并比对印刷页码 18–27（PDF 第 20–29 页）的 336 队，渲染查看全部名单页，复核换行姓名与星号说明。学校、队名（忽略排版空白）、成员身份及资格均与已发布快照一致；唯一变化是序号 232 天津商业大学“宗门无筑基，练气扛大旗”的成员顺序，按手册改为肖卫东、魏泽鸣、李洳帆，并同步名单与前瞻中的成员对象顺序。保留既有队伍顺序、ID、名称空白格式；海南大学两人队保持原样。共 336 队、209 校、1007 个成员条目，正式 300 队、打星 36 队；★★女队仍正式，★与★★★打星。忽略教练及座位。
+
+仅定向更新来源元数据与上述成员顺序，评分、匹配、历史战绩、评分快照日期和牌线均不重算；捧杯/金/银/铜仍为 `10 / 84 / 252 / 576`。本地提取和逐队审计保存在 `data-cache/changchun-manual-20261017/`，不作为离线测试依赖。回归覆盖 PDF 链接/标题/哈希、成员顺序、队数和成员总数，以及既有全量名单与评分/网络赛排名一致性；浏览器回归的来源链接预期同步为 PDF。
+
 ## 2026-10-16 成都牌线定向更新
 
 仅更新 `static/data/regional-cutoffs/2026-2027.json` 中成都站摘要，名单来源为用户提供的 `成都最终强度表_20261012.xlsx`，工作表为“成都最终强度表”，SHA-256 为 `565da30b119eb38d3c07ada1909cfed9817c0622645c695a35e51a679a680b90`。本次导入仅将内存中的“队伍编号”表头映射为既有解析器的“队伍 ID”，继续检查重复编号；原工作簿、通用解析器保持不变。重算使用既有 `parse_roster_rows`、`build_summary`，忽略表内名次、评分与公式，沿用已发布网络赛系列和学校别名（哈希与 10 月 13 日记录一致）。
@@ -18,7 +26,7 @@
 
 前瞻表格上方提供“所有队伍 / 正式队伍 / 打星队伍”三个互斥按钮，默认所有队伍；`excluded: true` 视为打星，false 或缺省视为正式。资格筛选与搜索、学校选择取交集，计数与空结果沿用表格现有展示；切换资格重置表格纵向滚动。完整名单仍先计算排名、校排、综合战力及牌线，再筛选展示，筛选不重算全局值。URL 可选 `previewTeamType=official|starred`，默认或非法值为所有队伍，默认不写参数；刷新、浏览器前进后退恢复选择，切换比赛保留选择。仅影响前瞻，其他 tab 不使用该筛选且移除该 URL 参数。纯函数测试覆盖三种资格、旧快照缺省资格、交集/空结果、输入不变及 URL；浏览器覆盖桌面/手机的切换、计数、排名保持、历史恢复与图片点击。
 
-2026-10-14 按用户要求，在前瞻数据来源上方显示独立的“名单来源”链接，使用当前场次 `teamSource`，切换场次同步更新。西安链接到 `static/sources/icpc-2026-xian-manual.pdf`，保留正式参赛手册原文件；长春链接到 `static/sources/ccpc-2026-changchun/index.html`，按图片中的队伍序号 1–336 排序展示 10 张正式名单原图（`statusSources` 的原始记录顺序不是页序），可打开原图放大，以图片为正式名单，不发布 Excel。所有原图逐一核对既有 SHA-256，文件名与字节不变；原始本地路径不写入网页。这些附件是静态站点资源，部署时与 `static/` 一起复制，名单 JSON 仍供离线重建使用。来源标题和 URL 的更改不刷新名单、评分或快照时间；西安以后重建时也应保留正式 PDF URL，长春保留图片来源页 URL。
+2026-10-14 按用户要求，在前瞻数据来源上方显示独立的“名单来源”链接，使用当前场次 `teamSource`，切换场次同步更新。西安链接到 `static/sources/icpc-2026-xian-manual.pdf`，保留正式参赛手册原文件；长春链接到 `static/sources/ccpc-2026-changchun/index.html`，按图片中的队伍序号 1–336 排序展示 10 张正式名单原图（`statusSources` 的原始记录顺序不是页序），可打开原图放大，以图片为正式名单，不发布 Excel。所有原图逐一核对既有 SHA-256，文件名与字节不变；原始本地路径不写入网页。这些附件是静态站点资源，部署时与 `static/` 一起复制，名单 JSON 仍供离线重建使用。来源标题和 URL 的更改不刷新名单、评分或快照时间；西安以后重建时也应保留正式 PDF URL，长春自 2026-10-17 起保留正式手册 PDF URL，见上文校对记录。
 
 队员姓名及其奖项提示触发器改为普通行内元素，让单元格按字符截断，避免第二个长名字作为整块被省略；例如显示“名字 / 较长的…”而非“名字 / …”。完整姓名仍保留在单元格 title 与 DOM 中，NOI/IOI 标记、聚焦及悬浮提示保留。浏览器回归覆盖桌面 1440px/手机 390px、普通和带提示的长名字、前缀可见、溢出和来源切换；离线校验来源链接与附件哈希。
 
@@ -93,7 +101,7 @@ python -m scripts.generate_regional_cutoffs --teams "C:/Downloads/成都报名�
 XLSX 导入兼容原西安表头与本次 CCPC 导出表头；重复表头、序号、缺失身份、成员重复和公式身份带原始行号报错。名单、当前/上赛季评分及三场网络赛排名完整离线回归，前端验证 336 队 schema、五维战力、公开索引及时间隐藏/恢复；静态生成器测试覆盖名单和前瞻一并复制。公开 Python API 不变。
 
 ```bash
-python -m scripts.generate_preview_data --teams static/data/rosters/ccpc-2026-changchun.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --host-school "东北师范大学" --preview-title "2026年CCPC国赛（长春）" --team-source-url ./data/rosters/ccpc-2026-changchun.json --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
+python -m scripts.generate_preview_data --teams static/data/rosters/ccpc-2026-changchun.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --host-school "东北师范大学" --preview-title "2026年CCPC国赛（长春）" --team-source-url ./sources/ccpc-2026-changchun-manual.pdf --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
 ```
 
 ### 图片名单参赛资格修订
