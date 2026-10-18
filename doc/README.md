@@ -6,7 +6,7 @@
 | 个人与报名实体 rating 规则、系列计算及队伍归一化 LSE 聚合 | [rating-rules.md](rating-rules.md) |
 | 题目难度 rating 的特征、训练、验证、XCPC 预测与静态展示 | [problem-rating.md](problem-rating.md) |
 | 多系列静态站点 JSON 数据契约、生成与零构建前端 | [static-site-data.md](static-site-data.md) |
-| 赛后复盘、指标符合度、队伍结果关联与排名对比 | [post-contest-review.md](post-contest-review.md) |
+| 赛后复盘、指标符合度、金银铜精确预测命中率、队伍结果关联与排名对比 | [post-contest-review.md](post-contest-review.md) |
 | 首场网络赛 max、LSE 与混合聚合的离线对比实验 | [team-aggregation-first-preliminary.md](team-aggregation-first-preliminary.md) |
 | RankLand 数据获取与 SRK 转换 | [rankland-data.md](rankland-data.md) |
 | 牛客榜单数据获取、报名实体 Rating 与 CSV 导出 | [nowcoder-data.md](nowcoder-data.md) |

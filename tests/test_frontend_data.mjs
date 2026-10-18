@@ -33,9 +33,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   )));
   assert.equal(series.contests[0].id, "icpc2026preliminary-1");
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
-  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary"]);
+  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "ccpc2026changchun", "icpc2026xi_an"]);
   assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(series.competitors.length, 8926);
+  assert.equal(series.competitors.length, 9099);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
   assert.equal(participants.length, 7380);
@@ -57,9 +57,11 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.equal(series.contests[2].startAt, "2026-09-19T13:00:00+08:00");
   const third = series.competitors.filter(c => c.participations.some(p => p.contestIndex === 2));
   assert.equal(third.length, 6251);
-  const debut = third.filter(c => c.participations.length === 1);
+  const debut = third.filter(c => c.participations[0].contestIndex === 2);
   assert.equal(debut.length, 527);
   assert.ok(debut.every(c => c.participations[0].before === 1400));
+  assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === 3).length, 894);
+  assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === 4).length, 1205);
   for (const person of series.competitors) {
     const history = person.participations;
     for (let i = 1; i < history.length; i++) assert.equal(history[i].before, history[i - 1].after);
@@ -84,8 +86,8 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   ];
   for (const [id, rating] of retained) {
     const person = series.competitors.find(c => c.id === id);
-    assert.deepEqual(person.participations.map(p => p.contestIndex), [0, 1]);
-    assert.equal(person.finalRating, rating);
+    assert.deepEqual(person.participations.filter(p => p.contestIndex < 3).map(p => p.contestIndex), [0, 1]);
+    assert.equal(person.participations[1].after, rating);
   }
 });
 
@@ -266,6 +268,25 @@ test("validates and indexes a series once", () => {
   assert.equal(first.competitorById.get("c_1"), series.competitors[0]);
   assert.equal(first.participantsByContest[1].length, 0);
   assert.equal(first.participantsByContest[2][0].participation.after, 1430);
+});
+
+test("rating and contest ties use Chinese school order before stable IDs", () => {
+  const series = fixture();
+  const base = series.competitors[0];
+  series.competitors = [
+    { ...base, id: "a", school: "浙江大学" },
+    { ...base, id: "c", school: "北京大学" },
+    { ...base, id: "b", school: "北京大学" },
+    { ...base, id: "d", rank: 2, school: "安徽大学",
+      participations: base.participations.map(p => ({ ...p, contestRank: 3 })) },
+  ];
+  const original = [...series.competitors];
+  const indexed = indexSeries(series);
+  assert.deepEqual(indexed.rankedCompetitors.map(c => c.id), ["b", "c", "a", "d"]);
+  assert.deepEqual(indexed.participantsByContest[0].map(p => p.competitor.id), ["b", "c", "a", "d"]);
+  assert.deepEqual(searchCompetitors(indexed.rankedCompetitors, "北京").map(c => c.id), ["b", "c"]);
+  assert.deepEqual(series.competitors, original);
+  assert.deepEqual(indexed.rankedCompetitors.map(c => c.rank), [1, 1, 1, 2]);
 });
 
 test("accepts an empty display school", () => {

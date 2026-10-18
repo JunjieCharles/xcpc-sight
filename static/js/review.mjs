@@ -1,8 +1,16 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261014-70";
-import { buildPreviewPower, buildPreviewRanks, sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20261014-70";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261018-72";
+import { buildPreviewPower, buildPreviewRanks, previewPowerMetricIds, compareOnlineRanks,
+  sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20261018-72";
 
 const validated = new WeakMap();
 const analyses = new WeakMap();
+
+export function sortReviewContests(contests) {
+  const day = contest => new Date(Date.parse(contest.startAt) + 8 * 3600000).toISOString().slice(0, 10);
+  const priority = contest => /^icpc/i.test(contest.id) ? 0 : /^ccpc/i.test(contest.id) ? 1 : 2;
+  return [...contests].sort((a, b) => day(a).localeCompare(day(b))
+    || priority(a) - priority(b) || Date.parse(a.startAt) - Date.parse(b.startAt) || a.id.localeCompare(b.id));
+}
 
 export function validateReview(document, previews) {
   if (previews && validated.get(document) === previews) return document;
@@ -29,6 +37,7 @@ export function validateReview(document, previews) {
       fail(`${path}.source`, "expected source title and URL");
     }
     if (!Array.isArray(contest.teams)) fail(`${path}.teams`, "expected array");
+    if (Object.hasOwn(contest, "hasMedals") && typeof contest.hasMedals !== "boolean") fail(path, "hasMedals must be boolean");
     const rosterIds = new Set(preview.teams.filter(t => !t.excluded).map(t => t.id));
     const resultIds = new Set();
     for (const [j, team] of contest.teams.entries()) {
@@ -38,8 +47,11 @@ export function validateReview(document, previews) {
         fail(teamPath, "missing or duplicate result team ID");
       }
       resultIds.add(team.resultTeamId);
+      if (contest.hasMedals && ![null, "gold", "silver", "bronze"].includes(team.actualMedal)) fail(teamPath, "invalid actualMedal");
+      if (!contest.hasMedals && Object.hasOwn(team, "actualMedal")) fail(teamPath, "actualMedal requires hasMedals");
+      if (contest.hasMedals && team.actualMedal !== null && (!team.hasActivity || team.resultStatus)) fail(teamPath, "inactive results cannot receive medals");
       if (Object.hasOwn(team, "resultStatus")) {
-        if (team.resultStatus !== "removed") fail(teamPath, "unknown resultStatus");
+        if (!["removed", "unofficial"].includes(team.resultStatus)) fail(teamPath, "unknown resultStatus");
         if (team.hasActivity !== null || team.actualRank !== null) {
           fail(teamPath, "removed results require null activity and rank");
         }
@@ -54,6 +66,23 @@ export function validateReview(document, previews) {
   }
   validated.set(document, previews);
   return document;
+}
+
+// Exact medal precision within this metric's eligible cohort. Keep prediction ties.
+export function medalPredictionAccuracy(rows) {
+  const medals = ["gold", "silver", "bronze"];
+  const counts = medals.map(medal => rows.filter(row => row.actualMedal === medal).length);
+  const ends = counts.map((_, i) => counts.slice(0, i + 1).reduce((a, b) => a + b, 0));
+  const result = Object.fromEntries(medals.map(medal => [medal, { hits: 0, predicted: 0, value: null }]));
+  for (const row of rows) {
+    const index = ends.findIndex(end => row.previewRank <= end);
+    if (index < 0) continue;
+    const medal = medals[index];
+    result[medal].predicted += 1;
+    if (row.actualMedal === medal) result[medal].hits += 1;
+  }
+  for (const score of Object.values(result)) score.value = score.predicted ? score.hits / score.predicted : null;
+  return result;
 }
 
 export function createReviewStore(indexUrl, fetchImpl = globalThis.fetch) {
@@ -118,23 +147,25 @@ function compareMedals(a, b) {
 
 export function buildReviewAnalysis(preview, contest, metric = "power") {
   const metricIds = preview.metricSources.map(s => s.id);
-  if (!["power", "medals", ...metricIds].includes(metric)) throw new TypeError(`Unknown review metric: ${metric}`);
+  if (!reviewMetrics(preview).some(source => source.id === metric)) throw new TypeError(`Unknown review metric: ${metric}`);
   let cache = analyses.get(preview);
   if (!cache) { cache = new WeakMap(); analyses.set(preview, cache); }
   if (!cache.has(contest)) cache.set(contest, new Map());
   const byMetric = cache.get(contest);
   if (byMetric.has(metric)) return byMetric.get(metric);
-  const power = buildPreviewPower(preview.teams, metricIds);
+  const power = buildPreviewPower(preview.teams, metricIds, previewPowerMetricIds(preview));
   const originalRanks = metric === "power" ? null : buildPreviewRanks(preview.teams, metricIds);
   const results = new Map(contest.teams.map(t => [t.previewTeamId, t]));
   const active = preview.teams.filter(t => !t.excluded && results.get(t.id)?.resultStatus !== "removed"
     && results.get(t.id)?.hasActivity);
   const teams = active.filter(t => metric === "power"
     ? power.get(t.id).vector.some(value => value !== 0)
-    : t.ratings[metric === "medals" ? "cpcfinder" : metric] != null);
+    : metric === "onlineRanks" ? t.onlineRanks.some(rank => rank !== null)
+      : t.ratings[metric === "medals" ? "cpcfinder" : metric] != null);
   const compare = metric === "power"
     ? (a, b) => power.get(a.id).rank - power.get(b.id).rank
-    : metric === "medals"
+    : metric === "onlineRanks" ? (a, b) => compareOnlineRanks(b.onlineRanks, a.onlineRanks)
+      : metric === "medals"
       ? (a, b) => compareMedals(b.medals, a.medals)
       : (a, b) => b.ratings[metric] - a.ratings[metric];
   const predicted = ranks(teams, compare);
@@ -145,8 +176,10 @@ export function buildReviewAnalysis(preview, contest, metric = "power") {
     actualRank: actual.get(team.id),
     originalPowerRank: power.get(team.id).rank,
     originalPreviewRank: metric === "power" ? power.get(team.id).rank
-      : metric === "medals" ? originalRanks.get(team.id).medals : originalRanks.get(team.id).ratings[metric],
+      : metric === "onlineRanks" ? originalRanks.get(team.id).onlineRanks
+        : metric === "medals" ? originalRanks.get(team.id).medals : originalRanks.get(team.id).ratings[metric],
     originalActualRank: results.get(team.id).actualRank,
+    actualMedal: results.get(team.id).actualMedal ?? null,
     change: predicted.get(team.id) - actual.get(team.id),
     growth: Math.log10(predicted.get(team.id) / actual.get(team.id)),
   }));
@@ -154,9 +187,18 @@ export function buildReviewAnalysis(preview, contest, metric = "power") {
     rows, metric, power, activeCount: active.length,
     coverage: active.length ? rows.length / active.length : null,
     agreement: spearmanRho(rows.map(t => [t.previewRank, t.actualRank])),
+    medalAccuracy: contest.hasMedals ? medalPredictionAccuracy(rows) : null,
   };
   byMetric.set(metric, analysis);
   return analysis;
+}
+
+export function reviewMetrics(preview) {
+  const included = new Set(previewPowerMetricIds(preview));
+  return [{ id: "power", title: "综合战力" },
+    ...(preview.onlineContests ? [{ id: "onlineRanks", title: "网络赛排名" }] : []),
+    ...preview.metricSources, { id: "medals", title: "奖牌" }]
+    .filter(source => source.id === "power" || included.has(source.id));
 }
 
 export function sortReviewRows(analysis, sort = "actualRank", order = "asc") {

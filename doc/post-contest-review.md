@@ -1,12 +1,43 @@
 # 赛后复盘
 
+## 2026-10-18 西安、长春与奖牌预测准确率
+
+新增 `icpc2026xi_an` → `icpc-2026-xian`、`ccpc2026changchun` → `ccpc-2026-changchun`。来源展示 [RankLand 西安榜单](https://rl.algoux.cn/ranklist/icpc2026xi_an)和[长春榜单](https://rl.algoux.cn/ranklist/ccpc2026changchun)。当前文件 ID 为 `105318714861256704` / `105318715452649472`，核验下载字节哈希后，解析内容与 srk-collection PR #75 合并版本一致；结果中保存固定 CDN URL、file ID 与 SHA-256。复盘选择列表按北京时间日期升序，同日 ICPC 在 CCPC 前；默认选日期最近的已发布复盘，同日优先 ICPC，再以开赛时间和 ID 稳定破同分。显式 URL 和页内已选场次继续保留。
+
+西安覆盖 403 支赛前正式队，其中 402 支有正式参赛结果，湖南科技大学 `Team366` 赛后转为打星，通过 `config/review-unofficial-results/icpc2026xi_an.json` 显式登记。长春覆盖 300 支赛前正式队，298 支有提交；深圳理工大学“SUAT曙光231”有 `I10` / `I1000` 两个同身份账号，前者无提交，通过 `config/review-overrides/ccpc2026changchun.json` 关联有成绩的 `I1000`。
+
+复盘仅展示综合战力和实际参与其计算的指标，由 `reviewMetrics(preview)` 按 `previewPowerMetricIds(preview)` 筛选。两站各六项：综合战力、网络赛排名、XCPC Rating、XCPC Elo、上赛季 Rating、本赛季 Rating；不参与战力的 CPC Finder、奖牌不出现在区域赛复盘，也不接受为当前指标，旧 URL 回退到综合战力。综合战力沿用前瞻指定的五维原始计数与排名；网络赛排名使用三场最好名次元组比较，至少有一场记录才纳入。旧网络赛快照保留各自参与战力的六/七项指标。每张卡片增加金银铜三档的**精确命中率**及 `命中数/预测数`：
+
+`该档准确率 = 预测为该档且实际获得同档奖牌的队数 / 预测为该档的队数`
+
+预测银牌而实际金牌不算银牌命中。每项指标在既有的正式、实际参赛、有当前指标的有效样本中，按该样本的实际金/银/铜数量设定累计预测名次边界，再以该指标竞赛排名分档。并列同档、不拆分，边界并列会扩大预测数并压缩后续档位，CPC Finder 和奖牌零值并列也遵守此规则。零预测时为 null，显示 `— (0/0)`。这是使用已知奖牌数量的排序分档评价，不评价赛前奖牌名额估计。不同指标样本不同；搜索、学校筛选、表头升降序只改变明细，不重算指标。
+
+纯 JS `medalPredictionAccuracy(rows)` 返回三档 `{hits, predicted, value}`；`buildReviewAnalysis.medalAccuracy` 在缺少奖牌标签的旧场次为 null。有标签的两站综合战力结果为：
+
+| 场次 | 有效队伍 | Spearman ρ | 金牌 | 银牌 | 铜牌 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 西安 | 396 | 0.768620 | 27/41 = 65.9% | 43/82 = 52.4% | 63/122 = 51.6% |
+| 长春 | 294 | 0.821510 | 20/30 = 66.7% | 33/58 = 56.9% | 41/86 = 47.7% |
+
+schema v1 可选新增 `contest.hasMedals: true`，要求全部结果行提供 `actualMedal: "gold" | "silver" | "bronze" | null`。拒绝缺失/未知标签以及无提交、非正常结果携带奖牌。旧文件不提供标签时不展示准确率。实际奖牌用既有 `_history_medals` 解释 SRK count/ratio 和并列：西安为 41/82/124（铜牌配置 123 因并列扩张）；长春按解题队伍基数、10%/20%/30% 累计比例向上取整为 30/58/88。
+
+纯 API 新增可选 `result_medals`，须恰好覆盖所有正式结果 ID，值限三档或 null；新增 `unofficial_results` 映射前瞻 ID 到当前打星结果 ID，不能与其他映射重叠、重复目标或引用正式结果。对应行写入 `resultStatus: "unofficial"`，活动、名次和奖牌为 null，排除于排名、覆盖率和预测统计。默认仍拒绝自动把正式前瞻匹配到打星。通用 CLI 增加 `--medals`、`--unofficial-results`、`--source-url` 和 `--source-title`。
+
+两站与 Rating 可通过固定输入命令离线重建，五份 SRK 的来源和哈希见[赛季发布说明](season-2026-2027-preview.md#2026-10-18-西安长春赛后-rating)。只替换两站复盘，保留三场网络赛及赛前快照。
+
+```bash
+python -m scripts.publish_october_2026_results --input-dir data-cache/results-20261018-rankland
+```
+
+测试覆盖精确分档（更高奖牌也不命中）、并列边界、零预测、缺失指标、无活动、资格变化、重复账号及标签校验。`tests/fixtures/review/regional-metrics.json` 固定两站六项指标样本、ρ 和各档计数；12 项系数经 SciPy `spearmanr`、36 项计数经独立分档交集复核。浏览器回归覆盖两站切换、同日排序与默认优先 ICPC、六张卡片及排除指标、RankLand 网页来源、网络赛指标、搜索不变、1440px/390px 与内容不越界；旧场次的滚动、雷达图和奖牌对齐继续检查。复盘取消空的全名单排名槽，并为筛选前后名次保留足够列宽，确保窄屏奖牌、网络赛值与原名次完整显示。数据来源链接同样只保留参与综合战力的指标来源。
+
 ## 页面与计算口径
 
 复盘与前瞻共用 Rating 格式化：所有来源的队伍值固定两位小数，整数补零；成员明细中 XCPC Elo、上赛季和本赛季 Rating 的整数值按整数显示，XCPC Rating 与 CPC Finder 固定两位小数；缺失仍显示“—”；只改变展示，排序与聚合保留原精度，个人赛季榜与已发布数据不变。回归覆盖各来源、零分、整数、小数舍入及 Elo 特殊颜色分支。
 
 2026-09-11 队伍聚合调整从第二场前瞻开始，第一场前瞻保持原文件，首场复盘的指标、排名和下文统计基准保持不变。后续复盘读取对应前瞻的队伍聚合值，不另行按个人分聚合；归一化 LSE 的缺失值与兼容规则见 [前瞻设计](season-2026-2027-preview.md)。
 
-“赛前前瞻”沿用 `preview-tab` 和 `view=preview`。“赛后复盘”使用独立 `review-tab` / `view=review`，仅有已发布复盘数据的系列显示该入口；默认选择最新可复盘比赛、综合战力指标、实际排名升序。最新场次按 `startAt` 的实际时间比较，不依赖数组顺序；同一时刻按 ID 升序确定。首次进入且没有已有选择，或 URL 明确指定的场次无效时选最新，有效 `reviewContest` 链接保留指定场次；同一系列内切到其他 tab 再回来，以及页内切换指标、排序和筛选时均保留已选场次。前瞻与复盘独立记忆各自的选择；重新加载按 URL 恢复，不使用持久存储。离线回归覆盖乱序列表、时区偏移、同一时间、无效 ID、显式旧场次、单场/空列表与页签选择保留。
+“赛前前瞻”沿用 `preview-tab` 和 `view=preview`。“赛后复盘”使用独立 `review-tab` / `view=review`，仅有已发布复盘数据的系列显示该入口；默认选择最新可复盘比赛、综合战力指标、实际排名升序。最新场次按 `startAt` 的北京时间日期比较，同日优先 ICPC，再比较开赛时间和 ID，不依赖数组顺序。首次进入且没有已有选择，或 URL 明确指定的场次无效时选最新，有效 `reviewContest` 链接保留指定场次；同一系列内切到其他 tab 再回来，以及页内切换指标、排序和筛选时均保留已选场次。前瞻与复盘独立记忆各自的选择；重新加载按 URL 恢复，不使用持久存储。离线回归覆盖乱序列表、时区偏移、同日优先 ICPC、同一时间、无效 ID、显式旧场次、单场/空列表与页签选择保留。
 
 比赛选择框列出同时具有赛前快照和赛后结果的场次。各项指标（第一场六项、第二场七项）的 **Spearman ρ、有效队伍数和覆盖率始终同时显示**，通过同尺度的正负条形和数值直接比较；点击卡片选择下方队伍表的指标，不使用指标下拉菜单。选中卡片使用边框、底色和 `aria-pressed` 标记，可通过键盘操作。桌面六列，中等宽度三列，手机两列。符合度不是准确率，不转换成百分制，也不将不同覆盖范围的系数解释为同样本上的优劣。
 
@@ -63,7 +94,7 @@ schema v1 结果行新增可选 `resultStatus: "removed"`：保留旧 `resultTea
 
 结果必须恰好覆盖对应快照中的每支正式队伍（排除 `excluded: true` 的打星队伍），各侧 ID 唯一；未知前瞻、重复关联、漏队、非法活动状态和名次会报出字段路径。源结果中未出现在前瞻中的队伍不加入复盘，其存在可能影响原实际名次，但筛选后名次会压缩。
 
-纯 Python API：`core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None)`。输入原前瞻映射和不可变 `Contest`，输出一场复盘映射，不访问网络或文件，不修改输入。先按规范化学校和队名唯一匹配，再用规范化学校及排序后的完整成员名单唯一匹配。学校、成员复用 `DefaultNormalizer`；队名仅进行 NFKC、大小写和空白归一化，保留标点，因为真实队名可能完全由标点组成。`overrides` 明确映射前瞻队伍 ID 到结果队伍 ID，并验证目标唯一且未被其他队伍使用。除显式登记的 `removed_results` 外，未匹配或歧义一律失败，不能视为无提交。
+纯 Python API：`core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None, unofficial_results=None, result_medals=None)`。输入原前瞻映射和不可变 `Contest`，输出一场复盘映射，不访问网络或文件，不修改输入。先按规范化学校和队名唯一匹配，再用规范化学校及排序后的完整成员名单唯一匹配。学校、成员复用 `DefaultNormalizer`；队名仅进行 NFKC、大小写和空白归一化，保留标点，因为真实队名可能完全由标点组成。`overrides` 明确映射前瞻队伍 ID 到结果队伍 ID，并验证目标唯一且未被其他队伍使用。除显式登记的 `removed_results` 外，未匹配或歧义一律失败，不能视为无提交。
 
 ```bash
 python scripts/generate_review_data.py

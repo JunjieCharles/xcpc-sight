@@ -11,7 +11,7 @@
 | 系列 | 已发布内容 |
 | --- | --- |
 | 2025–2026 ICPC + CCPC | 选手 Rating、题目难度 |
-| 2026–2027 ICPC + CCPC | 三场网络赛选手 Rating、赛前前瞻和赛后复盘，以及西安站前瞻 |
+| 2026–2027 ICPC + CCPC | 三场网络赛及西安、长春站的选手 Rating、赛前前瞻和赛后复盘 |
 | 2026 牛客暑期多校训练营 | 第一至第十场报名实体 Rating、题目难度 |
 | 2026 HDU 暑期联赛 | CID 1229 至 1238 报名实体 Rating、题目难度 |
 
@@ -80,6 +80,14 @@ python scripts/generate_review_data.py
 
 默认下载指定版本的首场 SRK，校验 SHA-256 后生成 `static/data/reviews/2026-2027.json`，不刷新赛前评分或索引。使用 `--srk` 可离线生成；其他场次参数、官方移除队伍的映射与匹配规则见[复盘生成说明](doc/post-contest-review.md)。
 
+西安、长春已计入本赛季 Rating，共 5 场、9099 名选手。两站复盘为各项排名指标显示金银铜各档的精确预测命中率（同档命中数 / 预测该档队数）及计数，包含网络赛排名指标。准备好五份固定 SRK 后，可同时离线重建本赛季 Rating 和两站复盘：
+
+```bash
+python -m scripts.publish_october_2026_results --input-dir data-cache/results-20261018-rankland
+```
+
+输入版本、下载地址和哈希见[赛季发布说明](doc/season-2026-2027-preview.md#2026-10-18-西安长春赛后-rating)，有效样本、并列与准确率口径见[复盘说明](doc/post-contest-review.md#2026-10-18-西安长春与奖牌预测准确率)。
+
 ### 其他数据工具
 
 ```bash
@@ -118,7 +126,7 @@ print(len(document["contests"]), len(document["competitors"]))
 
 队伍聚合可使用 `rating.normalized_lse_rating`，计算 `400 * log10(mean(10 ** (R / 400)))`；空输入返回 `None`，调用方需过滤缺失成员。完整计算规则见 [Rating 规则](doc/rating-rules.md)。
 
-学校别名可通过 `core.load_school_aliases(path)` 加载，再传给 `DefaultNormalizer(school_aliases=...)`。复盘纯 API `core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None)` 负责队伍关联与结果投影；官方移除的队伍须通过 `removed_results` 显式提供映射。
+学校别名可通过 `core.load_school_aliases(path)` 加载，再传给 `DefaultNormalizer(school_aliases=...)`。复盘纯 API `core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None, unofficial_results=None, result_medals=None)` 负责队伍关联与结果投影；官方移除和赛后打星分别通过 `removed_results`、`unofficial_results` 显式映射，`result_medals` 可传入正式结果 ID 到实际奖牌或 null 的完整映射。
 
 静态索引 API `rating.project_static_data_index` 支持 `p`review_publications`` 和 review_publications，可登记同系列多份前瞻与复盘入口。库 API 不隐式写文件；输出由脚本显式完成。数据获取、模型和字段契约见[设计文档索引](doc/README.md)。
 

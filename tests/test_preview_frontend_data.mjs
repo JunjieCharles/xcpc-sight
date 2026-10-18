@@ -186,6 +186,13 @@ test("preview and review default to the latest timestamp and preserve explicit c
     assert.equal(select([], undefined, key), null);
     const tied = { id: "a", [key]: "2026-09-12T05:00:00Z" };
     assert.equal(select([newest, tied], undefined, key), tied);
+    const icpc = { id: "icpc2026xi_an", [key]: "2026-10-18T09:00:00+08:00" };
+    const ccpc = { id: "ccpc2026changchun", [key]: "2026-10-18T13:00:00+08:00" };
+    const laterDate = { id: "ccpc2026later", [key]: "2026-10-19T09:00:00+08:00" };
+    assert.equal(select([ccpc, icpc], undefined, key), icpc);
+    assert.equal(select([icpc, ccpc], "missing", key), icpc);
+    assert.equal(select([icpc, ccpc], ccpc.id, key), ccpc);
+    assert.equal(select([icpc, ccpc, laterDate], undefined, key), laterDate);
     assert.deepEqual(contests, [newest, old, middle]);
   }
 });

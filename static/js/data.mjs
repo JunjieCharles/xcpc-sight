@@ -188,11 +188,16 @@ export function indexSeries(document) {
     }
   }
   for (const participants of participantsByContest) {
-    participants.sort((a, b) => a.participation.contestRank - b.participation.contestRank || a.competitor.id.localeCompare(b.competitor.id));
+    participants.sort((a, b) => a.participation.contestRank - b.participation.contestRank || compareCompetitorSchools(a.competitor, b.competitor));
   }
-  const result = { competitorById, participantsByContest };
+  const rankedCompetitors = [...document.competitors].sort((a, b) => a.rank - b.rank || compareCompetitorSchools(a, b));
+  const result = { competitorById, participantsByContest, rankedCompetitors };
   indexedSeries.set(document, result);
   return result;
+}
+
+function compareCompetitorSchools(a, b) {
+  return a.school.localeCompare(b.school, "zh-CN") || a.id.localeCompare(b.id);
 }
 
 export function ratingTimeline(competitor, contests, initialRating) {

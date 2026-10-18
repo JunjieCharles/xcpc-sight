@@ -1,5 +1,28 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-18 西安、长春赛后 Rating
+
+以 [srk-collection PR #75](https://github.com/algoux/srk-collection/pull/75) 的合并提交 `4358d90170753e6d872cc544b47c318de5145ffc` 为固定来源，在 9 月 23 日校正过的三场网络赛后计入 CCPC 长春、ICPC 西安。沿用既有赛季排序规则，同一天 CCPC 在 ICPC 之前；均从空状态重算，默认身份规范化、同场重复身份取最好成绩、正式且有提交才计分。
+
+当前累计 **9099 名选手、5 场比赛**，各场计分人次依次为 **7380 / 7464 / 6251 / 894 / 1205**，最终 Rating 范围 1247–1991。原 8926 人的前三场历史逐条与更新前一致；新增两站后仍保留赛前名单、评分、牌线和前三场复盘。西安手册中的队员已补入上游 SRK；佛山大学“我的刀盾”按手册仅两名队员。西安赛后打星的 `Team366` 不计分，长春无提交的同身份账号 `I10` 不计分，有成绩的 `I1000` 正常参与。
+
+RankLand 已同步两场数据，当前下载内容与合并版本 JSON 一致，页面来源使用其比赛网页。固定下载路径为 `https://cdn.algoux.cn/rankland/file/{fileId}/{id}.srk.json`，核验实际下载字节 SHA-256：
+
+| ID | collection / fileId | SHA-256 |
+| --- | --- | --- |
+| `ccpc2026changchun` | `ccpc2026` / `105318715452649472` | `1d785e150b26994ba67e06d951ff3edfb0c777711e26df3753a1c79766e780bf` |
+| `icpc2026xi_an` | `icpc2026` / `105318714861256704` | `ac458e941d11d0b235c5e5f68d286592d0c5897bf50b96d8fd75f81ba050945e` |
+
+完整离线重建：把以上两份和下文 9 月校正版本的三份网络赛 SRK 按 `{id}.srk.json` 放入同一输入目录。旧输入为 RankLand file ID `94656957302009856`、`94656957834690560`、`95451702349623296`，文件名分别是 `icpc2026preliminary-1.srk.json`、`icpc2026preliminary-2.srk.json`、`ccpc2026preliminary.srk.json`，固定下载路径为 `https://cdn.algoux.cn/rankland/file/{fileId}/{文件名}`。五份校验值也固定在脚本的 `INPUTS` 中；不假定新检出中存在缓存，不在默认测试中访问网络。
+
+```bash
+python -m scripts.publish_october_2026_results --input-dir data-cache/results-20261018-rankland
+```
+
+脚本读取现有 `static/data/` 中的前瞻、复盘和显式映射，验证全部输入并计算完成后，原子写入 `series/2026-2027.json` 和 `reviews/2026-2027.json`；`--data-dir` 可指向包含相同前瞻/复盘的其他目录。命令离线、重复生成字节一致，不重抓外部评分。现有站点索引已引用五份前瞻及该复盘系列，重投影索引（含独立牌线摘要引用）内容不变。复盘展示和默认选择按同日 ICPC 优先，Rating 计算保留原有赛季排序。实际比赛结果关联与金银铜预测准确率见[复盘说明](post-contest-review.md#2026-10-18-西安长春与奖牌预测准确率)。
+
+回归固定五场顺序、人次、初始 1400、跨场连续性、最终范围和旧三场历史。区域赛前瞻校验从新赛季数据中截取开赛前历史恢复赛前评分，避免用新的 `finalRating` 误校验旧快照。
+
 ## 2026-10-17 长春正式手册名单校对
 
 长春站“名单来源”改为用户提供的 `2026年中国大学生程序设计竞赛（长春站）参赛手册.pdf`，原文件发布在 `static/sources/ccpc-2026-changchun-manual.pdf`，SHA-256 为 `386f3093f33ad88fe16d9f47d71f42815325e808cdf13dc4900312613f9d7497`。以后重建保留此 PDF URL 和正式手册标题；旧图片页保留供历史链接使用，名单 JSON 的 `statusSources` 仅记录历史图片校对来源。

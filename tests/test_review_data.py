@@ -89,6 +89,37 @@ def test_unofficial_teams_never_match_and_input_is_not_mutated():
         project_review_contest(preview, replace(contest, teams=(unofficial, *contest.teams[1:])))
 
 
+def test_explicit_unofficial_results_and_medals_preserve_preview_and_scores():
+    preview, contest = fixture()
+    original = copy.deepcopy(preview)
+    changed = replace(
+        contest, teams=(replace(contest.teams[0], official=False), *contest.teams[1:])
+    )
+    medals = {t.team_id: None for t in changed.teams if t.official}
+    medals[contest.teams[3].team_id] = "gold"
+    projected = project_review_contest(preview, changed,
+                                       unofficial_results={"a": "result-a"}, result_medals=medals)
+    assert projected["hasMedals"] is True
+    assert projected["teams"][0] == {
+        "previewTeamId": "a", "resultTeamId": "result-a", "resultStatus": "unofficial",
+        "hasActivity": None, "actualRank": None, "actualMedal": None,
+    }
+    assert projected["teams"][3]["actualMedal"] == "gold"
+    assert preview == original
+    for invalid in ({"a": "result-b"}, {"unknown": "result-a"}):
+        with pytest.raises(DataValidationError, match="unofficial"):
+            project_review_contest(preview, changed, unofficial_results=invalid)
+    with pytest.raises(DataValidationError, match="overlap"):
+        project_review_contest(preview, changed, unofficial_results={"a": "result-a"},
+                               overrides={"a": "result-b"})
+    with pytest.raises(DataValidationError, match="exactly"):
+        project_review_contest(preview, contest, result_medals={})
+    with pytest.raises(DataValidationError, match="invalid result medal"):
+        project_review_contest(preview, changed, result_medals={**medals, "result-d": "platinum"})
+    with pytest.raises(DataValidationError, match="inactive"):
+        project_review_contest(preview, changed, result_medals={**medals, "result-b": "gold"})
+
+
 def test_excluded_preview_teams_are_omitted_without_requiring_a_result():
     preview, contest = fixture()
     preview["teams"][0]["excluded"] = True
@@ -214,4 +245,43 @@ def test_offline_generator_is_deterministic_and_rejects_wrong_hash(tmp_path, rem
     failed = subprocess.run([*command[:-1], "0" * 64], cwd=root, capture_output=True)
     assert failed.returncode != 0
     assert b"SHA-256 mismatch" in failed.stderr
+    assert output.read_bytes() == first
+
+
+def test_offline_generator_publishes_medals_source_and_explicit_unofficial_result(tmp_path):
+    payload = json.loads((FIXTURES / "contest.srk.json").read_text(encoding="utf-8"))
+    payload["rows"][0]["user"]["official"] = False
+    payload["series"] = [{"rule": {"preset": "ICPC", "options": {
+        "count": {"value": [1, 1, 1]},
+    }}}]
+    raw = json.dumps(payload).encode()
+    source = tmp_path / "contest.srk.json"
+    source.write_bytes(raw)
+    mapping = tmp_path / "unofficial.json"
+    mapping.write_text(json.dumps({"a": "result-a"}), encoding="utf-8")
+    output = tmp_path / "review.json"
+    command = [
+        sys.executable, "scripts/generate_review_data.py", "--srk", str(source),
+        "--preview", str(FIXTURES / "preview.json"), "--contest-id", "actual-one",
+        "--file-id", "fixture", "--file-url", "https://example.test/results.json",
+        "--sha256", hashlib.sha256(raw).hexdigest(), "--output", str(output),
+        "--medals", "--unofficial-results", str(mapping),
+        "--source-url", "https://example.test/board", "--source-title", "Official board",
+    ]
+    subprocess.run(command, check=True, capture_output=True)
+    first = output.read_bytes()
+    contest = json.loads(first)["contests"][0]
+    assert contest["hasMedals"]
+    assert contest["source"]["url"] == "https://example.test/board"
+    assert contest["source"]["title"] == "Official board"
+    assert contest["teams"][0]["resultStatus"] == "unofficial"
+    assert contest["teams"][0]["actualMedal"] is None
+    assert all("actualMedal" in team for team in contest["teams"])
+    assert any(team["actualMedal"] for team in contest["teams"])
+    subprocess.run(command, check=True, capture_output=True)
+    assert output.read_bytes() == first
+    mapping.write_text(json.dumps({"a": "result-b"}), encoding="utf-8")
+    failed = subprocess.run(command, capture_output=True)
+    assert failed.returncode != 0
+    assert b"current unofficial results" in failed.stderr
     assert output.read_bytes() == first

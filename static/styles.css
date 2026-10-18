@@ -217,6 +217,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .review-metric-title { font-size: .8rem; font-weight: 650; }
 .review-metric-coefficient { font-size: 1.45rem; line-height: 1.25; }
 .review-metric-card small { color: var(--muted); font-size: .7rem; }
+.review-medal-accuracy { display: grid; gap: .2rem; border-top: 1px solid var(--line); padding-top: .4rem; font-variant-numeric: tabular-nums; }
 .review-metric-bar { display: block; position: relative; height: 6px; background: #dbe3e8; border-radius: 3px; }
 .review-metric-bar::after { content: ""; position: absolute; left: 50%; top: -2px; height: 10px; width: 1px; background: var(--muted); }
 .review-metric-fill { position: absolute; left: var(--agreement-start); width: var(--agreement-width); height: 100%; background: var(--accent); border-radius: 3px; }
@@ -236,6 +237,7 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-table.review-table { min-width: 100%; --review-column-extra: 0px; }
 .review-table col:nth-child(4) { width: calc(150px + var(--review-column-extra)) !important; }
 .review-table col:nth-child(n+5) { width: calc(110px + var(--review-column-extra)) !important; }
+.review-table col:nth-child(5), .review-table col:nth-child(6) { width: calc(128px + var(--review-column-extra)) !important; }
 .preview-table-shell { height: min(72vh, 820px); }
 .preview-table { --preview-school-width: min(200px, 24cqw); --preview-team-width: min(170px, calc(40cqw - var(--preview-school-width))); width: calc(var(--preview-non-frozen-width) + var(--preview-school-width) + var(--preview-team-width)); table-layout: fixed; }
 .preview-table col:nth-child(1) { width: var(--preview-school-width) !important; }
@@ -264,6 +266,8 @@ input, select { width: 100%; min-height: 2.6rem; padding: .55rem .7rem; border: 
 .preview-ranked-value { display: grid; grid-template-columns: minmax(0, 1fr) 1.9rem; align-items: baseline; gap: .125rem; width: 100%; white-space: nowrap; }
 .preview-ranked-value > :first-child { min-width: 0; justify-self: end; }
 .preview-global-rank { width: 1.9rem; color: var(--muted); font-size: .65rem; font-variant-numeric: tabular-nums; font-weight: 500; text-align: left; }
+.review-table .preview-ranked-value { grid-template-columns: minmax(0, 1fr); }
+.review-table .preview-global-rank { display: none; }
 .preview-rating { font-weight: 700; font-variant-numeric: tabular-nums; }
 .preview-rating-xcpcrating { color: #274c77; }
 .preview-rating-xcpc-elo.rating-orange { color: #ff8c00; }

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261014-70";
+} from "./data.mjs?v=20261018-72";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261014-70";
+} from "./problem-rating.mjs?v=20261018-72";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261014-70";
+} from "./preview.mjs?v=20261018-72";
 
 import {
-  createReviewStore, buildReviewAnalysis, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261014-70";
+  createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
+} from "./review.mjs?v=20261018-72";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -466,7 +466,7 @@ function applySearch({ resetScroll = true, updateUrl = true } = {}) {
     });
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 支队伍`;
   } else {
-    state.filtered = searchCompetitors(state.series.competitors, state.query, state.schools);
+    state.filtered = searchCompetitors(state.index.rankedCompetitors, state.query, state.schools);
     elements.resultCount.textContent = `${state.filtered.length.toLocaleString("zh-CN")} 位参赛者`;
   }
   elements.clearSearchButton.disabled = !state.query
@@ -1086,10 +1086,15 @@ function renderPreviewNavigation() {
 }
 
 function selectLatestContest(contests, requestedId, timeKey) {
+  const day = contest => new Date(Date.parse(contest[timeKey]) + 8 * 3600000).toISOString().slice(0, 10);
+  const priority = contest => /^icpc/i.test(contest.id) ? 0 : /^ccpc/i.test(contest.id) ? 1 : 2;
   return contests.find(contest => contest.id === requestedId)
     ?? contests.reduce((latest, contest) => {
       if (contest.unlisted) return latest;
       if (!latest) return contest;
+      const dateDifference = day(contest).localeCompare(day(latest));
+      if (dateDifference) return dateDifference > 0 ? contest : latest;
+      if (priority(contest) !== priority(latest)) return priority(contest) < priority(latest) ? contest : latest;
       const difference = Date.parse(contest[timeKey]) - Date.parse(latest[timeKey]);
       return difference > 0 || (difference === 0 && contest.id < latest.id) ? contest : latest;
     }, null);
@@ -1114,9 +1119,7 @@ function choosePreview(id, remember = true) {
 }
 
 function renderReviewHeader() {
-  const metricTitle = state.reviewMetric === "power" ? "综合战力"
-    : state.reviewMetric === "medals" ? "奖牌"
-      : state.preview.metricSources.find(s => s.id === state.reviewMetric).title;
+  const metricTitle = reviewMetrics(state.preview).find(s => s.id === state.reviewMetric).title;
   const columns = [["学校", "school"], ["队伍", "name"], ["成员", "members"],
     [metricTitle, "metric"], ["前瞻排名", "previewRank"], ["实际排名", "actualRank"],
     ["名次变化", "change"], ["上涨程度", "growth"]];
@@ -1145,7 +1148,7 @@ function renderReviewHeader() {
   }
   elements.reviewHead.replaceChildren(row);
   const table = elements.reviewHead.closest("table");
-  const widths = [200, 170, 190, 150, 110, 110, 110, 110];
+  const widths = [200, 170, 190, 150, 128, 128, 110, 110];
   table.style.setProperty("--preview-table-width", `${widths.reduce((a, b) => a + b)}px`);
   table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((a, b) => a + b)}px`);
   table.querySelector("colgroup")?.remove();
@@ -1182,7 +1185,9 @@ function renderReviewRows() {
       row.append(node("td", { className: "preview-members-cell", text: memberNames, title: memberNames }));
       const metricValue = state.reviewMetric === "power"
         ? previewPowerControl(team)
-        : state.reviewMetric === "medals"
+        : state.reviewMetric === "onlineRanks"
+          ? previewValueControl(team, team.onlineRanks, null, m => m.onlineRanks, previewOnlineRankNode)
+          : state.reviewMetric === "medals"
           ? previewValueControl(team, team.medals, null, m => m.medals, previewMedalNode)
           : previewValueControl(team, team.ratings[state.reviewMetric], null,
             m => m.ratings[state.reviewMetric],
@@ -1246,6 +1251,14 @@ function renderReviewMetrics(metrics) {
       node("small", { text: `${analysis.rows.length} 队 · 覆盖 ${coverage}` }),
     ]);
     button.dataset.metric = metric.id;
+    if (analysis.medalAccuracy) {
+      const scores = node("span", { className: "review-medal-accuracy", "aria-label": "奖牌预测准确率" });
+      for (const [key, label] of [["gold", "金"], ["silver", "银"], ["bronze", "铜"]]) {
+        const score = analysis.medalAccuracy[key];
+        scores.append(node("small", { text: `${label} ${score.value === null ? "—" : `${(score.value * 100).toFixed(1)}%`} (${score.hits}/${score.predicted})` }));
+      }
+      button.append(scores);
+    }
     return button;
   }));
 }
@@ -1272,7 +1285,7 @@ async function showReview(query = {}, updateUrl = false) {
     "startAt",
   );
   choosePreview(state.reviewContest.previewId, false);
-  const metrics = [{ id: "power", title: "综合战力" }, ...state.preview.metricSources, { id: "medals", title: "奖牌" }];
+  const metrics = reviewMetrics(state.preview);
   const requestedMetric = query.reviewMetric ?? state.reviewMetric;
   state.reviewMetric = metrics.some(m => m.id === requestedMetric) ? requestedMetric : "power";
   state.reviewSort = query.reviewSort ?? state.reviewSort;
@@ -1289,7 +1302,7 @@ async function showReview(query = {}, updateUrl = false) {
   elements.searchInput.placeholder = "输入学校、中文队名或成员姓名";
   renderSchoolControls();
   elements.reviewTitle.textContent = state.reviewContest.title;
-  elements.reviewContestSelect.replaceChildren(...review.contests.map(c => node("option", { value: c.id, text: c.title })));
+  elements.reviewContestSelect.replaceChildren(...sortReviewContests(review.contests).map(c => node("option", { value: c.id, text: c.title })));
   elements.reviewContestSelect.value = state.reviewContest.id;
   renderReviewMetrics(metrics);
   const analysis = state.reviewAnalysis;
@@ -1300,7 +1313,12 @@ async function showReview(query = {}, updateUrl = false) {
   elements.reviewCoverage.textContent = `有效队伍：${analysis.rows.length} / ${analysis.activeCount} 支实际参赛前瞻队伍 · 覆盖率：${analysis.coverage === null ? "—" : `${(analysis.coverage * 100).toFixed(1)}%`}`;
   const removedCount = state.reviewContest.teams.filter(t => t.resultStatus === "removed").length;
   if (removedCount) elements.reviewCoverage.textContent += ` · 官方结果已移除 ${removedCount} 支队伍`;
-  renderSourceLinks(elements.reviewSources, "数据来源：", [state.reviewContest.source, ...state.preview.metricSources]);
+  const unofficialCount = state.reviewContest.teams.filter(t => t.resultStatus === "unofficial").length;
+  if (unofficialCount) elements.reviewCoverage.textContent += ` · 赛后转为打星 ${unofficialCount} 支队伍`;
+  if (analysis.medalAccuracy) elements.reviewCoverage.textContent += "。奖牌预测准确率 = 同档命中数 / 预测该档队数；各指标按有效样本中的实际金银铜数量分档，并列同档。";
+  renderSourceLinks(elements.reviewSources, "数据来源：", [state.reviewContest.source,
+    ...(metrics.some(metric => metric.id === "onlineRanks") ? [{ title: "网络赛排名", url: "./?series=2026-2027" }] : []),
+    ...state.preview.metricSources.filter(source => metrics.some(metric => metric.id === source.id))]);
   renderReviewHeader();
   elements.status.hidden = true;
   elements.participantControls.hidden = false;

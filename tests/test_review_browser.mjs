@@ -1,5 +1,7 @@
 // Optional local Chrome regression: see doc/post-contest-review.md for invocation.
 import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
 
 const debuggerUrl = process.env.REVIEW_BROWSER_URL;
@@ -71,10 +73,12 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       counts: Array.from(el.querySelectorAll('.medal-count'), n => n.getBoundingClientRect().right),
       inside: el.getBoundingClientRect().left >= el.closest('td').getBoundingClientRect().left
         && el.getBoundingClientRect().right <= el.closest('td').getBoundingClientRect().right,
+      bounds: [el.getBoundingClientRect().left, el.getBoundingClientRect().right,
+        el.closest('td').getBoundingClientRect().left, el.closest('td').getBoundingClientRect().right],
     }))`);
     assert.ok(rows.length > 1, "check multiple medal rows");
     for (const row of rows) {
-      assert.ok(row.inside, "medals must fit their table cell");
+      assert.ok(row.inside, `medals must fit their table cell: ${JSON.stringify(row.bounds)}`);
       for (let medal = 0; medal < 3; medal++) {
         assert.ok(Math.abs(row.icons[medal] - rows[0].icons[medal]) < .5, "medal icons must align");
         assert.ok(Math.abs(row.counts[medal] - rows[0].counts[medal]) < .5, "medal counts must align");
@@ -87,7 +91,7 @@ test("changing review metrics preserves page and table scroll, clamping only at 
     await send("Network.setCacheDisabled", { cacheDisabled: true });
     for (const width of [1920, 390]) {
       await send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });
-      await send("Page.navigate", { url: new URL("?series=2026-2027&view=review", siteUrl).href });
+      await send("Page.navigate", { url: new URL("?series=2026-2027&view=review&reviewContest=icpc2026preliminary-1&previewContest=icpc-2026-preliminary-1", siteUrl).href });
       await waitFor("document.querySelectorAll('.review-metric-card').length === 6 && !document.querySelector('#review-view').hidden");
       assert.equal(await evaluate("document.querySelector('.review-summary h3 small').textContent"), "Spearman ρ");
       assert.equal(await evaluate("document.querySelector('[data-metric=\"power\"] strong').textContent"), "0.736");
@@ -170,6 +174,45 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       })()`);
       await settle();
       assert.deepEqual(await powerPresentation("#preview-body"), reviewPower, "review and preview must share fonts and original radar data");
+    }
+    for (const width of [1440, 390]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
+      await send("Page.navigate", { url: new URL("?series=2026-2027&view=review", siteUrl).href });
+      await waitFor("document.querySelectorAll('.review-metric-card').length === 6 && !document.querySelector('#review-view').hidden");
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026xi_an");
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 5);
+      assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.review-metric-card'), n => n.dataset.metric).sort()"), ["currentSeason", "onlineRanks", "power", "previousSeason", "xcpcElo", "xcpcrating"]);
+      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-2).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun"]);
+      assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 65\.9% \(27\/41\).*银 52\.4% \(43\/82\).*铜 51\.6% \(63\/122\)/);
+      assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026xi_an");
+      assert.ok(!(await evaluate("document.querySelector('#review-sources').textContent")).includes("CPC Finder"));
+      for (const id of ["ccpc2026changchun", "icpc2026xi_an"]) {
+        await evaluate(`(() => { const select = document.querySelector('#review-contest-select'); select.value = '${id}'; select.dispatchEvent(new Event('change')); })()`);
+        await waitFor(`new URL(location.href).searchParams.get('reviewContest') === '${id}'`);
+        await settle();
+        const cards = await evaluate(`Array.from(document.querySelectorAll('.review-metric-card'), card => ({
+          count: card.querySelectorAll('.review-medal-accuracy small').length,
+          fits: Array.from(card.querySelectorAll('.review-medal-accuracy small')).every(n => n.getBoundingClientRect().right <= card.getBoundingClientRect().right),
+        }))`);
+        assert.ok(cards.every(c => c.count === 3 && c.fits));
+        await evaluate("document.querySelector('[data-metric=onlineRanks]').click()");
+        await waitFor("document.querySelector('[data-metric=onlineRanks]').getAttribute('aria-pressed') === 'true'");
+        assert.match(await evaluate("document.querySelector('#review-head').textContent"), /网络赛排名/);
+        const summary = await evaluate("document.querySelector('#review-coverage').textContent");
+        assert.match(summary, /同档命中数/);
+        if (id === "icpc2026xi_an") assert.match(summary, /赛后转为打星 1 支队伍/);
+        const before = await evaluate("document.querySelector('[data-metric=onlineRanks] .review-medal-accuracy').textContent");
+        await evaluate(`(() => { const input = document.querySelector('#search-input'); input.value = '北京'; input.dispatchEvent(new Event('input')); })()`);
+        await settle();
+        assert.equal(await evaluate("document.querySelector('[data-metric=onlineRanks] .review-medal-accuracy').textContent"), before);
+        await evaluate(`(() => { const input = document.querySelector('#search-input'); input.value = ''; input.dispatchEvent(new Event('input')); document.querySelector('[data-metric=power]').click(); document.querySelector('#review-view').scrollIntoView(); })()`);
+        await settle();
+        if (process.env.REVIEW_SCREENSHOT_DIR) {
+          await mkdir(process.env.REVIEW_SCREENSHOT_DIR, { recursive: true });
+          const shot = await send("Page.captureScreenshot", { format: "png" });
+          await writeFile(path.join(process.env.REVIEW_SCREENSHOT_DIR, `${id}-${width}.png`), Buffer.from(shot.data, "base64"));
+        }
+      }
     }
     assert.deepEqual(errors, []);
   } finally {

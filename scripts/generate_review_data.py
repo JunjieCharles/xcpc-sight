@@ -9,6 +9,7 @@ from pathlib import Path
 
 import httpx
 from generate_static_data import write_json_atomic
+from preview_history import _history_medals
 
 from core import ContestProvenance, DefaultNormalizer, load_school_aliases, normalize_srk_contest
 from core.review import project_review_contest
@@ -28,6 +29,11 @@ def main() -> None:
     parser.add_argument("--file-id", default=FILE_ID)
     parser.add_argument("--file-url", default=FILE_URL)
     parser.add_argument("--sha256", default=SHA256)
+    parser.add_argument("--source-url", help="result source page (default: RankLand)")
+    parser.add_argument("--source-title", default="RankLand")
+    parser.add_argument("--medals", action="store_true", help="publish SRK medal classifications")
+    parser.add_argument("--unofficial-results", type=Path,
+                        help="JSON mapping preview IDs to current unofficial result IDs")
     parser.add_argument(
         "--school-aliases", type=Path,
         default=Path(__file__).resolve().parents[1] / "config/school-aliases.json",
@@ -67,7 +73,15 @@ def main() -> None:
             json.loads(args.removed_results.read_text(encoding="utf-8"))
             if args.removed_results else None
         ),
+        unofficial_results=(json.loads(args.unofficial_results.read_text(encoding="utf-8"))
+                            if args.unofficial_results else None),
+        result_medals=(
+            _history_medals(json.loads(raw), contest.teams, args.contest_id + ".srk.json")
+            if args.medals else None
+        ),
     )
+    if args.source_url:
+        projected["source"].update(title=args.source_title, url=args.source_url)
     document = {"schemaVersion": 1, "seriesId": preview["seriesId"], "contests": []}
     if args.output.exists():
         document = json.loads(args.output.read_text(encoding="utf-8"))

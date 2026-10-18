@@ -130,7 +130,7 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
 
 @pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 418),
                                              ("ccpc-2026-changchun", 336)])
-def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count):
+def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count, tmp_path):
     import json
     from pathlib import Path
 
@@ -142,10 +142,26 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
     roster = json.loads((root / f"static/data/rosters/{contest_id}.json").read_text("utf-8"))
     normalizer = load_normalizer(root / "config/school-aliases.json")
     series = json.loads((root / "static/data/series/2026-2027.json").read_text("utf-8"))
+    # Replay only pre-contest histories after the season adds these regional results.
+    from datetime import datetime
+
+    cutoff = datetime.fromisoformat(preview["sortAt"])
+    eligible = {i for i, c in enumerate(series["contests"])
+                if datetime.fromisoformat(c["startAt"]) < cutoff}
+    prior = []
+    for person in series["competitors"]:
+        history = [p for p in person["participations"] if p["contestIndex"] in eligible]
+        if history:
+            prior.append({**person, "finalRating": history[-1]["after"]})
+    current_path = tmp_path / "pre-contest.json"
+    current_path.write_text(json.dumps({"competitors": prior,
+                                      "contests": [c for i, c in enumerate(series["contests"])
+                                                   if i in eligible]}), encoding="utf-8")
     indexes = {
-        metric: PersonIndex(load_previous_series(root / f"static/data/series/{year}.json")[0],
+        metric: PersonIndex(load_previous_series(path)[0],
                             normalizer)
-        for metric, year in [("currentSeason", "2026-2027"), ("previousSeason", "2025-2026")]
+        for metric, path in [("currentSeason", current_path),
+                             ("previousSeason", root / "static/data/series/2025-2026.json")]
     }
     ranks = online_rank_index(series, normalizer, preview["sortAt"])
     projected = deepcopy(preview["teams"])

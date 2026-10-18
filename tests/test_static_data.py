@@ -203,11 +203,18 @@ def test_published_index_matches_published_series_documents() -> None:
         for entry in index["series"]
         if "reviewPath" in entry
     )
-    assert index == project_static_data_index(
+    projected = project_static_data_index(
         publications,
         preview_publications=preview_publications,
         review_publications=review_publications,
     )
+    # Independent regional summaries are attached by the file publisher.
+    for entry in projected["series"]:
+        source = data_dir / "regional-cutoffs" / f"{entry['id']}.json"
+        if source.is_file():
+            assert json.loads(source.read_text(encoding="utf-8"))["seriesId"] == entry["id"]
+            entry["regionalCutoffsPath"] = f"regional-cutoffs/{source.name}"
+    assert index == projected
 
 
 def test_index_and_series_reject_empty_or_duplicate_publications() -> None:
