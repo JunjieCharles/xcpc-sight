@@ -111,7 +111,7 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '368']);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-cutoff-table thead th').length`), 8);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
-        ['icpc-2026-xian', 'ccpc-2026-changchun']);
+        ['icpc-2026-xian', 'ccpc-2026-changchun', 'icpc-2026-chengdu']);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr'), el => [el.cells[1].textContent, el.cells[2].textContent])`),
         [['2026-10-18', '西北工业大学'], ['2026-10-18', '东北师范大学'],
           ['2026-10-25', '电子科技大学'], ['2026-11-01', '武汉大学']]);
@@ -121,7 +121,26 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       assert.equal(await evaluate('location.href'), beforeSummaryClick);
       assert.equal(await evaluate(current('ccpc-2026-changchun')), true);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-summary-only'), row => Array.from(row.querySelectorAll('.preview-cutoff-value'), el => el.textContent))`),
-        [['4', '76', '268', '599'], ['13', '113', '279', '673']]);
+        [['13', '113', '279', '673']]);
+      await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-chengdu"] td').click()`);
+      await waitFor(current('icpc-2026-chengdu'));
+      assert.equal(await evaluate(`(() => {
+        const headers = Array.from(document.querySelectorAll('#preview-head th'));
+        const index = headers.findIndex(th => th.textContent.includes('上赛季 Rating'));
+        return index >= 0 && Array.from(document.querySelectorAll('#preview-body tr'))
+          .every(row => !/preview-medal-/.test(row.cells[index]?.className || ''));
+      })()`), true);
+      assert.equal(await evaluate(`document.querySelector('.preview-power-radar').getAttribute('aria-label').startsWith('4维')`), true);
+      assert.equal(await evaluate(`document.querySelector('#preview-team-source a').getAttribute('href')`), './sources/icpc-2026-chengdu-manual.pdf');
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="icpc-2026-chengdu"] .preview-cutoff-value'), el => el.textContent)`), ['4', '76', '268', '599']);
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        await mkdir(process.env.PREVIEW_SCREENSHOT_DIR, { recursive: true });
+        await evaluate(`document.querySelector('#preview-team-source').scrollIntoView({block: 'start'})`);
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/chengdu-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+      }
+      await evaluate(`document.querySelector('tr[data-preview-id="ccpc-2026-changchun"] td').click()`);
+      await waitFor(current('ccpc-2026-changchun'));
       assert.equal(await evaluate(`document.querySelector('[data-preview-id="icpc-2026-xian"]') !== null`), true);
       assert.equal(await evaluate(`(() => {
         const online = document.querySelector('#preview-online-navigation').getBoundingClientRect();

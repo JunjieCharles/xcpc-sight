@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261018-72";
+} from "./data.mjs?v=20261019-74";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261018-72";
+} from "./problem-rating.mjs?v=20261019-74";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261018-72";
+} from "./preview.mjs?v=20261019-74";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261018-72";
+} from "./review.mjs?v=20261019-74";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -816,8 +816,8 @@ function previewColumnSources(sources) {
   return ordered;
 }
 
-function previewRankMedalClass(metric, rank, teamCount, excluded = false, stage = "preliminary") {
-  if (stage !== "regional" || excluded || metric === "cpcfinder" || metric === "medals"
+function previewRankMedalClass(metric, rank, teamCount, excluded = false, stage = "preliminary", powerMetrics = []) {
+  if (stage !== "regional" || excluded || (metric !== "power" && !powerMetrics.includes(metric))
     || !Number.isInteger(rank) || rank < 1 || rank > teamCount) return "";
   const goldEnd = Math.ceil(teamCount / 10);
   const silverEnd = goldEnd + Math.ceil(teamCount * 2 / 10);
@@ -886,12 +886,12 @@ function renderPreviewRows() {
         title: memberNames,
       }, memberChildren));
       row.append(node("td", { className: "preview-metric-cell preview-power-cell"
-        + previewRankMedalClass("power", state.previewPower.get(team.id).rank, teamCount, team.excluded, state.preview.contestStage) }, [
+        + previewRankMedalClass("power", state.previewPower.get(team.id).rank, teamCount, team.excluded, state.preview.contestStage, previewPowerMetricIds(state.preview)) }, [
         previewPowerControl(team),
       ]));
       if (state.preview.onlineContests) {
         row.append(node("td", { className: "preview-metric-cell preview-online-ranks"
-          + previewRankMedalClass("onlineRanks", state.previewRanks.get(team.id).onlineRanks, teamCount, team.excluded, state.preview.contestStage) }, [
+          + previewRankMedalClass("onlineRanks", state.previewRanks.get(team.id).onlineRanks, teamCount, team.excluded, state.preview.contestStage, previewPowerMetricIds(state.preview)) }, [
           previewValueControl(team, team.onlineRanks, state.previewRanks.get(team.id).onlineRanks,
             member => member.onlineRanks, previewOnlineRankNode),
         ]));
@@ -901,7 +901,7 @@ function renderPreviewRows() {
         const rank = state.previewRanks.get(team.id).ratings[source.id];
         row.append(node("td", {
           className: `preview-metric-cell${value === null ? " preview-missing" : ""}`
-            + previewRankMedalClass(source.id, rank, teamCount, team.excluded, state.preview.contestStage),
+            + previewRankMedalClass(source.id, rank, teamCount, team.excluded, state.preview.contestStage, previewPowerMetricIds(state.preview)),
         }, [previewValueControl(
           team,
           value,

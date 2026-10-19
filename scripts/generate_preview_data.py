@@ -28,6 +28,16 @@ METRIC_SOURCES = (
     ("cpcfinder", "CPC Finder", "https://cpcfinder.com/"),
 )
 SPECIAL_ACHIEVEMENTS = {
+    "杜瑜皓": [
+        {"competition": "noi", "year": 2011, "medal": "silver",
+         "rank": 93, "score": 415, "maxScore": 705},
+        {"competition": "noi", "year": 2012, "medal": "silver",
+         "rank": 53, "score": 429, "maxScore": 705},
+        {"competition": "noi", "year": 2014, "medal": "gold",
+         "rank": 4, "score": 640, "maxScore": 705},
+        {"competition": "ioi", "year": 2015, "medal": "gold",
+         "rank": 4, "score": 551, "maxScore": 600},
+    ],
     "沈吉滪": [
         {"competition": "ioi", "year": 2024, "medal": "participant"},
     ],
@@ -124,6 +134,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--current-series", type=Path)
     parser.add_argument("--online-series", type=Path,
                         help="Local series containing the three preliminary results")
+    parser.add_argument("--exclude-previous-season-power", action="store_true",
+                        help="Keep previous-season ratings visible but exclude them from power")
     parser.add_argument("--cpcfinder-pages", type=Path, required=True)
     parser.add_argument(
         "--school-aliases", type=Path,
@@ -475,6 +487,9 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
             if contest["id"] in ONLINE_CONTEST_IDS
         )
     member_count = sum(len(team["members"]) for team in teams)
+    if getattr(args, "exclude_previous_season_power", False):
+        metrics = online_metadata.get("powerMetrics", [*indexes, "medals"])
+        online_metadata["powerMetrics"] = [key for key in metrics if key != "previousSeason"]
     return {
         "schemaVersion": 1,
         "ratingAggregation": "normalized-lse",

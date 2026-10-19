@@ -1,5 +1,27 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-19 成都完整前瞻与四维战力
+
+成都页面的“名单来源”使用官方参赛手册 PDF，原文件随站点发布于 `static/sources/icpc-2026-chengdu-manual.pdf`，来源标题为官方手册文件名。名单 JSON 仅供离线重建使用。下文重建命令已使用 PDF URL；生成后需将 `teamSource.title` 设置为该 PDF 的官方文件名，与西安、长春的发布流程一致。
+
+同日按用户提供的《“华为杯”第51届ICPC国际大学生程序设计竞赛亚洲区域赛（成都）参赛手册》最终名单（PDF 第 17–24 页）逐队核对全部 328 队：学校、成员及正式／打星资格一致，忽略排版空格与换行后仅香港城市大学队名不同。以官方序号 249（座位 A6）为准，将身份摘录及完整前瞻中的队名统一修正为“城市大學是一所歷史悠久學術實力雄厚辦學特色鮮明的大學”。原工作簿来源字段保留作为初始导入记录；本次官方校正以此段记录，后续重建使用已修正的名单 JSON。成员、评分、队伍 ID 和资格不变。
+
+同日按用户提供的 OIerDb 摘录，定向补充成都队员杜瑜皓的四项获奖记录：NOI 2011 银牌（415/705，#93）、NOI 2012 银牌（429/705，#53）、NOI 2014 金牌（640/705，#4）、IOI 2015 金牌（551/600，#4）。按用户要求排除 NOI 2013 D 类，不收录 NOIP、CTSC、年龄或能力等级。记录固化于生成器的人工补充表，重建可保留；只更新成都该成员的 `achievements`，不改变评分、CPC Finder 奖牌总数、战力或其他场次。沿用原有 achievement 数据契约。测试覆盖四项数据、排除 D 类、人工补充加载及快照一致。
+
+成都从仅牌线摘要升级为可点击的完整前瞻 `icpc-2026-chengdu`，通过站点索引与静态生成器登记。名单沿用 10 月 16 日核验的 `成都最终强度表_20261012.xlsx`（工作表“成都最终强度表”，SHA-256 `565da30b119eb38d3c07ada1909cfed9817c0622645c695a35e51a679a680b90`），在内存中把“队伍编号”映射为“队伍 ID”后使用现有解析器，只提取身份和资格。发布可离线重建的 `static/data/rosters/icpc-2026-chengdu.json`，共 328 队、982 个成员条目，正式 319 队、打星 9 队；名单来源链接指向官方参赛手册 PDF，身份摘录仅供重建使用，不发布原工作簿内评分和公式。比赛时间与承办学校沿用下文官方指南已核验值：2026-10-25 09:00、电子科技大学。
+
+按用户要求重新下载 XCPC Rating 线上正式榜和 XCPC Elo：前者版本 `2026-10-18T15:23:21.585592+00:00`，632 页共 63187 条记录，下载完成后再次核对元信息一致；后者版本 `2026-10-18T15:27:06.373Z`，67643 名上游选手。下载来源分别为 `https://hei-maom.github.io/xcpcrating/data/` 下的 `meta.json`、`leaderboards/official/meta.json`、`leaderboards/official/pages/{页码}.json`，以及 `https://zzzzzzyt.github.io/xcpc-elo/data.js`。两项均匹配 941 个成员条目。沿用既有学校及姓名规范化、重复身份最高值、缺失为 null、队伍归一化 LSE 规则。本赛季 Rating 使用已发布的五场比赛（截至西安、长春），匹配 913 个成员条目；上赛季匹配 523 个，CPC Finder 匹配 451 个并保留 10 月 10 日缓存。NOI/IOI 与上赛季历史使用既有本地缓存。
+
+生成器新增可选 `--exclude-previous-season-power`：保留上赛季 Rating 列、成员值和历史战绩，只从 `powerMetrics` 移除 `previousSeason`；默认行为不变。成都明确使用 `xcpcrating / xcpcElo / currentSeason / onlineRanks` 四维，雷达图相应为四边形；CPC Finder 与奖牌沿用区域赛规则不参与战力。未修改旧前瞻、旧复盘、个人赛季数据或其他站名单。成都原牌线摘要保留，导航按同 ID 的完整前瞻优先去重；捧杯/金/银/铜仍为 **4 / 76 / 268 / 599**。
+
+离线重建（外部缓存需先按上述来源与版本下载；全新检出不假定存在缓存）：
+
+```bash
+python -m scripts.generate_preview_data --teams static/data/rosters/icpc-2026-chengdu.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261019/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261019/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-19 --preview-id icpc-2026-chengdu --contest-stage regional --host-school "电子科技大学" --preview-title "2026 ICPC 亚洲区域赛（成都）" --team-source-url ./sources/icpc-2026-chengdu-manual.pdf --sort-at 2026-10-25T09:00:00+08:00 --output static/data/previews/icpc-2026-chengdu.json
+```
+
+回归覆盖身份摘录与完整名单逐项一致、本赛季/上赛季分数和网络赛排名重算、静态复制、来源时间与匹配人数、四维计数及打星无排名、任意修改上赛季评分不影响战力、牌线一致与摘要去重。浏览器回归增加桌面/手机成都入口、四维雷达及来源链接检查。公开 Python 包 API 无变化。
+
 ## 2026-10-18 西安、长春赛后 Rating
 
 以 [srk-collection PR #75](https://github.com/algoux/srk-collection/pull/75) 的合并提交 `4358d90170753e6d872cc544b47c318de5145ffc` 为固定来源，在 9 月 23 日校正过的三场网络赛后计入 CCPC 长春、ICPC 西安。沿用既有赛季排序规则，同一天 CCPC 在 ICPC 之前；均从空状态重算，默认身份规范化、同场重复身份取最好成绩、正式且有提交才计分。
@@ -151,7 +173,7 @@ python -m scripts.generate_preview_data --teams static/data/rosters/ccpc-2026-ch
 
 前瞻表的 Rating 列展示顺序为 XCPC Rating、XCPC Elo、本赛季 Rating、上赛季 Rating、CPC Finder；未提供本赛季评分的旧场次保留原顺序。表头与数据单元格共用展示排序，不修改快照来源顺序、评分或综合战力。回归覆盖双赛季、单赛季和输入不变。
 
-仅区域赛正赛前瞻中的综合战力、网络赛排名和各项 Rating（除 CPC Finder）单元格按该列全场队伍名次标注浅金、浅银、浅铜底色。基数为未筛选的正式队伍总数 N，各档名额分别为 ceil(N/10)、ceil(2N/10)、ceil(3N/10)，累计划分排名区间；西安 403 队对应 #1–41、#42–122、#123–243。按竞赛排名处理并列，同名次同色，因此边界并列可能增加实际着色队数。缺失名次和打星不标色，CPC Finder、奖牌及学校名次不标色。排序、筛选和悬浮不改变底色，网络赛列使用当前名单内的综合名次，不使用三场原始名次分别着色。这仅是前瞻档位提示，并非正式获奖结果。通过可选 `contestStage: "regional"` 显式启用标色；省略或 `"preliminary"` 不标色，三场网络赛均不标色。生成器 `--contest-stage regional` 用于区域赛，默认 preliminary；未知阶段或显式 null 拒绝。测试覆盖真实三场网络赛均无标色、西安保留标色、阶段校验、独立向上取整、各档边界、并列、缺失、打星、排除列和小规模名单。
+仅区域赛正赛前瞻中的综合战力及该场 `previewPowerMetricIds` 返回的指标单元格按该列全场队伍名次标注浅金、浅银、浅铜底色。成都上赛季 Rating 不参与战力，不加底色；西安、长春该指标仍参与战力，保留底色。评分文字的等级色不变。基数为未筛选的正式队伍总数 N，各档名额分别为 ceil(N/10)、ceil(2N/10)、ceil(3N/10)，累计划分排名区间；西安 403 队对应 #1–41、#42–122、#123–243。按竞赛排名处理并列，同名次同色，因此边界并列可能增加实际着色队数。缺失名次和打星不标色，学校名次不标色。排序、筛选和悬浮不改变底色，网络赛列使用当前名单内的综合名次，不使用三场原始名次分别着色。这仅是前瞻档位提示，并非正式获奖结果。通过可选 `contestStage: "regional"` 显式启用标色；省略或 `"preliminary"` 不标色，三场网络赛均不标色。生成器 `--contest-stage regional` 用于区域赛，默认 preliminary；未知阶段或显式 null 拒绝。测试覆盖成都排除上赛季列和四项参与指标保留底色、真实三场网络赛均无标色、西安保留标色、阶段校验、独立向上取整、各档边界、并列、缺失、打星、排除列和小规模名单。
 
 - 一个“网络赛排名”列按 ICPC1 / ICPC2 / CCPC 展示三场排名；悬浮或聚焦显示每名成员的三场记录。
 - 三场排名使用各 4ch 的固定数字槽，数字与缺失标记右对齐，斜线单独占固定居中槽；内部名次沿用独立排名槽并增加间距。副标题居中。队员明细使用相同网格，避免不同位数导致错位；渲染回归覆盖一位、四位及缺失值。排序、数据契约不变。

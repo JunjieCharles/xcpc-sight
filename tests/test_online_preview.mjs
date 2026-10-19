@@ -14,6 +14,34 @@ function team(id, ranks, extra = {}) {
 }
 const dimensions = ['currentSeason', 'onlineRanks'];
 
+test('Chengdu publishes updated ratings and four-dimensional power independent of last season', async () => {
+  const preview = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-chengdu.json', import.meta.url), 'utf8')));
+  assert.equal(preview.teams.length, 328);
+  assert.equal(preview.teams.filter(t => !t.excluded).length, 319);
+  assert.equal(preview.matchingSummary.members, 982);
+  assert.equal(preview.sourceSnapshots.xcpcrating, '2026-10-18T15:23:21.585592+00:00');
+  assert.equal(preview.sourceSnapshots.xcpcElo, '2026-10-18T15:27:06.373Z');
+  assert.deepEqual(previewPowerMetricIds(preview), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
+  assert.deepEqual(buildPreviewCutoffs(preview), { cup: 4, gold: 76, silver: 268, bronze: 599 });
+  const power = buildPreviewPower(preview.teams, undefined, preview.powerMetrics);
+  const changed = structuredClone(preview.teams);
+  changed.forEach((team, i) => { team.ratings.previousSeason = i * 100000; });
+  assert.deepEqual(buildPreviewPower(changed, undefined, preview.powerMetrics), power);
+  for (const team of preview.teams) {
+    assert.equal(power.get(team.id).counts.length, 4);
+    if (team.excluded) assert.equal(power.get(team.id).rank, null);
+  }
+  assert.ok(preview.metricSources.some(s => s.id === 'previousSeason'));
+  for (const source of preview.metricSources) {
+    assert.equal(preview.matchingSummary[source.id], preview.teams.flatMap(t => t.members)
+      .filter(m => m.ratings[source.id] !== null).length);
+  }
+  const summaries = validateRegionalCutoffs(JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8')), '2026-2027');
+  const group = previewNavigationGroups([preview], preview.id, summaries.contests);
+  assert.equal(group.regional.filter(p => p.id === preview.id).length, 1);
+  assert.equal(group.regional.find(p => p.id === preview.id).summaryOnly, undefined);
+});
+
 test('preview columns show current season before previous season without mutating sources', async () => {
   const source = await readFile(new URL('../static/js/app.mjs', import.meta.url), 'utf8');
   const order = runInNewContext(
@@ -190,7 +218,7 @@ test('preview medal colors use independently rounded quotas and global competiti
   const classify = runInNewContext(
     source.match(/function previewRankMedalClass\([^]*?\n\}/)[0] + '\npreviewRankMedalClass',
   );
-  const color = (metric, rank, count, excluded = false) => classify(metric, rank, count, excluded, 'regional');
+  const color = (metric, rank, count, excluded = false) => classify(metric, rank, count, excluded, 'regional', ['onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']);
   for (const metric of ['power', 'onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']) {
     for (const [rank, expected] of [[1, 'gold'], [41, 'gold'], [42, 'silver'], [122, 'silver'], [123, 'bronze'], [243, 'bronze'], [244, null], [403, null]]) {
       assert.equal(color(metric, rank, 403), expected ? ' preview-medal-' + expected : '');
@@ -210,12 +238,15 @@ test('preview medal colors use independently rounded quotas and global competiti
   assert.match(source, /state\.preview\.teams\.filter\(team => !team\.excluded\)\.length/);
   assert.match(source, /previewRankMedalClass\("power", state\.previewPower\.get\(team\.id\)\.rank/);
   assert.match(source, /previewRankMedalClass\("onlineRanks", state\.previewRanks\.get\(team\.id\)\.onlineRanks/);
-  assert.match(source, /previewRankMedalClass\(source\.id, rank, teamCount, team\.excluded, state\.preview\.contestStage\)/);
+  assert.match(source, /previewRankMedalClass\(source\.id, rank, teamCount, team\.excluded, state\.preview\.contestStage, previewPowerMetricIds\(state\.preview\)\)/);
   for (const stage of [undefined, 'preliminary']) {
     for (const metric of ['power', 'onlineRanks', 'xcpcrating', 'xcpcElo', 'currentSeason', 'previousSeason']) {
       for (const rank of [1, 42, 123]) assert.equal(classify(metric, rank, 403, false, stage), '');
     }
   }
+  const chengdu = JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-chengdu.json', import.meta.url), 'utf8'));
+  assert.equal(classify('previousSeason', 1, 319, false, 'regional', previewPowerMetricIds(chengdu)), '');
+  for (const metric of previewPowerMetricIds(chengdu)) assert.equal(classify(metric, 1, 319, false, 'regional', previewPowerMetricIds(chengdu)), ' preview-medal-gold');
   const xianPreview = validatePreview(await xian());
   assert.equal(xianPreview.contestStage, 'regional');
   assert.equal(classify('power', 1, 403, false, xianPreview.contestStage), ' preview-medal-gold');

@@ -129,7 +129,8 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
 
 
 @pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 418),
-                                             ("ccpc-2026-changchun", 336)])
+                                             ("ccpc-2026-changchun", 336),
+                                             ("icpc-2026-chengdu", 328)])
 def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count, tmp_path):
     import json
     from pathlib import Path
@@ -208,6 +209,23 @@ def test_xian_manual_starred_teams_and_two_member_team():
             member["ratings"][key] is not None
             for team in preview["teams"] for member in team["members"]
         )
+
+
+def test_chengdu_official_source_is_original_pdf():
+    import hashlib
+    import json
+    from pathlib import Path
+
+    static = Path("static")
+    preview = json.loads((static / "data/previews/icpc-2026-chengdu.json").read_text("utf-8"))
+    assert preview["teamSource"]["url"] == "./sources/icpc-2026-chengdu-manual.pdf"
+    assert preview["teamSource"]["title"] == (
+        "“华为杯”第51届ICPC国际大学生程序设计竞赛亚洲区域赛（成都）参赛手册.pdf"
+    )
+    pdf = static / preview["teamSource"]["url"].removeprefix("./")
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == (
+        "10526a069e7b69a1abd6f16fbb53a948325bb7e8f7f6b2df9526ee5d8dc0f257"
+    )
 
 
 def test_published_official_sources_match_reviewed_files():
@@ -296,5 +314,7 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     index = json.loads((tmp_path / "index.json").read_text("utf-8"))
     entry = next(e for e in index["series"] if e["id"] == "2026-2027")
     assert entry["regionalCutoffsPath"] == "regional-cutoffs/2026-2027.json"
-    assert not (tmp_path / "previews/icpc-2026-chengdu.json").exists()
+    assert (tmp_path / "previews/icpc-2026-chengdu.json").is_file()
+    roster = json.loads((tmp_path / "rosters/icpc-2026-chengdu.json").read_text("utf-8"))
+    assert len(roster["teams"]) == 328
     assert not (tmp_path / "previews/icpc-2026-wuhan.json").exists()

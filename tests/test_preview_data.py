@@ -54,6 +54,22 @@ def test_competition_ranks_preserve_ties_and_skip_following_places() -> None:
     assert competition_ranks([600, 580, 600, 550, 580]) == [1, 3, 1, 5, 3]
 
 
+def test_du_yuhao_user_provided_noi_ioi_achievements(tmp_path):
+    (tmp_path / "index.json").write_text('{"years": []}', encoding="utf-8")
+    awards = generator.load_achievements(tmp_path, tmp_path).match("杜瑜皓")
+    assert [(a["competition"], a["year"], a["medal"], a["rank"], a["score"])
+            for a in awards] == [
+        ("noi", 2011, "silver", 93, 415), ("noi", 2012, "silver", 53, 429),
+        ("noi", 2014, "gold", 4, 640),
+        ("ioi", 2015, "gold", 4, 551),
+    ]
+    assert all(a["year"] != 2013 for a in awards)
+    document = generator.load_json(Path("static/data/previews/icpc-2026-chengdu.json"))
+    members = [m for t in document["teams"] for m in t["members"] if m["name"] == "杜瑜皓"]
+    assert len(members) == 1
+    assert members[0]["achievements"] == awards
+
+
 def test_achievement_matching_uses_only_name_and_orders_noi_before_ioi() -> None:
     records = [
         {"name": "张三", "competition": "ioi", "year": 2025, "medal": "silver"},
@@ -245,6 +261,13 @@ def test_second_preview_metadata_and_cached_source_date(
         generator.build_document(args)
     args.end_at = None
 
+    baseline = generator.build_document(args)
+    args.exclude_previous_season_power = True
+    filtered = generator.build_document(args)
+    assert "previousSeason" not in filtered.pop("powerMetrics")
+    assert filtered == baseline
+    args.exclude_previous_season_power = False
+
     assert document["ratingAggregation"] == "normalized-lse"
     assert document["id"] == "icpc-2026-preliminary-2"
     assert document["title"] == "第二场"
@@ -299,9 +322,9 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
-        "icpc-2026-xian", "ccpc-2026-changchun",
+        "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 418, 336]
+    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 418, 336, 328]
     for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]
