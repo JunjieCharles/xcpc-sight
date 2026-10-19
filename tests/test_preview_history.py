@@ -8,6 +8,25 @@ from core.models import TeamResult
 from scripts.preview_history import _history_medals, build_history_index, team_history
 
 
+def test_current_history_filters_future_and_other_seasons(tmp_path, monkeypatch):
+    from scripts import preview_history
+
+    captured = []
+    monkeypatch.setattr(preview_history, "build_history_index",
+                        lambda series, root, normalizer: captured.extend(series["contests"]) or {})
+    series = {"id": "2026-2027", "contests": [
+        {"id": "past", "startAt": "2026-10-18T09:00:00+08:00"},
+        {"id": "same", "startAt": "2026-10-25T01:00:00+00:00"},
+        {"id": "future", "startAt": "2026-11-01T09:00:00+08:00"},
+    ]}
+    preview_history.current_history_index(series, tmp_path, DefaultNormalizer(),
+                                          "2026-2027", "2026-10-25T09:00:00+08:00")
+    assert [contest["id"] for contest in captured] == ["past"]
+    with pytest.raises(ValueError, match="current season"):
+        preview_history.current_history_index(series, tmp_path, DefaultNormalizer(),
+                                              "2025-2026", "2026-10-25T09:00:00+08:00")
+
+
 def medal_teams():
     return tuple(TeamResult(str(i), str(i), "school", (), i + 1,
                             20 - i if i < 10 else 0, 100 + i, has_activity=i < 10)

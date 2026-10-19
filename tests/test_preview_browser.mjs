@@ -124,6 +124,16 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
         [['13', '113', '279', '673']]);
       await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-chengdu"] td').click()`);
       await waitFor(current('icpc-2026-chengdu'));
+      assert.deepEqual(await evaluate(`Array.from(document.querySelector('.preview-history-tooltip').querySelectorAll('strong'), el => el.textContent)`), ['本赛季比赛记录', '上赛季比赛记录']);
+      await evaluate(`document.querySelector('#preview-team-source').scrollIntoView({block: 'start'}); new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
+      await evaluate(`Array.from(document.querySelectorAll('.preview-team-identity')).find(el => el.querySelector('.preview-history-tooltip strong').nextElementSibling.classList.contains('preview-history-row')).dispatchEvent(new MouseEvent('mouseenter'))`);
+      await waitFor(`document.querySelector('.preview-history-tooltip.preview-tooltip-visible') !== null`);
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        await mkdir(process.env.PREVIEW_SCREENSHOT_DIR, { recursive: true });
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/current-history-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+      }
+      await evaluate(`document.querySelectorAll('.preview-team-identity').forEach(el => el.dispatchEvent(new MouseEvent('mouseleave'))); document.activeElement.blur()`);
       assert.equal(await evaluate(`(() => {
         const headers = Array.from(document.querySelectorAll('#preview-head th'));
         const index = headers.findIndex(th => th.textContent.includes('上赛季 Rating'));

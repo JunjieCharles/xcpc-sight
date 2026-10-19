@@ -497,7 +497,7 @@ test("history tooltip omits the member list and aligns ranks in shared columns",
   ]);
   assert.doesNotMatch(app, /preview-history-members/);
   assert.doesNotMatch(css, /\.preview-history-tooltip\s*\{[^}]*pointer-events:\s*auto/);
-  assert.match(app, /team\.previousSeasonHistory \? "暂无" :/);
+  assert.match(app, /team\[field\] \? "暂无" :/);
   assert.match(css, /\.preview-history-tooltip\s*\{[^}]*grid-template-columns:/);
   assert.match(css, /\.preview-history-tooltip > span\.preview-history-row\s*\{[^}]*grid-template-columns:\s*subgrid/);
   assert.match(css, /\.preview-history-rank\s*\{[^}]*text-align:\s*right;[^}]*font-variant-numeric:\s*tabular-nums/);
@@ -514,6 +514,7 @@ test("validates team history and abbreviates regional and final titles", async (
   document.teams[0].previousSeasonHistory = [record];
   assert.equal(validatePreview(document), document);
   assert.equal(previewHistoryTitle(record), "50th ICPC 成都");
+  assert.equal(previewHistoryTitle({ contestId: "ccpc2026changchun", contestTitle: "2026 年第十二届中国大学生程序设计竞赛 长春站 正式赛" }), "12th CCPC 长春");
   assert.equal(previewHistoryTitle({ contestId: "ccpc2025final", contestTitle: "第十一届中国大学生程序设计竞赛总决赛" }), "11th CCPC Final");
   assert.equal(previewHistoryTitle({ contestId: "icpc2025hongkong", contestTitle: "The 50th ICPC Asia Hong Kong Regional Contest" }), "50th ICPC 香港");
   for (const [field, value, error] of [
@@ -527,6 +528,10 @@ test("validates team history and abbreviates regional and final titles", async (
   const duplicate = structuredClone(document);
   duplicate.teams[0].previousSeasonHistory.push(record);
   assert.throws(() => validatePreview(duplicate), /duplicate history/);
+  document.teams[0].currentSeasonHistory = [record];
+  assert.equal(validatePreview(document), document);
+  document.teams[0].currentSeasonHistory[0] = { ...record, matchedMembers: 99 };
+  assert.throws(() => validatePreview(structuredClone(document)), /currentSeasonHistory.*matched members/);
 });
 
 test("normalized LSE preserves scale, favors strong members and validates per snapshot", () => {

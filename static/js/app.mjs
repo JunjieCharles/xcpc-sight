@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261019-74";
+} from "./data.mjs?v=20261019-75";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261019-74";
+} from "./problem-rating.mjs?v=20261019-75";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261019-74";
+} from "./preview.mjs?v=20261019-75";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261019-74";
+} from "./review.mjs?v=20261019-75";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -854,13 +854,15 @@ function renderPreviewRows() {
       ]));
       const memberNames = team.members.map(({ name }) => name).join(" / ");
       const identityTooltip = node("span", { className: "preview-member-tooltip preview-history-tooltip", role: "tooltip" }, [
-        node("strong", { text: "上赛季比赛记录" }),
-        ...(team.previousSeasonHistory?.length ? team.previousSeasonHistory.map((record) =>
+        ...[["currentSeasonHistory", "本赛季比赛记录"], ["previousSeasonHistory", "上赛季比赛记录"]].flatMap(([field, title]) => [
+        node("strong", { text: title }),
+        ...(team[field]?.length ? team[field].map((record) =>
           node("span", { className: "preview-history-row" }, [
             node("span", { text: previewHistoryTitle(record), title: record.contestTitle }),
             node("span", { className: `preview-history-rank ${record.medal || ""}`, text: `#${record.rank}` }),
             node("span", { text: `${record.teamName} (${record.matchedMembers}/${team.members.length})` }),
-          ])) : [node("span", { text: team.previousSeasonHistory ? "暂无" : "尚未收录上赛季比赛记录" })]),
+          ])) : [node("span", { text: team[field] ? "暂无" : `尚未收录${title}` })]),
+        ]),
       ]);
       const identityControl = node("span", {
         className: "preview-team-identity",

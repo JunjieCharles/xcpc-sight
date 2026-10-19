@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from itertools import accumulate
 from pathlib import Path
@@ -124,6 +125,17 @@ def team_history(team: dict, index: dict, normalizer: DefaultNormalizer) -> list
     )
 
 
+def current_history_index(series: dict, root: Path, normalizer: DefaultNormalizer,
+                          series_id: str, before: str) -> dict:
+    """Use only current-season regional/final contests preceding this preview."""
+    if series["id"] != series_id:
+        raise ValueError("history must come from the current season")
+    cutoff = datetime.fromisoformat(before)
+    eligible = [contest for contest in series["contests"]
+                if datetime.fromisoformat(contest["startAt"]) < cutoff]
+    return build_history_index({**series, "contests": eligible}, root, normalizer)
+
+
 def main() -> None:
     from scripts.generate_preview_data import load_normalizer, write_json_atomic
 
@@ -131,18 +143,23 @@ def main() -> None:
     parser.add_argument("--series", type=Path, required=True)
     parser.add_argument("--srk-root", type=Path, required=True)
     parser.add_argument("--preview", type=Path, action="append", required=True)
+    parser.add_argument("--season", choices=("previous", "current"), default="previous")
     args = parser.parse_args()
     normalizer = load_normalizer(Path(__file__).resolve().parents[1] / "config/school-aliases.json")
     series = json.loads(args.series.read_text(encoding="utf-8"))
-    index = build_history_index(series, args.srk_root, normalizer)
+    index = (build_history_index(series, args.srk_root, normalizer)
+             if args.season == "previous" else None)
     documents = []
     for path in args.preview:
         document = json.loads(path.read_text(encoding="utf-8"))
         year = int(document["seriesId"].split("-")[0])
-        if series["id"] != f"{year - 1}-{year}":
+        if args.season == "previous" and series["id"] != f"{year - 1}-{year}":
             raise ValueError(f"{path}: history must come from the previous season")
+        if args.season == "current":
+            index = current_history_index(series, args.srk_root, normalizer,
+                                          document["seriesId"], document["sortAt"])
         for team in document["teams"]:
-            team["previousSeasonHistory"] = team_history(team, index, normalizer)
+            team[f"{args.season}SeasonHistory"] = team_history(team, index, normalizer)
         documents.append((path, document))
     for path, document in documents:
         write_json_atomic(path, document)

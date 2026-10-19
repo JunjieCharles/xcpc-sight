@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261019-74";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261019-75";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -31,11 +31,11 @@ export function normalizedLseRating(values) {
 export function previewHistoryTitle(record) {
   const title = record.contestTitle;
   const competition = record.contestId.startsWith("ccpc") ? "CCPC" : "ICPC";
-  const editionText = title.match(/第\s*(\d+|十一)\s*届/u)?.[1]
+  const editionText = title.match(/第\s*(\d+|十一|十二)\s*届/u)?.[1]
     ?? title.match(/(\d+)(?:st|nd|rd|th)\s+ICPC/u)?.[1];
-  const edition = editionText === "十一" ? 11 : Number(editionText);
+  const edition = ({ "十一": 11, "十二": 12 })[editionText] ?? Number(editionText);
   const place = /总决赛/u.test(title) ? (competition === "ICPC" ? "EC-Final" : "Final")
-    : title.match(/(?:区域赛|竞赛)([\u4e00-\u9fff]{2,4})站/u)?.[1]
+    : title.match(/(?:区域赛|竞赛)\s*([\u4e00-\u9fff]{2,4})站/u)?.[1]
       ?? title.match(/区域赛[（(]([^）)]+)[）)]/u)?.[1]
       ?? (title.includes("Hong Kong Regional") ? "香港" : null);
   if (!edition || !place) return title;
@@ -215,11 +215,12 @@ export function validatePreview(document) {
     teamIds.add(team.id);
     array(team.members, `${path}.members`);
     if (!team.members.length) fail(`${path}.members`, "expected at least one member");
-    if (team.previousSeasonHistory !== undefined) {
-      array(team.previousSeasonHistory, `${path}.previousSeasonHistory`);
+    for (const field of ["currentSeasonHistory", "previousSeasonHistory"]) {
+      if (team[field] === undefined) continue;
+      array(team[field], `${path}.${field}`);
       const historyIds = new Set();
-      team.previousSeasonHistory.forEach((record, index) => {
-        const historyPath = `${path}.previousSeasonHistory[${index}]`;
+      team[field].forEach((record, index) => {
+        const historyPath = `${path}.${field}[${index}]`;
         object(record, historyPath);
         for (const key of ["contestId", "contestTitle", "startAt", "teamId", "teamName"]) {
           string(record[key], `${historyPath}.${key}`);
