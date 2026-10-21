@@ -89,7 +89,9 @@ def main() -> None:
             raise ValueError("output belongs to a different schema or series")
     document["contests"] = [c for c in document["contests"] if c["id"] != projected["id"]]
     document["contests"].append(projected)
-    document["contests"].sort(key=lambda c: (c["startAt"], c["id"]))
+    document["contests"].sort(key=lambda c: (
+        c["startAt"][:10], not c["id"].startswith("icpc"), c["startAt"], c["id"],
+    ))
     write_json_atomic(args.output, document)
     print(f"Published {len(projected['teams'])} teams to {args.output}")
 

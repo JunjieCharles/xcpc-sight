@@ -25,7 +25,7 @@ from scripts.generate_static_data import write_json_atomic
 from scripts.preview_history import _history_medals
 
 REGIONAL_FILE_IDS = {
-    "ccpc2026changchun": "105318715452649472",
+    "ccpc2026changchun": "105706787390464000",
     "icpc2026xi_an": "105318714861256704",
 }
 INPUTS = (
@@ -36,7 +36,7 @@ INPUTS = (
     ("ccpc2026preliminary", "ccpc2026",
      "d579046c9b6bde35c9b0178fdcda574c8a2ca7f9d1a52b2110349dd2010594b1"),
     ("ccpc2026changchun", "ccpc2026",
-     "1d785e150b26994ba67e06d951ff3edfb0c777711e26df3753a1c79766e780bf"),
+     "a430faa32608ae0812674333c8ff752691da3927a56a9b58b0aa0a57e6c583a2"),
     ("icpc2026xi_an", "icpc2026",
      "ac458e941d11d0b235c5e5f68d286592d0c5897bf50b96d8fd75f81ba050945e"),
 )

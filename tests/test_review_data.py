@@ -248,6 +248,21 @@ def test_offline_generator_is_deterministic_and_rejects_wrong_hash(tmp_path, rem
     assert output.read_bytes() == first
 
 
+def test_offline_generator_keeps_icpc_before_ccpc_on_same_day(tmp_path):
+    source = FIXTURES / "contest.srk.json"
+    output = tmp_path / "review.json"
+    for contest_id in ("ccpc-fixture", "icpc-fixture"):
+        subprocess.run([
+            sys.executable, "scripts/generate_review_data.py", "--srk", str(source),
+            "--preview", str(FIXTURES / "preview.json"), "--contest-id", contest_id,
+            "--file-id", "fixture", "--file-url", "https://example.test/fixture.srk.json",
+            "--output", str(output), "--sha256", hashlib.sha256(source.read_bytes()).hexdigest(),
+        ], cwd=Path(__file__).parents[1], check=True, capture_output=True)
+    assert [c["id"] for c in json.loads(output.read_text("utf-8"))["contests"]] == [
+        "icpc-fixture", "ccpc-fixture",
+    ]
+
+
 def test_offline_generator_publishes_medals_source_and_explicit_unofficial_result(tmp_path):
     payload = json.loads((FIXTURES / "contest.srk.json").read_text(encoding="utf-8"))
     payload["rows"][0]["user"]["official"] = False

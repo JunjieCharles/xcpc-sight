@@ -92,6 +92,25 @@ def test_wuhan_cached_counts_repair_only_zero_placeholder():
         assert list(medals.values()) == ["gold"] * 45 + ["silver"] * 90 + ["bronze"] * 136 + [None]
 
 
+@pytest.mark.parametrize("filename", ["ccpc2026changchun", "ccpc2026changchun.srk.json"])
+def test_changchun_obsolete_ratio_uses_corrected_official_counts(filename):
+    teams = tuple(replace(medal_teams()[0], team_id=str(i), solved=1 if i < 292 else 0,
+                          penalty=i) for i in range(300))
+    old = {"ratio": {"value": [.1, .2, .3], "denominator": "scored"}}
+    for options in (old, {"count": {"value": [30, 60, 90]}}):
+        payload = {"series": [{"rule": {"preset": "ICPC", "options": options}}], "rows": []}
+        medals = _history_medals(payload, teams, filename)
+        assert list(medals.values()) == (
+            ["gold"] * 30 + ["silver"] * 60 + ["bronze"] * 90 + [None] * 120
+        )
+    payload["series"][0]["rule"]["options"] = old
+    other = _history_medals(payload, teams, "another-contest.srk.json")
+    assert list(other.values()).count("silver") == 58
+    payload["series"][0]["rule"]["options"] = {"count": {"value": [31, 61, 91]}}
+    explicit = _history_medals(payload, teams, filename)
+    assert list(explicit.values()).count("silver") == 61
+
+
 @pytest.mark.parametrize("options", [
     {"ratio": {"value": [True, .2, .3]}}, {"ratio": {"value": [float("nan"), .2, .3]}},
     {"ratio": {"value": [-.1, .2, .3]}}, {"ratio": {"value": [.5, .5, .5]}},

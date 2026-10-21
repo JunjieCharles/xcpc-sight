@@ -2,7 +2,7 @@
 
 ## 2026-10-18 西安、长春与奖牌预测准确率
 
-新增 `icpc2026xi_an` → `icpc-2026-xian`、`ccpc2026changchun` → `ccpc-2026-changchun`。来源展示 [RankLand 西安榜单](https://rl.algoux.cn/ranklist/icpc2026xi_an)和[长春榜单](https://rl.algoux.cn/ranklist/ccpc2026changchun)。当前文件 ID 为 `105318714861256704` / `105318715452649472`，核验下载字节哈希后，解析内容与 srk-collection PR #75 合并版本一致；结果中保存固定 CDN URL、file ID 与 SHA-256。复盘选择列表按北京时间日期升序，同日 ICPC 在 CCPC 前；默认选日期最近的已发布复盘，同日优先 ICPC，再以开赛时间和 ID 稳定破同分。显式 URL 和页内已选场次继续保留。
+新增 `icpc2026xi_an` → `icpc-2026-xian`、`ccpc2026changchun` → `ccpc-2026-changchun`。来源展示 [RankLand 西安榜单](https://rl.algoux.cn/ranklist/icpc2026xi_an)和[长春榜单](https://rl.algoux.cn/ranklist/ccpc2026changchun)。当前文件 ID 为 `105318714861256704` / `105706787390464000`，核验下载字节哈希后，西安沿用原快照，长春采用 10 月 20 日官方修订版；结果中保存固定 CDN URL、file ID 与 SHA-256。复盘选择列表按北京时间日期升序，同日 ICPC 在 CCPC 前；默认选日期最近的已发布复盘，同日优先 ICPC，再以开赛时间和 ID 稳定破同分。显式 URL 和页内已选场次继续保留。
 
 西安覆盖 403 支赛前正式队，其中 402 支有正式参赛结果，湖南科技大学 `Team366` 赛后转为打星，通过 `config/review-unofficial-results/icpc2026xi_an.json` 显式登记。长春覆盖 300 支赛前正式队，298 支有提交；深圳理工大学“SUAT曙光231”有 `I10` / `I1000` 两个同身份账号，前者无提交，通过 `config/review-overrides/ccpc2026changchun.json` 关联有成绩的 `I1000`。
 
@@ -17,9 +17,9 @@
 | 场次 | 有效队伍 | Spearman ρ | 金牌 | 银牌 | 铜牌 |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 西安 | 396 | 0.768620 | 27/41 = 65.9% | 43/82 = 52.4% | 63/122 = 51.6% |
-| 长春 | 294 | 0.821510 | 20/30 = 66.7% | 33/58 = 56.9% | 41/86 = 47.7% |
+| 长春 | 294 | 0.821510 | 20/30 = 66.7% | 36/60 = 60.0% | 41/88 = 46.6% |
 
-schema v1 可选新增 `contest.hasMedals: true`，要求全部结果行提供 `actualMedal: "gold" | "silver" | "bronze" | null`。拒绝缺失/未知标签以及无提交、非正常结果携带奖牌。旧文件不提供标签时不展示准确率。实际奖牌用既有 `_history_medals` 解释 SRK count/ratio 和并列：西安为 41/82/124（铜牌配置 123 因并列扩张）；长春按解题队伍基数、10%/20%/30% 累计比例向上取整为 30/58/88。
+schema v1 可选新增 `contest.hasMedals: true`，要求全部结果行提供 `actualMedal: "gold" | "silver" | "bronze" | null`。拒绝缺失/未知标签以及无提交、非正常结果携带奖牌。旧文件不提供标签时不展示准确率。实际奖牌用既有 `_history_medals` 解释 SRK count/ratio 和并列：西安为 41/82/124（铜牌配置 123 因并列扩张）；长春采用 2026-10-20 官方修订的固定名额 count `[30,60,90]`，累计边界为 30/90/180。
 
 纯 API 新增可选 `result_medals`，须恰好覆盖所有正式结果 ID，值限三档或 null；新增 `unofficial_results` 映射前瞻 ID 到当前打星结果 ID，不能与其他映射重叠、重复目标或引用正式结果。对应行写入 `resultStatus: "unofficial"`，活动、名次和奖牌为 null，排除于排名、覆盖率和预测统计。默认仍拒绝自动把正式前瞻匹配到打星。通用 CLI 增加 `--medals`、`--unofficial-results`、`--source-url` 和 `--source-title`。
 
@@ -30,6 +30,22 @@ python -m scripts.publish_october_2026_results --input-dir data-cache/results-20
 ```
 
 测试覆盖精确分档（更高奖牌也不命中）、并列边界、零预测、缺失指标、无活动、资格变化、重复账号及标签校验。`tests/fixtures/review/regional-metrics.json` 固定两站六项指标样本、ρ 和各档计数；12 项系数经 SciPy `spearmanr`、36 项计数经独立分档交集复核。浏览器回归覆盖两站切换、同日排序与默认优先 ICPC、六张卡片及排除指标、RankLand 网页来源、网络赛指标、搜索不变、1440px/390px 与内容不越界；旧场次的滚动、雷达图和奖牌对齐继续检查。复盘取消空的全名单排名槽，并为筛选前后名次保留足够列宽，确保窄屏奖牌、网络赛值与原名次完整显示。数据来源链接同样只保留参与综合战力的指标来源。
+
+## 2026-10-22 长春奖牌规则纠正
+
+RankLand 在 10 月 20 日发布 file `105706787390464000`，SHA-256 `a430faa32608ae0812674333c8ff752691da3927a56a9b58b0aa0a57e6c583a2`，把旧快照按 scored 比例计算的 30/58/88 修订为固定 30/60/90。逐行核验新旧 `score`、`statuses`、正式资格、学校、姓名与成员未变，只有头像/标记等展示信息不同；不需要重算 Rating 或名次。
+
+受影响：复盘原第 89、90 名由铜改银，第 177–180 名由无牌改铜；六项指标的奖牌命中统计随之更新，Spearman 和样本人数不变。成都前瞻“请问我们是已经教到stl了吗”的一条当前赛季历史（F28，第 180 名）补铜，不刷新其评分、名单或战力。赛前网络赛牌线不是赛后奖牌分界，不随此次修订改变。
+
+根因是旧来源规则过期，图片又把同一份旧网站复盘当作交叉验证，未检查官方 file ID 更新。发布脚本现固定新文件 ID 和哈希；`_history_medals` 针对 `ccpc2026changchun` 的旧精确规则 `ratio {value:[.1,.2,.3], denominator:"scored"}` 使用已核验固定名额兼容，防止旧历史缓存再次写回错误。其他比赛、显式 count 和未来不同规则不覆盖。
+
+仅重建此场复盘（其余比赛和 Rating 保持不变）：
+
+```bash
+python scripts/generate_review_data.py --preview static/data/previews/ccpc-2026-changchun.json --srk data-cache/results-20261018-rankland/ccpc2026changchun.srk.json --contest-id ccpc2026changchun --file-id 105706787390464000 --file-url https://cdn.algoux.cn/rankland/file/105706787390464000/ccpc2026changchun.srk.json --sha256 a430faa32608ae0812674333c8ff752691da3927a56a9b58b0aa0a57e6c583a2 --medals --overrides config/review-overrides/ccpc2026changchun.json
+```
+
+离线回归覆盖旧 ratio、新 count、其他比赛不受影响、显式不同名额不覆盖；发布数据回归检查 30/60/90 人数及全部边界标签。六项指标命中数由原实际排名区间和预测排名区间的独立交集复核。视频长春总结同步重绘，源规则断言为固定名额，避免仅测试硬编码边界。
 
 ## 页面与计算口径
 

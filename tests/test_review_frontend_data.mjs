@@ -385,7 +385,7 @@ test("regional reviews preserve preview power and compare only its five constitu
     const c = doc.contests.find(c => c.previewId === p.id);
     const original = structuredClone(p);
     const activeCount = c.id === "icpc2026xi_an" ? 402 : 298;
-    assert.equal(c.source.fileId, c.id === "icpc2026xi_an" ? "105318714861256704" : "105318715452649472");
+    assert.equal(c.source.fileId, c.id === "icpc2026xi_an" ? "105318714861256704" : "105706787390464000");
     assert.equal(c.source.url, `https://rl.algoux.cn/ranklist/${c.id}`);
     const power = buildPreviewPower(p.teams, p.metricSources.map(m => m.id), previewPowerMetricIds(p));
     assert.deepEqual(reviewMetrics(p).map(m => m.id), Object.keys(expected[c.id]));
@@ -409,8 +409,25 @@ test("regional reviews preserve preview power and compare only its five constitu
     if (c.id === "icpc2026xi_an") {
       assert.deepEqual(c.teams.filter(t => t.resultStatus === "unofficial").map(t => t.resultTeamId), ["Team366"]);
     } else {
+      assert.deepEqual(["gold", "silver", "bronze"].map(medal =>
+        c.teams.filter(t => t.actualMedal === medal).length), [30, 60, 90]);
+      for (const row of c.teams) {
+        const rank = row.actualRank;
+        assert.equal(row.actualMedal, rank == null ? null : rank <= 30 ? "gold"
+          : rank <= 90 ? "silver" : rank <= 180 ? "bronze" : null);
+      }
       assert.ok(c.teams.some(t => t.previewTeamId === "t_35484354206ca267e86a" && t.resultTeamId === "I1000" && t.hasActivity));
       assert.ok(!c.teams.some(t => t.resultTeamId === "I10"));
     }
   }
+});
+
+
+test("Chengdu history includes Changchun's corrected final bronze place", async () => {
+  const preview = await read("../static/data/previews/icpc-2026-chengdu.json");
+  const records = preview.teams.flatMap(t => t.currentSeasonHistory ?? [])
+    .filter(h => h.contestId === "ccpc2026changchun" && h.teamId === "F28");
+  assert.equal(records.length, 1);
+  assert.equal(records[0].rank, 180);
+  assert.equal(records[0].medal, "bronze");
 });

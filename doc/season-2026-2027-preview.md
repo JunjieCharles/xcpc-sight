@@ -1,5 +1,9 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-22 长春历史奖牌修正
+
+按官方 10 月 20 日的固定奖牌名额修订，成都队伍“请问我们是已经教到stl了吗”关联的长春历史 F28（第 180 名）补记铜牌；只修正历史标签，不更新名单、评分、战力及赛前牌线。规则兼容、复盘修订和离线回归见 [赛后复盘](post-contest-review.md#2026-10-22-长春奖牌规则纠正)。
+
 ## 2026-10-19 成都完整前瞻与四维战力
 
 成都页面的“名单来源”使用官方参赛手册 PDF，原文件随站点发布于 `static/sources/icpc-2026-chengdu-manual.pdf`，来源标题为官方手册文件名。名单 JSON 仅供离线重建使用。下文重建命令已使用 PDF URL；生成后需将 `teamSource.title` 设置为该 PDF 的官方文件名，与西安、长春的发布流程一致。
@@ -32,7 +36,7 @@ RankLand 已同步两场数据，当前下载内容与合并版本 JSON 一致�
 
 | ID | collection / fileId | SHA-256 |
 | --- | --- | --- |
-| `ccpc2026changchun` | `ccpc2026` / `105318715452649472` | `1d785e150b26994ba67e06d951ff3edfb0c777711e26df3753a1c79766e780bf` |
+| `ccpc2026changchun` | `ccpc2026` / `105706787390464000` | `a430faa32608ae0812674333c8ff752691da3927a56a9b58b0aa0a57e6c583a2` |
 | `icpc2026xi_an` | `icpc2026` / `105318714861256704` | `ac458e941d11d0b235c5e5f68d286592d0c5897bf50b96d8fd75f81ba050945e` |
 
 完整离线重建：把以上两份和下文 9 月校正版本的三份网络赛 SRK 按 `{id}.srk.json` 放入同一输入目录。旧输入为 RankLand file ID `94656957302009856`、`94656957834690560`、`95451702349623296`，文件名分别是 `icpc2026preliminary-1.srk.json`、`icpc2026preliminary-2.srk.json`、`ccpc2026preliminary.srk.json`，固定下载路径为 `https://cdn.algoux.cn/rankland/file/{fileId}/{文件名}`。五份校验值也固定在脚本的 `INPUTS` 中；不假定新检出中存在缓存，不在默认测试中访问网络。

@@ -18,6 +18,12 @@ def _history_medals(payload: dict, teams: tuple, filename: str) -> dict:
     options = next((entry["rule"].get("options", {})
                     for entry in payload.get("series", [])
                     if entry.get("rule", {}).get("preset") == "ICPC"), {})
+    # RankLand corrected Changchun on 2026-10-20 (file 105706787390464000).
+    # Old history caches still contain a scored-team ratio, yielding 30/58/88.
+    # Repair only that exact obsolete rule; preserve explicit/future rules.
+    if (Path(filename).name.removesuffix(".srk.json") == "ccpc2026changchun"
+            and options == {"ratio": {"value": [.1, .2, .3], "denominator": "scored"}}):
+        options = {"count": {"value": [30, 60, 90]}}
     # The older xcpcrating cache has a zero placeholder. The existing xcpc-elo
     # srk-collection/official/icpc/icpc2025/icpc2025wuhan.srk.json supplies these
     # explicit counts. Keep the original standings and repair only this rule.
