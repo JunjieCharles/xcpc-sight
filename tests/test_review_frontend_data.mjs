@@ -11,7 +11,7 @@ const preview = validatePreview(await read("./fixtures/review/preview.json"));
 const review = validateReview(await read("./fixtures/review/results.json"), [preview]);
 const contest = review.contests[0];
 const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
-const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun"]
+const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu"]
   .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
 
 test("review menu uses Beijing dates and ICPC precedes later-starting CCPC on the same date", () => {
@@ -291,7 +291,7 @@ test("published second preliminary joins all teams and compares all seven pre-co
   const p = validatePreview(await read("../static/data/previews/icpc-2026-preliminary-2.json"));
   const ccpc = validatePreview(await read("../static/data/previews/ccpc-2026-preliminary.json"));
   const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [first, p, ccpc, ...regionalPreviews]);
-  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "icpc2026xi_an", "ccpc2026changchun"]);
+  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu"]);
   const c = r.contests[1];
   assert.equal(c.previewId, p.id);
   assert.equal(c.startAt, "2026-09-12T13:00:00+08:00");
@@ -375,7 +375,7 @@ test("published CCPC review covers only official teams and seven verified metric
   }
 });
 
-test("regional reviews preserve preview power and compare only its five constituent metrics", async () => {
+test("regional reviews preserve preview power and compare only its constituent metrics", async () => {
   const network = await Promise.all(["2026-2027", "icpc-2026-preliminary-2", "ccpc-2026-preliminary"]
     .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
   const doc = validateReview(await read("../static/data/reviews/2026-2027.json"), [...network, ...regionalPreviews]);
@@ -384,8 +384,8 @@ test("regional reviews preserve preview power and compare only its five constitu
   for (const p of regionalPreviews) {
     const c = doc.contests.find(c => c.previewId === p.id);
     const original = structuredClone(p);
-    const activeCount = c.id === "icpc2026xi_an" ? 402 : 298;
-    assert.equal(c.source.fileId, c.id === "icpc2026xi_an" ? "105318714861256704" : "105706787390464000");
+    const activeCount = c.id === "icpc2026chengdu" ? 319 : c.id === "icpc2026xi_an" ? 402 : 298;
+    assert.equal(c.source.fileId, c.id === "icpc2026chengdu" ? "107769046547718144" : c.id === "icpc2026xi_an" ? "105318714861256704" : "105706787390464000");
     assert.equal(c.source.url, `https://rl.algoux.cn/ranklist/${c.id}`);
     const power = buildPreviewPower(p.teams, p.metricSources.map(m => m.id), previewPowerMetricIds(p));
     assert.deepEqual(reviewMetrics(p).map(m => m.id), Object.keys(expected[c.id]));
@@ -408,7 +408,7 @@ test("regional reviews preserve preview power and compare only its five constitu
     assert.deepEqual(p, original);
     if (c.id === "icpc2026xi_an") {
       assert.deepEqual(c.teams.filter(t => t.resultStatus === "unofficial").map(t => t.resultTeamId), ["Team366"]);
-    } else {
+    } else if (c.id === "ccpc2026changchun") {
       assert.deepEqual(["gold", "silver", "bronze"].map(medal =>
         c.teams.filter(t => t.actualMedal === medal).length), [30, 60, 90]);
       for (const row of c.teams) {
@@ -430,4 +430,23 @@ test("Chengdu history includes Changchun's corrected final bronze place", async 
   assert.equal(records.length, 1);
   assert.equal(records[0].rank, 180);
   assert.equal(records[0].medal, "bronze");
+});
+
+
+test("Chengdu joins every official team and preserves fixed medal boundaries", async () => {
+  const p = regionalPreviews.find(p => p.id === "icpc-2026-chengdu");
+  const c = (await read("../static/data/reviews/2026-2027.json")).contests.at(-1);
+  assert.equal(c.id, "icpc2026chengdu");
+  assert.equal(c.startAt, "2026-10-25T09:10:00+08:00");
+  assert.equal(c.source.sha256, "23f0b373820c561d0f219de014ed65ff0e6c6496e818d4d55f8673cb46aa6882");
+  assert.equal(c.teams.length, 319);
+  assert.equal(new Set(c.teams.map(t => t.resultTeamId)).size, 319);
+  assert.deepEqual(new Set(c.teams.map(t => t.previewTeamId)), new Set(p.teams.filter(t => !t.excluded).map(t => t.id)));
+  assert.deepEqual(["gold", "silver", "bronze"].map(m => c.teams.filter(t => t.actualMedal === m).length), [32, 64, 96]);
+  for (const t of c.teams) {
+    assert.equal(t.hasActivity, true);
+    assert.equal(t.resultStatus, undefined);
+    assert.equal(t.actualMedal, t.actualRank <= 32 ? "gold" : t.actualRank <= 96 ? "silver" : t.actualRank <= 192 ? "bronze" : null);
+  }
+  assert.throws(() => buildReviewAnalysis(p, c, "previousSeason"), /Unknown review metric/);
 });

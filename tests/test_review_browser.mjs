@@ -178,15 +178,15 @@ test("changing review metrics preserves page and table scroll, clamping only at 
     for (const width of [1440, 390]) {
       await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
       await send("Page.navigate", { url: new URL("?series=2026-2027&view=review", siteUrl).href });
-      await waitFor("document.querySelectorAll('.review-metric-card').length === 6 && !document.querySelector('#review-view').hidden");
-      assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026xi_an");
-      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 5);
-      assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.review-metric-card'), n => n.dataset.metric).sort()"), ["currentSeason", "onlineRanks", "power", "previousSeason", "xcpcElo", "xcpcrating"]);
-      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-2).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun"]);
-      assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 65\.9% \(27\/41\).*银 52\.4% \(43\/82\).*铜 51\.6% \(63\/122\)/);
-      assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026xi_an");
+      await waitFor("document.querySelectorAll('.review-metric-card').length === 5 && !document.querySelector('#review-view').hidden");
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026chengdu");
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 6);
+      assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.review-metric-card'), n => n.dataset.metric).sort()"), ["currentSeason", "onlineRanks", "power", "xcpcElo", "xcpcrating"]);
+      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-3).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu"]);
+      assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 75\.0% \(24\/32\).*银 63\.5% \(40\/63\).*铜 55\.2% \(53\/96\)/);
+      assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026chengdu");
       assert.ok(!(await evaluate("document.querySelector('#review-sources').textContent")).includes("CPC Finder"));
-      for (const id of ["ccpc2026changchun", "icpc2026xi_an"]) {
+      for (const id of ["icpc2026chengdu", "ccpc2026changchun", "icpc2026xi_an"]) {
         await evaluate(`(() => { const select = document.querySelector('#review-contest-select'); select.value = '${id}'; select.dispatchEvent(new Event('change')); })()`);
         await waitFor(`new URL(location.href).searchParams.get('reviewContest') === '${id}'`);
         await settle();

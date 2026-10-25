@@ -82,13 +82,13 @@ python scripts/generate_review_data.py
 
 默认下载指定版本的首场 SRK，校验 SHA-256 后生成 `static/data/reviews/2026-2027.json`，不刷新赛前评分或索引。使用 `--srk` 可离线生成；其他场次参数、官方移除队伍的映射与匹配规则见[复盘生成说明](doc/post-contest-review.md)。
 
-西安、长春已计入本赛季 Rating，共 5 场、9099 名选手。两站复盘为各项排名指标显示金银铜各档的精确预测命中率（同档命中数 / 预测该档队数）及计数，包含网络赛排名指标。准备好五份固定 SRK 后，可同时离线重建本赛季 Rating 和两站复盘：
+西安、长春、成都已计入本赛季 Rating，共 6 场、9151 名选手。赛后复盘为各项排名指标显示金银铜各档的精确预测命中率（同档命中数 / 预测该档队数）及计数，包含网络赛排名指标。成都复盘覆盖 319 支正式队伍，默认展示该场。准备好前五份固定 SRK 和成都结果后，可离线重建本赛季 Rating 并更新成都复盘，保留其他场次复盘：
 
 ```bash
-python -m scripts.publish_october_2026_results --input-dir data-cache/results-20261018-rankland
+python -m scripts.publish_chengdu_2026_results --input-dir data-cache/results-20261025-rankland --previous-input-dir data-cache/results-20261018-rankland
 ```
 
-输入版本、下载地址和哈希见[赛季发布说明](doc/season-2026-2027-preview.md#2026-10-18-西安长春赛后-rating)，有效样本、并列与准确率口径见[复盘说明](doc/post-contest-review.md#2026-10-18-西安长春与奖牌预测准确率)。
+输入版本、下载地址和哈希见[赛季发布说明](doc/season-2026-2027-preview.md#2026-10-25-成都赛后-rating)，有效样本、并列与准确率口径见[复盘说明](doc/post-contest-review.md#2026-10-25-成都赛后复盘)。
 
 ### 其他数据工具
 

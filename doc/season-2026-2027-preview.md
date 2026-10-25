@@ -1,5 +1,17 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-25 成都赛后 Rating
+
+根据 [RankLand 成都站结果](https://rl.algoux.cn/ranklist/icpc2026chengdu) 定向更新本赛季 Rating 和赛后复盘。成都正式参赛 319 队、计分 957 人，新增赛季选手 52 人，累计 9151 人、6 场；最终 Rating 范围为 1236–2014。沿用现有个人计分和身份规则，前五场参赛记录逐项核验不变；未参加成都的选手分数不变，赛季总榜名次可随其他人的分数变化。
+
+成都输入固定为 file `107769046547718144`，SHA-256 `23f0b373820c561d0f219de014ed65ff0e6c6496e818d4d55f8673cb46aa6882`，下载地址为 `https://cdn.algoux.cn/rankland/file/107769046547718144/icpc2026chengdu.srk.json`。保存为下列输入目录中的 `icpc2026chengdu.srk.json`；前五份固定输入沿用 10 月 18 日发布脚本（含 10 月 20 日长春修订版）。离线重建：
+
+```bash
+python -m scripts.publish_chengdu_2026_results --input-dir data-cache/results-20261025-rankland --previous-input-dir data-cache/results-20261018-rankland
+```
+
+脚本校验全部六份输入哈希，完成计算和关联后只写 `series/2026-2027.json` 与 `reviews/2026-2027.json`；可用 `--data-dir` 指向另一份完整静态数据目录。其他系列、原五场复盘、名单、赛前评分和牌线均保留，现有索引无需修改。前端回归固定赛季人数、957 条新增记录、52 名首次参赛者和分数连续性；复盘统计与覆盖范围见[成都复盘](post-contest-review.md#2026-10-25-成都赛后复盘)。
+
 ## 2026-10-22 长春历史奖牌修正
 
 按官方 10 月 20 日的固定奖牌名额修订，成都队伍“请问我们是已经教到stl了吗”关联的长春历史 F28（第 180 名）补记铜牌；只修正历史标签，不更新名单、评分、战力及赛前牌线。规则兼容、复盘修订和离线回归见 [赛后复盘](post-contest-review.md#2026-10-22-长春奖牌规则纠正)。
