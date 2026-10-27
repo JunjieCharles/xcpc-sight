@@ -317,4 +317,8 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert (tmp_path / "previews/icpc-2026-chengdu.json").is_file()
     roster = json.loads((tmp_path / "rosters/icpc-2026-chengdu.json").read_text("utf-8"))
     assert len(roster["teams"]) == 328
-    assert not (tmp_path / "previews/icpc-2026-wuhan.json").exists()
+    wuhan = json.loads((tmp_path / "previews/icpc-2026-wuhan.json").read_text("utf-8"))
+    assert wuhan["unlisted"] is True
+    assert len(wuhan["teams"]) == 412
+    roster = json.loads((tmp_path / "rosters/icpc-2026-wuhan.json").read_text("utf-8"))
+    assert len(roster["teams"]) == 412

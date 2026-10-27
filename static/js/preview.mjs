@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261019-75";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261027-76";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -382,8 +382,11 @@ export function selectPreviewContest(previews, requestedId, rememberedId, now = 
 }
 
 export function previewNavigationGroups(previews, currentId, summaries = []) {
-  const ids = new Set(previews.map(p => p.id));
-  const visible = [...previews.filter(preview => !preview.unlisted || preview.id === currentId),
+  const summaryIds = new Set(summaries.map(summary => summary.id));
+  const listed = previews.filter(preview => !preview.unlisted
+    || (preview.id === currentId && !summaryIds.has(preview.id)));
+  const ids = new Set(listed.map(p => p.id));
+  const visible = [...listed,
     ...summaries.filter(summary => !ids.has(summary.id)).map(summary => ({ ...summary, summaryOnly: true }))];
   return {
     online: visible.filter(preview => preview.contestStage !== "regional"),
