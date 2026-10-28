@@ -240,7 +240,7 @@ def test_second_preview_metadata_and_cached_source_date(
     )
     if with_current:
         current = tmp_path / "current.json"
-        current.write_text(json.dumps({"id": "2026-2027"}))
+        current.write_text(json.dumps({"id": "2026-2027", "contests": []}))
         args.current_series = current
         monkeypatch.setattr(generator, "load_previous_series", lambda path: (
             [PersonRecord("甲", "学校", 1600), PersonRecord("乙", "另一学校", 1700)]
@@ -312,6 +312,18 @@ def test_second_preview_metadata_and_cached_source_date(
         current.write_text(json.dumps({"id": "2025-2026"}))
         with pytest.raises(ValueError, match="expected series"):
             generator.build_document(args)
+        args.sort_at = "2026-11-01T09:00:00+08:00"
+        current.write_text(json.dumps({"id": "2026-2027", "contests": [{
+            "id": "icpc2026a", "collection": "icpc2026", "title": "A",
+            "startAt": "2026-10-18T09:00:00+08:00",
+        }]}))
+        with pytest.raises(ValueError, match="current-history-srk-root"):
+            generator.build_document(args)
+        source = Path(__file__).parent / "fixtures/review/contest.srk.json"
+        (tmp_path / "icpc2026a.srk.json").write_bytes(source.read_bytes())
+        args.current_history_srk_root = tmp_path
+        refreshed = generator.build_document(args)
+        assert refreshed["medalSources"]["addedContestIds"] == ["icpc2026a"]
     else:
         assert "currentSeason" not in document["teams"][0]["ratings"]
 
@@ -322,9 +334,11 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     documents = [json.loads(spec.source.read_text(encoding="utf-8")) for spec in preview_specs()]
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
-        "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu",
+        "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan",
     ]
-    assert [len(document["teams"]) for document in documents] == [2535, 2636, 2173, 418, 336, 328]
+    assert [len(document["teams"]) for document in documents] == [
+        2535, 2636, 2173, 418, 336, 328, 412,
+    ]
     for document in documents[:2]:
         matches = [
             member for team in document["teams"] for member in team["members"]

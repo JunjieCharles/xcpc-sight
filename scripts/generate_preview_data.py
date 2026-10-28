@@ -126,24 +126,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--team-format",
                         choices=("registration", "pintia-public", "xlsx", "roster"),
                         default="registration")
-    parser.add_argument("--xcpcrating-data", type=Path, required=True)
-    parser.add_argument("--xcpc-elo-data", type=Path, required=True)
+    parser.add_argument("--xcpcrating-data", type=Path)
+    parser.add_argument("--xcpc-elo-data", type=Path)
+    parser.add_argument("--offline", action="store_true",
+                        help="Explicitly rebuild from cached sources instead of fetching latest")
+    parser.add_argument("--source-cache", type=Path,
+                        help="New directory for freshly downloaded preview sources")
     parser.add_argument("--previous-series", type=Path, required=True)
     parser.add_argument("--history-srk-root", type=Path,
                         help="Local SRK collection for previous-season team histories")
     parser.add_argument("--current-series", type=Path)
+    parser.add_argument("--current-history-srk-root", type=Path,
+                        help="Verified current-season SRK snapshots for medal supplements")
+    parser.add_argument("--cpcfinder-covered-contests", nargs="*", default=None,
+                        help="Current-season contest IDs already included in CPC Finder medals")
     parser.add_argument("--online-series", type=Path,
                         help="Local series containing the three preliminary results")
     parser.add_argument("--exclude-previous-season-power", action="store_true",
                         help="Keep previous-season ratings visible but exclude them from power")
-    parser.add_argument("--cpcfinder-pages", type=Path, required=True)
+    parser.add_argument("--cpcfinder-pages", type=Path)
     parser.add_argument(
         "--school-aliases", type=Path,
         default=Path(__file__).resolve().parents[1] / "config/school-aliases.json",
     )
     parser.add_argument("--noi-data", type=Path, default=Path("data-cache/noi/normalized"))
     parser.add_argument("--ioi-data", type=Path, default=Path("data-cache/ioi"))
-    parser.add_argument("--snapshot-date", required=True)
+    parser.add_argument("--snapshot-date")
     parser.add_argument("--hide-contest-time", action="store_true",
                         help="Hide the contest time when its exact start is unconfirmed")
     parser.add_argument("--preview-id", default=PREVIEW_ID)
@@ -490,7 +498,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
     if getattr(args, "exclude_previous_season_power", False):
         metrics = online_metadata.get("powerMetrics", [*indexes, "medals"])
         online_metadata["powerMetrics"] = [key for key in metrics if key != "previousSeason"]
-    return {
+    document = {
         "schemaVersion": 1,
         "ratingAggregation": "normalized-lse",
         "contestStage": getattr(args, "contest_stage", "preliminary"),
@@ -540,10 +548,24 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         },
         "teams": teams,
     }
+    if args.current_series:
+        from scripts.preview_medals import add_current_medals
+
+        document = add_current_medals(document, current_document,
+                                      getattr(args, "current_history_srk_root", None), normalizer,
+                                      getattr(args, "cpcfinder_covered_contests", None))
+    elif document["contestStage"] == "regional":
+        raise ValueError("regional preview requires --current-series to check prior medals")
+    if getattr(args, "source_fetch_manifest", None):
+        document["sourcesFetchedAt"] = args.source_fetch_manifest["fetchedAt"]
+    return document
 
 
 def main() -> int:
     args = parse_args()
+    from scripts.preview_sources import prepare_sources
+
+    prepare_sources(args)
     write_json_atomic(args.output, build_document(args))
     return 0
 

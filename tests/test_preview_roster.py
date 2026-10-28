@@ -130,7 +130,8 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
 
 @pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 418),
                                              ("ccpc-2026-changchun", 336),
-                                             ("icpc-2026-chengdu", 328)])
+                                             ("icpc-2026-chengdu", 328),
+                                             ("icpc-2026-wuhan", 412)])
 def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count, tmp_path):
     import json
     from pathlib import Path

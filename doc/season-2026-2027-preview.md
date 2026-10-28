@@ -1,5 +1,53 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-28 本赛季奖牌补齐与指标时效审计
+
+奖牌列原来仅取 CPC Finder 累计数，即使已补入 `currentSeasonHistory`，也不会更新成员和队伍奖牌。本次以该累计数为基线，按规范化学校及姓名补计本赛季已结束的区域赛／总决赛正式获奖记录，再按实际名单成员求和。比赛必须早于该前瞻 `sortAt`，排除网络预选赛、同时开赛及未来比赛；历史比赛仍使用已有正式且有提交筛选和 SRK 奖牌规则。相同规范化身份在同场有多条记录时取最好正式名次，只计一次。同校同名仍无法区分；本场打星身份不抹除以前正式参赛的奖牌，未匹配 CPC Finder 的成员也可以获得本赛季奖牌。
+
+成都补计西安、长春，183 个成员条目的奖牌发生变化，增加 45 金、61 银、77 铜。三场网络赛、西安和长春在各自开赛前无本赛季区域赛奖牌，保持原样。上述数量是前瞻名单内成员奖牌累计增量，不是赛事发放的队伍奖牌数。成都仅修改奖牌及其补充来源信息，评分、战力和牌线不变。武汉按照用户澄清的“生成时取最新、生成后固定”要求，另行刷新三个外部来源，见下文；不将今天的来源回填到已结束比赛的前瞻。
+
+新增脚本 `scripts.preview_medals` 可离线定向修正已发布快照。沿用 `preview_history` 的 SRK 适配及奖牌规则；缺少所需本赛季 SRK 会报错。先将西安、长春、成都三份已校验结果复制到同一专用目录（本次为 `data-cache/medal-fix-20261028/srk/`），执行：
+
+```bash
+python -m scripts.preview_medals --series static/data/series/2026-2027.json --srk-root data-cache/medal-fix-20261028/srk --preview static/data/previews/icpc-2026-chengdu.json --preview static/data/previews/icpc-2026-wuhan.json
+```
+
+`generate_preview_data` 已接入相同补计流程：有本赛季区域赛历史时必须提供 `--current-history-srk-root`，区域赛还必须提供 `--current-series`，避免新生成时静默漏计。下文成都重建命令需先准备截至其开赛前的赛季 JSON；该生成器原有赛前时间检查仍拒绝使用包含成都赛后分数的完整赛季 JSON。
+
+schema v1 新增可选 `medalSources`，记录 `cpcfinderSnapshot`、`cpcfinderCoveredContestIds` 和 `addedContestIds`；成员可选 `medalSupplement` 保存本次补计的 gold/silver/bronze 数量。重复执行先扣除旧补计再写新补计，支持幂等及奖牌规则修订。默认仅允许 CPC Finder 快照早于所有待计区域赛；如果其时间已覆盖部分区域赛，必须用 `--cpcfinder-covered-contests` 显式声明基线已计入的比赛（可给空列表表示已核对均未计入），禁止仅凭下载时间猜测已收录范围。声明不得包含重复、未来或尚未可能被基线包含的比赛。未匹配 CPC Finder 的成员没有累计基线，仍从所有本赛季已赛正式结果补计，即使服务已为其他成员收录该比赛。基线时间变化必须从新 CPC Finder 数据重新生成成员累计数，不能沿用旧补计基线。
+
+离线回归覆盖赛前截止及等价时区、网络赛排除、无匹配与打星成员、重复身份取最好名次、学校隔离、真实精简 SRK 的活动及正式筛选、队员求和、覆盖声明、防重复与重复执行、奖牌规则修订、缺少结果报错，以及成都/武汉发布快照增量与历史战绩相符。指标回归补齐武汉的本赛季/上赛季 Rating、网络赛名次、身份与来源时间校验。公开 Python 包 API 无变化。
+
+### 其他指标是否实时更新
+
+**新前瞻必须在生成时获取最新来源，生成后固定为赛前快照。** 浏览器不请求上游，仅对已加载数据实时计算聚合、指标排名、学校排名、战力、雷达图和牌线；复盘继续使用该场赛前快照，不能回填开赛后的分数。
+
+`generate_preview_data` 命令默认通过 `preview_sources` 下载最新 XCPC Rating、XCPC Elo 和 CPC Finder；不接受缓存路径悄然代替最新来源。新目录保存在 `data-cache/preview-sources-{时间}/`，可用 `--source-cache` 指定不存在的目录。XCPC Rating 校验完整分页、人数、唯一记录及下载前后元数据；CPC Finder 校验完整分页、人数、唯一选手及下载前后第一页和赛事目录一致；Elo 为单文件快照。失败不会退回旧缓存，也不会输出新的前瞻。成功后记录每个输入文件 SHA-256 和来源版本；前瞻新增 `sourcesFetchedAt` 记录实际下载时间。最新指上游当前公开版本，不保证上游即时收录全部比赛；CPC Finder 缺失奖牌由本地正式 SRK 补齐。
+
+离线重建必须显式传 `--offline`、三项缓存路径及 `--snapshot-date`；历史前瞻不允许用当前在线数据重建。生成器仍不联网刷新本地赛季 Rating、SRK 历史和 NOI/IOI 缓存，生成前须先按对应数据流程更新和核对。下文旧快照的重建命令已明确标记 `--offline`。此次武汉使用已包含成都的赛季 Rating/SRK，NOI/IOI 仍为现有缓存，不声称这些来源刚刚重新下载。
+
+| 前瞻 | XCPC Rating / Elo 来源日期（北京时间） | 本赛季 Rating 截至 | CPC Finder 基线 |
+| --- | --- | --- | --- |
+| ICPC 第一场 | 8 月 11 日 / 8 月 17 日 | 尚未开赛，无此列 | 9 月 4 日 |
+| ICPC 第二场 | 9 月 7 日 / 9 月 11 日 | ICPC 第一场 | 9 月 4 日 |
+| CCPC 网络赛 | 9 月 18 日 / 9 月 18 日 | ICPC 第二场 | 9 月 4 日 |
+| 西安、长春 | 9 月 29 日 / 9 月 28 日 | CCPC 网络赛 | 10 月 10 日 |
+| 成都 | 10 月 18 日 / 10 月 18 日 | 西安、长春 | 10 月 10 日 |
+| 武汉（本次刷新） | 10 月 27 日 / 10 月 25 日 | 成都 | 10 月 28 日 |
+
+本赛季 Rating 已逐场对照已发布赛季的赛前历史核验；区域赛网络赛排名来源为 9 月 19 日结束的三场网络赛。上赛季 Rating 固定于 4 月 26 日最后一场。NOI/IOI 为既有获奖缓存和人工补录，不自动刷新。武汉此前错误地沿用 10 月 18 日 XCPC Rating/Elo 和 10 月 10 日 CPC Finder，现在改用本次下载的新版本；CPC Finder 赛事目录确认西安（79）、长春（87）、成都（80）均为 OK，因此显式声明三站已在基线中，避免重复加奖牌。
+
+武汉本次版本：XCPC Rating `2026-10-26T18:58:27.047236+00:00`（634 页、63370 条正式榜记录），XCPC Elo `2026-10-25T09:41:47.011Z`（67680 人），CPC Finder 于 `2026-10-28T04:23:47.989457+00:00` 完整下载（267 页、26628 人）。缓存为 `data-cache/preview-sources-20261028/fresh/`，其中 `manifest.json` 保存哈希及校验信息。XCPC Rating/Elo/CPC Finder 分别改变 136/107/382 个成员条目的分数，CPC Finder 匹配人数从 575 增至 761；309 个成员条目的奖牌变化，名单累计为 278 金、518 银、777 铜。最新基线已覆盖匹配成员的本赛季奖牌，`medalSupplement` 全为零，避免再次叠加。武汉战力按新评分自动重算，名单、学校、资格、NOI/IOI、本赛季/上赛季 Rating、网络赛名次、两季历史以及仅链接访问设置保持不变。
+
+复现本次武汉快照（须有上述本地缓存和已校验 SRK）：
+
+```bash
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-wuhan.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261028/fresh/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261028/fresh/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-20261028/fresh/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-28T04:23:47.989457+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/medal-fix-20261028/srk --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --snapshot-date 2026-10-28 --preview-id icpc-2026-wuhan --contest-stage regional --host-school "武汉大学" --preview-title "2026 ICPC 亚洲区域赛（武汉）" --team-source-url ./data/rosters/icpc-2026-wuhan.json --sort-at 2026-11-01T09:00:00+08:00 --unlisted --output static/data/previews/icpc-2026-wuhan.json
+python -m scripts.preview_history --season current --series static/data/series/2026-2027.json --srk-root data-cache/medal-fix-20261028/srk --preview static/data/previews/icpc-2026-wuhan.json
+```
+
+本次 `sourcesFetchedAt` 取下载清单的 `fetchedAt`；离线重建不会伪造新的下载时间。生成新的武汉快照时移除 `--offline`、三项外部缓存路径及两个日期参数，即会下载当时最新数据；需重新核对最新 CPC Finder 赛事目录中的收录范围，再传入覆盖声明。首次生成不会自动追加 `currentSeasonHistory`，仍需执行上面的历史补充命令。下载器离线测试使用注入的 HTTP transport，覆盖完整分页、重复记录、来源中途更新、失败不生成清单、显式缓存重建及禁止为已赛场次下载赛后数据。
+
 ## 2026-10-27 武汉前瞻仅链接发布
 
 发布 10 月 26 日生成并核验的武汉完整前瞻 `previews/icpc-2026-wuhan.json`，设置 `unlisted: true`。直达参数为 `?series=2026-2027&view=preview&previewContest=icpc-2026-wuhan`。索引与静态生成器登记该快照及 `rosters/icpc-2026-wuhan.json`，不重新抓取或刷新评分。隐藏仅控制导航，不是访问控制。
@@ -43,7 +91,7 @@ python -m scripts.publish_chengdu_2026_results --input-dir data-cache/results-20
 离线重建（外部缓存需先按上述来源与版本下载；全新检出不假定存在缓存）：
 
 ```bash
-python -m scripts.generate_preview_data --teams static/data/rosters/icpc-2026-chengdu.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261019/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261019/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-19 --preview-id icpc-2026-chengdu --contest-stage regional --host-school "电子科技大学" --preview-title "2026 ICPC 亚洲区域赛（成都）" --team-source-url ./sources/icpc-2026-chengdu-manual.pdf --sort-at 2026-10-25T09:00:00+08:00 --output static/data/previews/icpc-2026-chengdu.json
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-chengdu.json --team-format roster --current-history-srk-root data-cache/results-20261018-rankland --xcpcrating-data data-cache/preview-sources-20261019/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261019/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-19 --preview-id icpc-2026-chengdu --contest-stage regional --host-school "电子科技大学" --preview-title "2026 ICPC 亚洲区域赛（成都）" --team-source-url ./sources/icpc-2026-chengdu-manual.pdf --sort-at 2026-10-25T09:00:00+08:00 --output static/data/previews/icpc-2026-chengdu.json
 ```
 
 回归覆盖身份摘录与完整名单逐项一致、本赛季/上赛季分数和网络赛排名重算、静态复制、来源时间与匹配人数、四维计数及打星无排名、任意修改上赛季评分不影响战力、牌线一致与摘要去重。浏览器回归增加桌面/手机成都入口、四维雷达及来源链接检查。公开 Python 包 API 无变化。
@@ -172,7 +220,7 @@ python -m scripts.generate_regional_cutoffs --teams "C:/Downloads/成都报名�
 XLSX 导入兼容原西安表头与本次 CCPC 导出表头；重复表头、序号、缺失身份、成员重复和公式身份带原始行号报错。名单、当前/上赛季评分及三场网络赛排名完整离线回归，前端验证 336 队 schema、五维战力、公开索引及时间隐藏/恢复；静态生成器测试覆盖名单和前瞻一并复制。公开 Python API 不变。
 
 ```bash
-python -m scripts.generate_preview_data --teams static/data/rosters/ccpc-2026-changchun.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --host-school "东北师范大学" --preview-title "2026年CCPC国赛（长春）" --team-source-url ./sources/ccpc-2026-changchun-manual.pdf --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/ccpc-2026-changchun.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-11 --preview-id ccpc-2026-changchun --contest-stage regional --host-school "东北师范大学" --preview-title "2026年CCPC国赛（长春）" --team-source-url ./sources/ccpc-2026-changchun-manual.pdf --sort-at 2026-10-18T09:00:00+08:00 --end-at 2026-10-18T14:00:00+08:00 --output static/data/previews/ccpc-2026-changchun.json
 ```
 
 ### 图片名单参赛资格修订
@@ -215,7 +263,7 @@ schema v1 新增可选 `onlineContests`（固定三场 ID 与标题），队伍�
 生成器新增 `--team-format xlsx`、`--online-series` 和 `--unlisted`。前瞻可选布尔字段 `unlisted` 省略时为 false，非布尔值拒绝；标记只影响页面比赛选项和默认选择，评分、排序和静态文件保持可用。回归覆盖隐藏场次不出现在选项、普通入口/无效 ID 默认公开场次、显式直达、仅隐藏场次列表以及标记类型验证。XLSX 使用可选依赖 `pip install -e ".[preview]"`，只支持本次中文身份表头；未知类型、缺失身份、重复 ID/成员和公式身份带行号报错。网络赛输入要求三场齐全且早于前瞻；新模式也拒绝不早于前瞻的外部 Rating/Elo 快照。
 
 ```bash
-python -m scripts.generate_preview_data --teams "C:/Downloads/西安报名强度表_final_20261006.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-10 --preview-id icpc-2026-xian --contest-stage regional --host-school "西北工业大学" --preview-title "2026 ICPC 亚洲区域赛（西安）" --team-source-url ./data/rosters/icpc-2026-xian.json --sort-at 2026-10-18T09:00:00+08:00 --output static/data/previews/icpc-2026-xian.json
+python -m scripts.generate_preview_data --offline --teams "C:/Downloads/西安报名强度表_final_20261006.xlsx" --team-format xlsx --xcpcrating-data data-cache/preview-sources-20261010/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261010/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/preview-sources-20261010/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-10 --snapshot-date 2026-10-10 --preview-id icpc-2026-xian --contest-stage regional --host-school "西北工业大学" --preview-title "2026 ICPC 亚洲区域赛（西安）" --team-source-url ./data/rosters/icpc-2026-xian.json --sort-at 2026-10-18T09:00:00+08:00 --output static/data/previews/icpc-2026-xian.json
 ```
 
 离线回归覆盖身份列白名单、错误行号、跨校同名、学校别名、重复身份最好名次、重组与缺失成绩、来源时间、整份名单与本地评分、三层排名比较、全缺失双向置后、并列与打星、CPC Finder/奖牌不影响战力、schema 及旧快照兼容。新增测试位于 `tests/test_preview_roster.py`、`tests/test_online_preview.mjs`。本地 HTTP 服务验证返回 200；本次浏览器控制连接超时，未完成视觉验收。
@@ -312,7 +360,7 @@ schema v1 每队新增可选布尔值 `excluded`，省略视为正式队伍，�
 复现命令（先取得上述公开响应和来源缓存）：
 
 ```bash
-python -m scripts.generate_preview_data --teams data-cache/pintia-investigate/rankings.json --team-format pintia-public --xcpcrating-data data-cache/preview-sources-20260918/xcpcrating --xcpc-elo-data data-cache/preview-sources-20260918/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/cpcfinder-pages --cpcfinder-snapshot-date 2026-09-04 --snapshot-date 2026-09-18 --preview-id ccpc-2026-preliminary --preview-title "2026年CCPC网络预选赛" --team-source-url https://pintia.cn/rankings/2099750481526394880 --sort-at 2026-09-19T13:00:00+08:00 --output static/data/previews/ccpc-2026-preliminary.json
+python -m scripts.generate_preview_data --offline --teams data-cache/pintia-investigate/rankings.json --team-format pintia-public --xcpcrating-data data-cache/preview-sources-20260918/xcpcrating --xcpc-elo-data data-cache/preview-sources-20260918/xcpc-elo-data.js --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --cpcfinder-pages data-cache/cpcfinder-pages --cpcfinder-snapshot-date 2026-09-04 --snapshot-date 2026-09-18 --preview-id ccpc-2026-preliminary --preview-title "2026年CCPC网络预选赛" --team-source-url https://pintia.cn/rankings/2099750481526394880 --sort-at 2026-09-19T13:00:00+08:00 --output static/data/previews/ccpc-2026-preliminary.json
 ```
 
 离线测试使用缩减的真实 Pintia 响应，覆盖零提交、打星、教练排除、非法身份、重复 ID、来源说明，以及 Elo 尾部不计分、全不计分、空历史和零分。前端校验完整 CCPC 快照、三场索引加载、评分聚合和匹配人数、来源早于比赛时间、六维战力；打星回归覆盖高于/居中/同分/缺失数据的位置、升降序、正式队伍计数与名次不变、同校打星不占校排、全打星和非法字段。静态资源版本更新为 `20260918-52`。

@@ -74,6 +74,8 @@ python scripts/generate_problem_rating_static_data.py
 
 ### 赛前前瞻与赛后复盘
 
+新前瞻生成时默认下载最新 XCPC Rating、XCPC Elo 和 CPC Finder，生成后固定为赛前快照；旧缓存重建须显式使用 `--offline`。奖牌由 CPC Finder 基线加上尚未收录的本赛季赛前获奖记录，按成员累计；有本赛季区域赛历史时需提供 `--current-history-srk-root`，已有快照可用 `python -m scripts.preview_medals` 定向补齐。来源日期、避免重复计数的规则和命令见[奖牌补齐与指标时效](doc/season-2026-2027-preview.md#2026-10-28-本赛季奖牌补齐与指标时效审计)。
+
 前瞻按指定场次和名单更新。名单导入、评分来源、历史战绩补充以及西安站参数见[前瞻生成说明](doc/season-2026-2027-preview.md)。学校别名和更名维护在 [config/school-aliases.json](config/school-aliases.json)，生成器默认读取该文件，`--school-aliases` 可指定其他本地文件；格式见[学校别名说明](doc/school-aliases.md)。
 
 ```bash
