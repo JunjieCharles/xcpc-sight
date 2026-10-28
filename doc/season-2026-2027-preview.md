@@ -1,5 +1,17 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-28 武汉正式手册名单核对
+
+根据用户提供的《2026年ICPC武汉参赛手册.pdf》，逐页渲染并提取 PDF 第 8–18 页（印刷页码 7–17）的完整名单：正式队序号 1–368，打星队序号 1–70，共 **438 队、1310 个成员条目，正式 368、打星 70**。原文件发布在 `static/sources/icpc-2026-wuhan-manual.pdf`，SHA-256 为 `025c8fb14bd3cb547522d3e7aa89b460c3de9a02e6292e5f49e85af1d65557dd`。前瞻“名单来源”链接和标题统一指向该正式手册；名单 JSON 保留原工作簿来源为 `originalSource`，新增 `officialSource` 记录 PDF URL、哈希、页码和已核对身份指纹。
+
+原有 412 队全部匹配，学校、成员身份及正式／打星资格没有变化，新增的 26 队均为打星。按手册修正正式序号 87 哈尔滨工业大学（威海）的队名，删除“有格调”三字；正式序号 291 香港理工大学“菜得气势磅礴”去掉旧队名开头不可见的 U+200B。打星“紫麒麟”成员顺序改为朴冠全、Abdurakhmanuly Duman、Martin Khachatryan；“永恒行旅”改为李天舒、姚陆涵茗、徐锐。保留原有队伍顺序与 ID，新增队伍按手册顺序附加；英文姓名及学校的跨行单词以空格连接，原有姓名格式保留，不把教练列并入成员。
+
+新增成员使用当天已经完整下载并校验的 10 月 28 日快照匹配评分，未再刷新来源。原有 412 队的成员评分、奖牌、网络赛名次及两季历史记录逐项一致，两个成员顺序修正只调整展示顺序。新名单的 XCPC Rating/Elo/CPC Finder/本赛季/上赛季匹配成员数为 1175/1188/777/1117/654；西安、长春、成都历史记录分别为 66/68/42 条。名单累计奖牌为 284 金、534 银、789 铜。正式队不变且新增均为打星，原正式队综合战力、排名和牌线保持不变。
+
+`unlisted: true` 保持，武汉在公开赛站表仍是不可点击的牌线摘要，直接链接可以打开完整前瞻。摘要只同步总队数 438、打星数 70 和名单来源文件/哈希，368 支正式队及捧杯/金/银/铜 13/113/279/673 不变。后续重建使用该身份 JSON 和手册来源 URL，生成后将 `teamSource.title` 设为正式手册文件名；评分仍使用下文固定缓存及本赛季历史补充步骤。
+
+回归覆盖 PDF 原文件哈希、全部 438 队的独立提取身份指纹、1310 个成员、正式/打星数量、英文换行、成员顺序、来源链接、仅链接访问、名单与前瞻逐项一致、更新后的来源匹配及奖牌累计。提取表格、逐项审计与渲染图片保存在被忽略的 `data-cache/wuhan-manual-20261028/`，默认测试不依赖 PDF 提取工具或缓存。
+
 ## 2026-10-28 本赛季奖牌补齐与指标时效审计
 
 奖牌列原来仅取 CPC Finder 累计数，即使已补入 `currentSeasonHistory`，也不会更新成员和队伍奖牌。本次以该累计数为基线，按规范化学校及姓名补计本赛季已结束的区域赛／总决赛正式获奖记录，再按实际名单成员求和。比赛必须早于该前瞻 `sortAt`，排除网络预选赛、同时开赛及未来比赛；历史比赛仍使用已有正式且有提交筛选和 SRK 奖牌规则。相同规范化身份在同场有多条记录时取最好正式名次，只计一次。同校同名仍无法区分；本场打星身份不抹除以前正式参赛的奖牌，未匹配 CPC Finder 的成员也可以获得本赛季奖牌。
@@ -42,7 +54,7 @@ schema v1 新增可选 `medalSources`，记录 `cpcfinderSnapshot`、`cpcfinderC
 复现本次武汉快照（须有上述本地缓存和已校验 SRK）：
 
 ```bash
-python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-wuhan.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261028/fresh/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261028/fresh/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-20261028/fresh/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-28T04:23:47.989457+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/medal-fix-20261028/srk --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --snapshot-date 2026-10-28 --preview-id icpc-2026-wuhan --contest-stage regional --host-school "武汉大学" --preview-title "2026 ICPC 亚洲区域赛（武汉）" --team-source-url ./data/rosters/icpc-2026-wuhan.json --sort-at 2026-11-01T09:00:00+08:00 --unlisted --output static/data/previews/icpc-2026-wuhan.json
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-wuhan.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261028/fresh/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261028/fresh/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-20261028/fresh/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-28T04:23:47.989457+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/medal-fix-20261028/srk --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --snapshot-date 2026-10-28 --preview-id icpc-2026-wuhan --contest-stage regional --host-school "武汉大学" --preview-title "2026 ICPC 亚洲区域赛（武汉）" --team-source-url ./sources/icpc-2026-wuhan-manual.pdf --sort-at 2026-11-01T09:00:00+08:00 --unlisted --output static/data/previews/icpc-2026-wuhan.json
 python -m scripts.preview_history --season current --series static/data/series/2026-2027.json --srk-root data-cache/medal-fix-20261028/srk --preview static/data/previews/icpc-2026-wuhan.json
 ```
 

@@ -131,7 +131,7 @@ def test_online_sources_require_all_three_past_contests_and_positive_ranks():
 @pytest.mark.parametrize("contest_id,count", [("icpc-2026-xian", 418),
                                              ("ccpc-2026-changchun", 336),
                                              ("icpc-2026-chengdu", 328),
-                                             ("icpc-2026-wuhan", 412)])
+                                             ("icpc-2026-wuhan", 438)])
 def test_published_regional_ranks_and_ratings_match_local_series(contest_id, count, tmp_path):
     import json
     from pathlib import Path
@@ -294,6 +294,49 @@ def test_changchun_image_statuses_match_all_marked_teams():
     assert not hunan["excluded"]
 
 
+def test_wuhan_official_manual_and_all_reviewed_identities():
+    import hashlib
+    import json
+    import re
+    from pathlib import Path
+
+    from scripts.generate_preview_data import load_normalizer
+
+    root = Path(__file__).parents[1]
+    normalizer = load_normalizer(root / "config/school-aliases.json")
+    roster = json.loads((root / "static/data/rosters/icpc-2026-wuhan.json").read_text("utf-8"))
+    preview = json.loads((root / "static/data/previews/icpc-2026-wuhan.json").read_text("utf-8"))
+    pdf = root / "static/sources/icpc-2026-wuhan-manual.pdf"
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == (
+        "025c8fb14bd3cb547522d3e7aa89b460c3de9a02e6292e5f49e85af1d65557dd")
+    assert preview["teamSource"]["url"] == "./sources/icpc-2026-wuhan-manual.pdf"
+    assert preview["teamSource"]["title"] == roster["source"] == "2026年ICPC武汉参赛手册.pdf"
+    assert preview["unlisted"] is True
+    assert len(roster["teams"]) == 438
+    assert sum(not t["excluded"] for t in roster["teams"]) == 368
+    assert sum(len(t["members"]) for t in roster["teams"]) == 1310
+    canonical = [[normalizer.school(t["school"]),
+                  re.sub(r"\s|\u200b", "", t["name"]).lstrip("*★"),
+                  [normalizer.member(m) for m in t["members"]], t["excluded"]]
+                 for t in roster["teams"]]
+    canonical.sort(key=lambda t: json.dumps(t, ensure_ascii=False))
+    digest = hashlib.sha256(json.dumps(canonical, ensure_ascii=False,
+                                       separators=(",", ":")).encode()).hexdigest()
+    # Independently extracted from all PDF roster tables and visually reviewed.
+    assert digest == "80d01adea84d42776952a1614212257b293971d91ab2648e06cf42aa8b586e3d"
+    assert roster["officialSource"]["identitySha256"] == digest
+    by_name = {t["name"]: t for t in roster["teams"]}
+    assert by_name["紫麒麟"]["members"] == [
+        "朴冠全", "Abdurakhmanuly Duman", "Martin Khachatryan"]
+    assert by_name["永恒行旅"]["members"] == ["李天舒", "姚陆涵茗", "徐锐"]
+    assert by_name["网瘾重度患者"]["school"] == "University of New South Wales"
+    assert "菜得气势磅礴" in by_name
+    for row, team in zip(roster["teams"], preview["teams"], strict=True):
+        assert row == {"school": team["school"], "name": team["name"],
+                       "members": [m["name"] for m in team["members"]],
+                       "excluded": team["excluded"]}
+
+
 def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     import json
 
@@ -320,6 +363,6 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert len(roster["teams"]) == 328
     wuhan = json.loads((tmp_path / "previews/icpc-2026-wuhan.json").read_text("utf-8"))
     assert wuhan["unlisted"] is True
-    assert len(wuhan["teams"]) == 412
+    assert len(wuhan["teams"]) == 438
     roster = json.loads((tmp_path / "rosters/icpc-2026-wuhan.json").read_text("utf-8"))
-    assert len(roster["teams"]) == 412
+    assert len(roster["teams"]) == 438

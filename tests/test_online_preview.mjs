@@ -17,7 +17,7 @@ test('Wuhan is link-only while its cutoff summary remains non-clickable', async 
   const wuhan = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-wuhan.json', import.meta.url), 'utf8')));
   const summaries = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8')).contests;
   assert.equal(wuhan.unlisted, true);
-  assert.equal(wuhan.teams.length, 412);
+  assert.equal(wuhan.teams.length, 438);
   assert.equal(wuhan.teams.filter(t => !t.excluded).length, 368);
   assert.equal(wuhan.teams.flatMap(t => t.currentSeasonHistory).filter(h => h.contestId === 'icpc2026chengdu').length, 42);
   for (const current of ['icpc-2026-chengdu', wuhan.id]) {

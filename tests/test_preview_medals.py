@@ -143,9 +143,9 @@ def test_wuhan_latest_cpcfinder_already_covers_this_season_without_double_counti
     assert document["medalSources"]["addedContestIds"] == []
     members = [m for t in document["teams"] for m in t["members"]]
     assert not any(any(m["medalSupplement"].values()) for m in members)
-    assert document["matchingSummary"]["cpcfinder"] == 761
+    assert document["matchingSummary"]["cpcfinder"] == 777
     assert {k: sum(m["medals"][k] for m in members) for k in ("gold", "silver", "bronze")} == {
-        "gold": 278, "silver": 518, "bronze": 777}
+        "gold": 284, "silver": 534, "bronze": 789}
     for team in document["teams"]:
         for medal in ("gold", "silver", "bronze"):
             assert team["medals"][medal] == sum(m["medals"][medal] for m in team["members"])
