@@ -52,6 +52,18 @@ def test_srk_to_review_to_frontend_offline():
     assert json.loads(process.stdout) == [["a", 1, 1], ["c", 2, 3], ["d", 3, 1]]
 
 
+def test_review_title_follows_preview_instead_of_upstream_title():
+    preview, contest = fixture()
+    original = copy.deepcopy(preview)
+    preview["title"] = "2026 ICPC 亚洲区域赛（成都）"
+    result = project_review_contest(preview, replace(contest, title="上游赞助冠名全称"))
+    baseline = project_review_contest(original, contest)
+    assert result.pop("title") == preview["title"]
+    baseline.pop("title")
+    assert result == baseline
+    assert preview == {**original, "title": "2026 ICPC 亚洲区域赛（成都）"}
+
+
 def test_matching_handles_punctuation_names_and_full_roster_fallback():
     preview, contest = fixture()
     preview["teams"][0]["name"] = "！！！"

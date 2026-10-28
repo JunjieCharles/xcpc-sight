@@ -158,7 +158,7 @@ def project_review_contest(
     return {
         "id": contest.contest_id,
         "previewId": preview["id"],
-        "title": contest.title,
+        "title": preview["title"],
         "startAt": contest.start_at.isoformat(),
         "source": source,
         "teams": rows,

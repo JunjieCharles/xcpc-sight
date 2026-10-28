@@ -123,8 +123,10 @@ schema v1 结果行新增可选 `resultStatus: "removed"`：保留旧 `resultTea
 `static/data/reviews/2026-2027.json` 为 schema v1，顶层包含 `schemaVersion`、`seriesId`、`contests[]`。每场包含：
 
 - `id`：实际比赛 ID；`previewId`：对应赛前快照 ID，不能通过标题猜测，两者允许不同。
-- `title`、`startAt`、`source`：来源标题、可打开的 RankLand `/ranklist/{contestId}` 链接；有 provenance 时还包含 `fileId`、`fileUrl`、`sha256`。
+- `title`：直接沿用对应前瞻的 `title`，让复盘页标题和比赛选择器与前瞻名称一致，不使用上游榜单冠名全称。`startAt` 保留实际比赛时间；`source` 保留来源名称及可打开的 RankLand `/ranklist/{contestId}` 链接，有 provenance 时还包含 `fileId`、`fileUrl`、`sha256`。
 - `teams[]`：`previewTeamId`、`resultTeamId`、`hasActivity`、`actualRank`。正常行的 `hasActivity` 为布尔值，有活动时名次必须为正整数，无活动时必须为 `null`；显式 `resultStatus: "removed"` 行的活动状态和名次均为 `null`。
+
+2026-10-26 统一现有复盘名称与前瞻一致，仅更改西安、长春、成都的标题；三场网络赛原已一致。回归覆盖上游标题不影响复盘名称、投影其余字段及输入保持不变，以及全部已发布复盘与关联前瞻标题一致。
 
 结果必须恰好覆盖对应快照中的每支正式队伍（排除 `excluded: true` 的打星队伍），各侧 ID 唯一；未知前瞻、重复关联、漏队、非法活动状态和名次会报出字段路径。源结果中未出现在前瞻中的队伍不加入复盘，其存在可能影响原实际名次，但筛选后名次会压缩。
 

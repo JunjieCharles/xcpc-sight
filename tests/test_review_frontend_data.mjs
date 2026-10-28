@@ -14,6 +14,16 @@ const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
 const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu"]
   .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
 
+test("published review titles match their linked preview titles", async () => {
+  const index = await read("../static/data/index.json");
+  const entry = index.series.find(s => s.id === "2026-2027");
+  const previews = await Promise.all(entry.previews.map(p => read(`../static/data/${p.path}`)));
+  const document = await read(`../static/data/${entry.reviewPath}`);
+  for (const contest of document.contests) {
+    assert.equal(contest.title, previews.find(p => p.id === contest.previewId).title);
+  }
+});
+
 test("review menu uses Beijing dates and ICPC precedes later-starting CCPC on the same date", () => {
   const icpc = { id: "icpc2026xi_an", startAt: "2026-10-18T01:00:00Z" };
   const ccpc = { id: "ccpc2026changchun", startAt: "2026-10-18T13:00:00+08:00" };

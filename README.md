@@ -128,7 +128,7 @@ print(len(document["contests"]), len(document["competitors"]))
 
 队伍聚合可使用 `rating.normalized_lse_rating`，计算 `400 * log10(mean(10 ** (R / 400)))`；空输入返回 `None`，调用方需过滤缺失成员。完整计算规则见 [Rating 规则](doc/rating-rules.md)。
 
-学校别名可通过 `core.load_school_aliases(path)` 加载，再传给 `DefaultNormalizer(school_aliases=...)`。复盘纯 API `core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None, unofficial_results=None, result_medals=None)` 负责队伍关联与结果投影；官方移除和赛后打星分别通过 `removed_results`、`unofficial_results` 显式映射，`result_medals` 可传入正式结果 ID 到实际奖牌或 null 的完整映射。
+学校别名可通过 `core.load_school_aliases(path)` 加载，再传给 `DefaultNormalizer(school_aliases=...)`。复盘纯 API `core.project_review_contest(preview, contest, *, normalizer=None, overrides=None, removed_results=None, unofficial_results=None, result_medals=None)` 负责队伍关联与结果投影，复盘标题沿用前瞻名称；官方移除和赛后打星分别通过 `removed_results`、`unofficial_results` 显式映射，`result_medals` 可传入正式结果 ID 到实际奖牌或 null 的完整映射。
 
 静态索引 API `rating.project_static_data_index` 支持 `p`review_publications`` 和 review_publications，可登记同系列多份前瞻与复盘入口。库 API 不隐式写文件；输出由脚本显式完成。数据获取、模型和字段契约见[设计文档索引](doc/README.md)。
 
