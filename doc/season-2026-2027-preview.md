@@ -1,5 +1,9 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-10-28 武汉前瞻公开入口
+
+移除武汉快照的 `unlisted`，赛站牌线表改为可点击的完整前瞻入口，并按既有规则参与默认场次选择。同 ID 摘要由完整前瞻去重，不显示重复行。名单、评分、来源、比赛记录和牌线不变；此前仅链接发布的记录保留为历史说明。回归覆盖公开入口、摘要去重、默认选择和桌面/手机点击切换。
+
 ## 2026-10-28 武汉正式手册名单核对
 
 根据用户提供的《2026年ICPC武汉参赛手册.pdf》，逐页渲染并提取 PDF 第 8–18 页（印刷页码 7–17）的完整名单：正式队序号 1–368，打星队序号 1–70，共 **438 队、1310 个成员条目，正式 368、打星 70**。原文件发布在 `static/sources/icpc-2026-wuhan-manual.pdf`，SHA-256 为 `025c8fb14bd3cb547522d3e7aa89b460c3de9a02e6292e5f49e85af1d65557dd`。前瞻“名单来源”链接和标题统一指向该正式手册；名单 JSON 保留原工作簿来源为 `originalSource`，新增 `officialSource` 记录 PDF URL、哈希、页码和已核对身份指纹。
@@ -54,7 +58,7 @@ schema v1 新增可选 `medalSources`，记录 `cpcfinderSnapshot`、`cpcfinderC
 复现本次武汉快照（须有上述本地缓存和已校验 SRK）：
 
 ```bash
-python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-wuhan.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261028/fresh/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261028/fresh/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-20261028/fresh/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-28T04:23:47.989457+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/medal-fix-20261028/srk --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --snapshot-date 2026-10-28 --preview-id icpc-2026-wuhan --contest-stage regional --host-school "武汉大学" --preview-title "2026 ICPC 亚洲区域赛（武汉）" --team-source-url ./sources/icpc-2026-wuhan-manual.pdf --sort-at 2026-11-01T09:00:00+08:00 --unlisted --output static/data/previews/icpc-2026-wuhan.json
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/icpc-2026-wuhan.json --team-format roster --xcpcrating-data data-cache/preview-sources-20261028/fresh/xcpcrating --xcpc-elo-data data-cache/preview-sources-20261028/fresh/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-20261028/fresh/cpcfinder-pages --cpcfinder-snapshot-date 2026-10-28T04:23:47.989457+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/medal-fix-20261028/srk --exclude-previous-season-power --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --snapshot-date 2026-10-28 --preview-id icpc-2026-wuhan --contest-stage regional --host-school "武汉大学" --preview-title "2026 ICPC 亚洲区域赛（武汉）" --team-source-url ./sources/icpc-2026-wuhan-manual.pdf --sort-at 2026-11-01T09:00:00+08:00 --output static/data/previews/icpc-2026-wuhan.json
 python -m scripts.preview_history --season current --series static/data/series/2026-2027.json --srk-root data-cache/medal-fix-20261028/srk --preview static/data/previews/icpc-2026-wuhan.json
 ```
 

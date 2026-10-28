@@ -311,7 +311,7 @@ def test_wuhan_official_manual_and_all_reviewed_identities():
         "025c8fb14bd3cb547522d3e7aa89b460c3de9a02e6292e5f49e85af1d65557dd")
     assert preview["teamSource"]["url"] == "./sources/icpc-2026-wuhan-manual.pdf"
     assert preview["teamSource"]["title"] == roster["source"] == "2026年ICPC武汉参赛手册.pdf"
-    assert preview["unlisted"] is True
+    assert not preview.get("unlisted", False)
     assert len(roster["teams"]) == 438
     assert sum(not t["excluded"] for t in roster["teams"]) == 368
     assert sum(len(t["members"]) for t in roster["teams"]) == 1310
@@ -362,7 +362,7 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     roster = json.loads((tmp_path / "rosters/icpc-2026-chengdu.json").read_text("utf-8"))
     assert len(roster["teams"]) == 328
     wuhan = json.loads((tmp_path / "previews/icpc-2026-wuhan.json").read_text("utf-8"))
-    assert wuhan["unlisted"] is True
+    assert not wuhan.get("unlisted", False)
     assert len(wuhan["teams"]) == 438
     roster = json.loads((tmp_path / "rosters/icpc-2026-wuhan.json").read_text("utf-8"))
     assert len(roster["teams"]) == 438

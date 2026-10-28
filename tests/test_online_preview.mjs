@@ -13,19 +13,22 @@ function team(id, ranks, extra = {}) {
     medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
 }
 
-test('Wuhan is link-only while its cutoff summary remains non-clickable', async () => {
+test('Wuhan is public and its complete preview replaces the cutoff summary', async () => {
   const wuhan = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-wuhan.json', import.meta.url), 'utf8')));
   const summaries = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8')).contests;
-  assert.equal(wuhan.unlisted, true);
+  assert.equal(wuhan.unlisted, undefined);
   assert.equal(wuhan.teams.length, 438);
   assert.equal(wuhan.teams.filter(t => !t.excluded).length, 368);
   assert.equal(wuhan.teams.flatMap(t => t.currentSeasonHistory).filter(h => h.contestId === 'icpc2026chengdu').length, 42);
   for (const current of ['icpc-2026-chengdu', wuhan.id]) {
     const rows = previewNavigationGroups([wuhan], current, summaries).regional.filter(p => p.id === wuhan.id);
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].summaryOnly, true);
-    assert.deepEqual(rows[0].cutoffs, buildPreviewCutoffs(wuhan));
+    assert.equal(rows[0].summaryOnly, undefined);
+    assert.equal(rows[0], wuhan);
+    assert.deepEqual(buildPreviewCutoffs(rows[0]), { cup: 13, gold: 113, silver: 279, bronze: 673 });
   }
+  const { selectPreviewContest } = await import('../static/js/preview.mjs');
+  assert.equal(selectPreviewContest([wuhan], null, null, new Date('2026-10-28T00:00:00Z')), wuhan);
 });
 const dimensions = ['currentSeason', 'onlineRanks'];
 
