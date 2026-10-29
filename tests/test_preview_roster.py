@@ -308,12 +308,12 @@ def test_wuhan_official_manual_and_all_reviewed_identities():
     preview = json.loads((root / "static/data/previews/icpc-2026-wuhan.json").read_text("utf-8"))
     pdf = root / "static/sources/icpc-2026-wuhan-manual.pdf"
     assert hashlib.sha256(pdf.read_bytes()).hexdigest() == (
-        "025c8fb14bd3cb547522d3e7aa89b460c3de9a02e6292e5f49e85af1d65557dd")
+        "2668146ffc9f62a5494676acd099a4028ed2dc89af0e3794413bce33ecc7b0ac")
     assert preview["teamSource"]["url"] == "./sources/icpc-2026-wuhan-manual.pdf"
-    assert preview["teamSource"]["title"] == roster["source"] == "2026年ICPC武汉参赛手册.pdf"
+    assert preview["teamSource"]["title"] == roster["source"] == "2026年ICPC武汉参赛手册1029.pdf"
     assert not preview.get("unlisted", False)
     assert len(roster["teams"]) == 438
-    assert sum(not t["excluded"] for t in roster["teams"]) == 368
+    assert sum(not t["excluded"] for t in roster["teams"]) == 369
     assert sum(len(t["members"]) for t in roster["teams"]) == 1310
     canonical = [[normalizer.school(t["school"]),
                   re.sub(r"\s|\u200b", "", t["name"]).lstrip("*★"),
@@ -323,9 +323,13 @@ def test_wuhan_official_manual_and_all_reviewed_identities():
     digest = hashlib.sha256(json.dumps(canonical, ensure_ascii=False,
                                        separators=(",", ":")).encode()).hexdigest()
     # Independently extracted from all PDF roster tables and visually reviewed.
-    assert digest == "80d01adea84d42776952a1614212257b293971d91ab2648e06cf42aa8b586e3d"
+    assert digest == "d74ca6f42570ae0db24876f70b9215c0bdde66f99f5bf862832966f2896bd961"
     assert roster["officialSource"]["identitySha256"] == digest
     by_name = {t["name"]: t for t in roster["teams"]}
+    assert not by_name["彩云归"]["excluded"]
+    assert by_name["彩云归"]["school"] == "河南师范大学"
+    assert by_name["彩云归"]["members"] == ["陈春宇", "董天逸", "孙胜锺"]
+    assert sum(t["excluded"] for t in roster["teams"]) == 69
     assert by_name["紫麒麟"]["members"] == [
         "朴冠全", "Abdurakhmanuly Duman", "Martin Khachatryan"]
     assert by_name["永恒行旅"]["members"] == ["李天舒", "姚陆涵茗", "徐锐"]

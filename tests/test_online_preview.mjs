@@ -18,7 +18,13 @@ test('Wuhan is public and its complete preview replaces the cutoff summary', asy
   const summaries = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8')).contests;
   assert.equal(wuhan.unlisted, undefined);
   assert.equal(wuhan.teams.length, 438);
-  assert.equal(wuhan.teams.filter(t => !t.excluded).length, 368);
+  assert.equal(wuhan.teams.filter(t => !t.excluded).length, 369);
+  assert.equal(wuhan.teams.find(t => t.school === '河南师范大学' && t.name === '彩云归').excluded, false);
+  const summary = summaries.find(t => t.id === wuhan.id);
+  assert.equal(summary.officialTeamCount, 369);
+  assert.equal(summary.excludedTeamCount, 69);
+  assert.equal(summary.matchedOfficialTeamCount, 358);
+  assert.deepEqual(summary.cutoffs, buildPreviewCutoffs(wuhan));
   assert.equal(wuhan.teams.flatMap(t => t.currentSeasonHistory).filter(h => h.contestId === 'icpc2026chengdu').length, 42);
   for (const current of ['icpc-2026-chengdu', wuhan.id]) {
     const rows = previewNavigationGroups([wuhan], current, summaries).regional.filter(p => p.id === wuhan.id);
