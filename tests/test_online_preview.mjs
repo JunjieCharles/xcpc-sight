@@ -367,15 +367,22 @@ test('regional navigation orders Beijing calendar dates then ICPC before CCPC wi
 test('summary-only stations validate, load independently, and yield to full previews', async () => {
   const document = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8'));
   validateRegionalCutoffs(document, '2026-2027');
-  const [chengdu, wuhan] = document.contests;
+  const [chengdu, wuhan, leshan] = document.contests;
   assert.deepEqual(chengdu.cutoffs, { cup: 4, gold: 76, silver: 268, bronze: 599 });
   assert.deepEqual([chengdu.teamCount, chengdu.officialTeamCount, chengdu.excludedTeamCount, chengdu.matchedOfficialTeamCount], [328, 319, 9, 310]);
   assert.equal(chengdu.sources.rosterFile, '成都最终强度表_20261012.xlsx');
   assert.equal(chengdu.sources.rosterSha256, '565da30b119eb38d3c07ada1909cfed9817c0622645c695a35e51a679a680b90');
   assert.deepEqual(wuhan.cutoffs, { cup: 13, gold: 113, silver: 279, bronze: 673 });
   const groups = previewNavigationGroups([await xian()], 'icpc-2026-xian', document.contests);
-  assert.deepEqual(groups.regional.map(p => p.id), ['icpc-2026-xian', chengdu.id, wuhan.id]);
+  assert.deepEqual(groups.regional.map(p => p.id), ['icpc-2026-xian', chengdu.id, wuhan.id, leshan.id]);
   assert.equal(groups.regional[1].summaryOnly, true);
+  assert.equal(leshan.id, 'ccpc-2026-leshan');
+  assert.equal(previewContestDate(leshan), '2026-11-08');
+  assert.equal(leshan.hostSchool, '乐山师范学院');
+  assert.deepEqual(leshan.cutoffs, { cup: 11, gold: 71, silver: 213, bronze: 451 });
+  assert.deepEqual([leshan.teamCount, leshan.officialTeamCount, leshan.excludedTeamCount, leshan.matchedOfficialTeamCount], [348, 300, 48, 293]);
+  assert.equal(groups.regional.at(-1).summaryOnly, true);
+  assert.ok(!('teams' in leshan));
   assert.equal(previewNavigationGroups([{ ...chengdu, teams: [] }], chengdu.id, document.contests).regional[0].summaryOnly, undefined);
   const store = createPreviewStore('https://example.test/data/index.json', async url => {
     assert.equal(url, 'https://example.test/data/regional-cutoffs/2026-2027.json');
