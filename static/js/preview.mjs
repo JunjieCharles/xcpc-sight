@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261027-76";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261101-77";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -10,6 +10,7 @@ export function formatPreviewTime(preview) {
   const date = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "long" });
   const time = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", timeStyle: "short" });
   const start = new Date(preview.sortAt);
+  if (preview.dateOnly) return `比赛日期：${date.format(start)}`;
   let label = `比赛时间：${date.format(start)} ${time.format(start)}`;
   if (preview.endAt) {
     const end = new Date(preview.endAt);
@@ -158,6 +159,9 @@ export function validatePreview(document) {
   }
   if (document.hideContestTime !== undefined && typeof document.hideContestTime !== "boolean") {
     fail("preview.hideContestTime", "expected boolean");
+  }
+  if (document.dateOnly !== undefined && typeof document.dateOnly !== "boolean") {
+    fail("preview.dateOnly", "expected boolean");
   }
   const aggregation = document.ratingAggregation === undefined ? "max" : document.ratingAggregation;
   if (!["max", "normalized-lse"].includes(aggregation)) fail("preview.ratingAggregation", "unsupported aggregation");

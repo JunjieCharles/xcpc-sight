@@ -33,6 +33,33 @@ def test_reviewed_identity_roster_keeps_eligibility_and_ignores_scores():
 CCPC_HEADERS = ["序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名", "教练姓名"]
 
 
+PRINT_HEADERS = ["序号", "中文队名", "所属学校", "队员1", "队员2", "队员3", "教练", "队伍类型"]
+
+
+def test_ccpc_print_roster_preserves_eligibility_and_skips_statistics():
+    rows = [PRINT_HEADERS,
+            [1, "队伍", "学校", "甲", "乙", "丙", "=PRIVATE()", "正式"],
+            [2, "星队", "学校", "丁", "无无", "无无", "教练", "打星"],
+            [None], ["统计", None, None, "=COUNTA(D2:D3)"]]
+    teams = parse_roster_rows(rows)
+    assert [t.excluded for t in teams] == [False, True]
+    assert [t.members for t in teams] == [("甲", "乙", "丙"), ("丁",)]
+    assert [t.source_index for t in teams] == [0, 1]
+    with pytest.raises(ValueError, match="row 6: unexpected row"):
+        parse_roster_rows([*rows, rows[1]])
+    with pytest.raises(ValueError, match="duplicate team ID"):
+        parse_roster_rows([PRINT_HEADERS, rows[1], rows[1]])
+
+
+@pytest.mark.parametrize("column,value", [(0, True), (0, "统计"), (2, None),
+                                         (3, "=BAD()"), (7, None), (7, "未知")])
+def test_ccpc_print_roster_rejects_invalid_rows(column, value):
+    row = [1, "队伍", "学校", "甲", "乙", "丙", "教练", "正式"]
+    row[column] = value
+    with pytest.raises(ValueError, match="roster row 2"):
+        parse_roster_rows([PRINT_HEADERS, row])
+
+
 def test_ccpc_roster_ignores_coach_and_preserves_identities():
     row = [1, "学校", "队伍", "张三", "李四", "王五", "=PRIVATE()"]
     teams = parse_roster_rows([["标题"], CCPC_HEADERS, row])

@@ -1,5 +1,39 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-11-02 乐山完整前瞻发布
+
+使用用户提供的 `2026CCPC(乐山)-参赛队伍-检验版.xlsx`“检验”表，SHA-256 `87db137b70960b9749eee2f0abd966a0807d10d1692543eca96f6ea81a7dbb7a`。与印刷版逐队比较，仅香港城市大学 `Feel the Russian Style` 补齐 `Timur Gizatullin`、`DEMIDOV Ilia`，保留蔡居宏。学校、队名、其他成员、资格和顺序不变；348 队（正式 300、打星 48），有效成员条目 1039。原工作簿不发布，只发布身份摘录。
+
+公开完整前瞻和索引入口，赛站表乐山行可点击，同 ID 牌线摘要被完整前瞻去重。直达参数为 `?series=2026-2027&view=preview&previewContest=ccpc-2026-leshan`，参与现有默认场次选择；11 月 8 日只展示日期，不伪造开赛时刻。捧杯／金／银／铜线仍为 **11／71／213／451**，293 支正式队至少匹配一场网络赛。同步摘要名单来源，不重算或发布其他比赛数据。
+
+本次核查及下载截止北京时间 **2026-11-02 00:20:55**，早于乐山比赛日期。外部完整缓存为 `data-cache/preview-sources-leshan-20261102/`，成功清单记录各输入哈希及下载前后一致性：
+
+| 指标 | 来源版本、核查结果与处理 |
+| --- | --- |
+| XCPC Rating | `2026-11-01T11:26:37.766839+00:00`，63397 条正式榜记录，已收录武汉；替换原 10 月 26 日版本。 |
+| XCPC Elo | `2026-11-01T11:13:38.623Z`，68027 人，已收录武汉；与上次版本一致，重新下载核验并匹配补齐成员。 |
+| CPC Finder | `2026-11-01T16:20:55.575465+00:00` 完整下载，27165 人；西安、长春、成都、武汉均为 OK，显式声明四场已覆盖。 |
+| 本赛季 Rating／三场网络赛 | 重新下载 RankLand 当前七场 SRK，离线重算结果与已发布 9212 人七场系列完全一致；问题链接等元数据修订不改变计分。乐山采用教练误计修正后的个人分数。 |
+| 上赛季 Rating | 下载当前 16 场 SRK，按现有规则重算得到 9236 人，相比已发布总榜少四名误计教练，88 人最终分变化；校正结果仅作为乐山输入，不改历史总榜和已赛前瞻。原始来源及重算结果保存在 `data-cache/leshan-audit-20261102/`。 |
+| 两季历史和奖牌 | 使用本次下载的正式 SRK 重建历史；CPC Finder 基线已覆盖武汉，`addedContestIds` 为空、所有成员补计为零，避免重复累计。名单合计 348 金、643 银、877 铜。 |
+| IOI | 核对统计站 2020–2026 年排名、分数、奖牌，包括并列及澳门选手；与现有用户提供快照一致，保留原中文姓名映射。早年人工补录未重新核实。 |
+| NOI | 尝试访问 2020–2026 年缓存所指的全部官方名单，均返回 HTTP 403，无法确认最新修订；保留 9 月 4 日缓存及人工补录，明确不声称已核实为最新。 |
+
+匹配成员数：XCPC Rating 933、Elo 951、上赛季 594、本赛季 902、CPC Finder 752。综合战力仍用 XCPC Rating、Elo、本赛季 Rating、网络赛排名四维；上赛季 Rating、CPC Finder 和奖牌仅展示。
+
+上赛季输入重建：从已发布 `static/data/series/2025-2026.json` 的 `contests` 顺序和 collection 获取本次审计目录内的 `{id}.srk.json`，依次调用 `normalize_srk_contest`、`select_season(..., SEASON_2025_2026)`、`calculate_series_ratings`、`project_series_rating_data`，显式保存到 `data-cache/leshan-audit-20261102/2025-2026.json`。该输入 SHA-256 和各 SRK 文件版本在本地审计中记录；库调用本身不写文件。四名移除身份为天津大学赵满坤、北京建筑大学钱丽萍、东北石油大学富宇、杭州师范大学单振宇，均因现有教练过滤规则排除。
+
+固定本次已下载输入后重建乐山：
+
+```bash
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/ccpc-2026-leshan.json --team-format roster --xcpcrating-data data-cache/preview-sources-leshan-20261102/xcpcrating --xcpc-elo-data data-cache/preview-sources-leshan-20261102/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-leshan-20261102/cpcfinder-pages --cpcfinder-snapshot-date 2026-11-01T16:20:55.575465+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu icpc2026wuhan --previous-series data-cache/leshan-audit-20261102/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/leshan-audit-20261102 --history-srk-root data-cache/leshan-audit-20261102 --exclude-previous-season-power --snapshot-date 2026-11-02 --preview-id ccpc-2026-leshan --contest-stage regional --host-school "乐山师范学院" --preview-title "2026年CCPC国赛（乐山）" --team-source-url ./data/rosters/ccpc-2026-leshan.json --sort-at 2026-11-08T00:00:00+08:00 --date-only --output static/data/previews/ccpc-2026-leshan.json
+python -m scripts.preview_history --season current --series static/data/series/2026-2027.json --srk-root data-cache/leshan-audit-20261102 --preview static/data/previews/ccpc-2026-leshan.json
+```
+
+离线命令完成后，将 `sourcesFetchedAt` 设为下载清单原值 `2026-11-01T16:20:55.575465+00:00`，`teamSource.title` 设为 `2026CCPC(乐山)-参赛队伍-检验版.xlsx（检验表身份摘录）`。未来刷新仍须重新下载和核查各来源，不复用本节的覆盖声明冒充新审计。
+
+回归覆盖新名单哈希、1039 个成员、补齐的英文姓名、四维战力、修正后的本赛季分数、武汉基线覆盖与零补计、来源日期、摘要去重、公开入口、默认选择、牌线不变，以及既有名单导入与日期展示规则。发布前执行相关 Python 测试、完整前端测试、Ruff，并通过 HTTP 检查桌面和手机页面。
+
 ## 2026-11-01 武汉教练误计修正
 
 武汉固定 SRK 将教练标为 `role: "coach"`，但旧个人 Rating 适配器直接读取前三个姓名。长沙理工大学 D20（两名选手魏宇彬、潘若瑜）和佛山大学 E85（两名选手陈凯鹏、刘骏学）因此分别把教练邓泽林、闫凯当作第三名选手，错误得到 1335／1337 分。现改为先过滤教练，再截取最多三名真实选手；角色与姓名后缀规则见[RankLand 适配](rankland-data.md)。
@@ -17,6 +51,31 @@
 来源为用户提供的 `2026CCPC(乐山)-参赛队伍-印刷信息(1).xlsx` 的“印刷”表，SHA-256 `68f1b582eb5835268cff1f5b4054358d4797af272866b13a00624e8871a9c371`。本地提取学校、队名、有效队员和正式／打星资格后，由 `scripts.generate_regional_cutoffs.build_summary` 匹配现有七场系列中的三场网络赛；空白与“无无”占位不参与匹配，教练和统计公式不参与。日期来源为[公开赛程](https://lus-jlu.github.io/xcpc)；零点仅用于日期排序，不作为已确认开赛时刻展示。原工作簿、身份摘录、边界队伍审计和完整前瞻均不在此次发布范围内。
 
 摘要回归固定人数、四条牌线、日期及 `summaryOnly` 无跳转模式。发布前在只含此次提交内容的独立检出中运行前端测试，并核对产物无乐山名单、完整前瞻或对应索引入口。
+
+## 2026-11-01 乐山本地前瞻
+
+从用户提供的 `2026CCPC(乐山)-参赛队伍-印刷信息(1).xlsx` 首张“印刷”表提取 348 支队伍（正式 300、打星 48），共 211 所学校、1037 个有效成员条目。原工作簿 SHA-256 为 `68f1b582eb5835268cff1f5b4054358d4797af272866b13a00624e8871a9c371`。身份快照为 `rosters/ccpc-2026-leshan.json`，完整前瞻为 `previews/ccpc-2026-leshan.json`，本地索引和静态复制清单登记该场；本次仅修改工作区，未提交或推送。
+
+印刷格式以“序号、所属学校、中文队名、队员1/2/3、队伍类型”识别表头，按正式／打星保留资格；忽略教练、座位、英文队名、教练工作表和末尾“统计”行公式。只接受无学校、队名及资格的单个末尾统计行，其后出现数据则报错。空白队员及该格式的 `无无` 占位不参与匹配；香港城市大学 `Feel the Russian Style` 因两格均为此占位，仅保留蔡居宏一名有效成员，不猜测缺失姓名。其他重复成员、重复序号、公式身份和未知资格仍拒绝并报告源行号。
+
+标题为“2026年CCPC国赛（乐山）”，承办学校为乐山师范学院。日期参考[公开竞赛赛程](https://lus-jlu.github.io/xcpc)和 CPC Finder 赛事目录，为 11 月 8 日；未取得精确开赛时刻，`sortAt` 暂用北京时间当日 00:00 作为排序和数据截止日期，`dateOnly: true`，标题显示“比赛日期：2026年11月8日”，赛站表显示 `2026-11-08`，不将零点展示为开赛时刻。
+
+schema v1 可选布尔字段 `dateOnly` 和生成参数 `--date-only` 支持日期已知、时刻未确认的场次，按北京时间显示日期并参与日期排序与默认场次选择；`hideContestTime` 保持原有日期完全未知的语义，若同时设置则优先隐藏。回归覆盖乐山标题、赛站日期、跨时区日期转换及非法字段类型。
+
+综合战力沿用成都／武汉四维：XCPC Rating、XCPC Elo、本赛季 Rating、网络赛排名；上赛季 Rating、CPC Finder 和奖牌保留展示。新下载 XCPC Rating、XCPC Elo、CPC Finder 后固定快照；本赛季 Rating、历史和补计奖牌使用武汉赛后七场系列及固定 SRK。CPC Finder 已收录西安、长春、成都，显式声明这三场覆盖，未收录的武汉按正式结果补计；匹配不到基线的成员仍按既有规则补齐已赛区域赛奖牌。上赛季历史和 NOI／IOI 使用既有本地缓存。
+
+本次成功下载缓存为 `data-cache/preview-sources-leshan-20261101-retry/`，`manifest.json` 保存完整文件哈希、人数和下载时间。首轮因 CPC Finder 赛事目录前后不一致而拒绝使用；第二轮完整校验通过。XCPC Rating 版本为 `2026-10-26T18:58:27.047236+00:00`（63370 人），Elo 为 `2026-11-01T11:13:38.623Z`（68027 人），CPC Finder 于 `2026-11-01T11:18:00.467836+00:00` 下载（26626 人）。有效成员匹配数分别为 XCPC Rating 930、Elo 949、上赛季 592、本赛季 901、CPC Finder 699；本赛季历史包含西安 100、长春 40、成都 51、武汉 81 条队伍关联，成员奖牌补计合计 24 金、61 银、78 铜。
+
+使用身份快照和上述缓存离线重建前瞻与本赛季历史：
+
+```bash
+python -m scripts.generate_preview_data --offline --teams static/data/rosters/ccpc-2026-leshan.json --team-format roster --xcpcrating-data data-cache/preview-sources-leshan-20261101-retry/xcpcrating --xcpc-elo-data data-cache/preview-sources-leshan-20261101-retry/xcpc-elo-data.js --cpcfinder-pages data-cache/preview-sources-leshan-20261101-retry/cpcfinder-pages --cpcfinder-snapshot-date 2026-11-01T11:18:00.467836+00:00 --cpcfinder-covered-contests icpc2026xi_an ccpc2026changchun icpc2026chengdu --previous-series static/data/series/2025-2026.json --current-series static/data/series/2026-2027.json --online-series static/data/series/2026-2027.json --current-history-srk-root data-cache/results-20261101-rankland --history-srk-root data-cache/external/xcpcrating/vendor/srk-collection/official --exclude-previous-season-power --snapshot-date 2026-11-01 --preview-id ccpc-2026-leshan --contest-stage regional --host-school "乐山师范学院" --preview-title "2026年CCPC国赛（乐山）" --team-source-url ./data/rosters/ccpc-2026-leshan.json --sort-at 2026-11-08T00:00:00+08:00 --date-only --output static/data/previews/ccpc-2026-leshan.json
+python -m scripts.preview_history --season current --series static/data/series/2026-2027.json --srk-root data-cache/results-20261101-rankland --preview static/data/previews/ccpc-2026-leshan.json
+```
+
+离线命令重建评分与历史，不伪造下载时间；本次快照另从成功下载清单保留 `sourcesFetchedAt`，并将 `teamSource.title` 标注为原文件名加“（印刷表身份摘录）”。直接从原工作簿生成时，使用其路径并改为 `--team-format xlsx`；身份摘录及原文件哈希随名单 JSON 保留，原工作簿不复制到站点。
+
+回归覆盖印刷格式资格、教练及统计行排除、占位姓名、非法身份、来源行号、静态生成器复制名单与前瞻、348／300／48 人数、四维战力、武汉历史与奖牌补计、来源截止和索引入口。119 项相关 Python 测试、103 项前端离线测试及 Ruff 通过；HTTP 核验本地入口、索引、名单和前瞻内容一致。未修改布局或交互，本次未做浏览器视觉检查。既有前瞻、Rating、复盘及牌线快照字节保持不变。
 
 ## 2026-11-01 武汉赛后 Rating
 
@@ -82,7 +141,9 @@ schema v1 新增可选 `medalSources`，记录 `cpcfinderSnapshot`、`cpcfinderC
 
 **每次要求更新未开赛比赛的前瞻页面，都必须核查各项指标是否为当前可用的最新赛前版本，首次生成和已有本地版本的更新同样适用。** 本地文件已存在、曾经核查过或只调整页面内容，都不能替代本次核查。先确认目标比赛的时间和状态；已结束比赛的前瞻不动，进行中的比赛也不得混入开赛后数据。核查和刷新仅针对用户指定的未开赛比赛，不联动刷新其他前瞻。
 
-核查范围包括 XCPC Rating、XCPC Elo、CPC Finder，本赛季和上赛季 Rating、三场网络赛排名、奖牌及两季历史战绩，以及 NOI／IOI 展示数据。逐项比对来源版本、覆盖比赛和修订情况；已完结赛季或固定网络赛没有新修订时可保留，但需记录已核查。CPC Finder 必须核对赛事收录范围，随后补计尚未收录的赛前奖牌，避免重复计数。指标更新后重算受影响的队伍聚合与派生数据；来源发布时间和所含成绩均不得越过目标比赛的赛前截止。
+核查范围包括 XCPC Rating、XCPC Elo、CPC Finder，本赛季和上赛季 Rating、三场网络赛排名、奖牌及两季历史战绩。逐项比对来源版本、覆盖比赛和修订情况；已完结赛季或固定网络赛没有新修订时可保留，但需记录已核查。CPC Finder 必须核对赛事收录范围，随后补计尚未收录的赛前奖牌，避免重复计数。指标更新后重算受影响的队伍聚合与派生数据；来源发布时间和所含成绩均不得越过目标比赛的赛前截止。
+
+按用户 2026-11-02 明确要求，NOI／IOI 成绩沿用现有缓存和人工补录，不纳入每次前瞻更新的例行校对或刷新；以后只有用户明确要求时才检查或修改。仍按既有姓名匹配规则展示，不因本规则重新生成数据。
 
 核查记录应包含本次核查时间、各来源版本及覆盖范围、实际刷新项和保留理由；无法访问或无法确认时明确记录未核实项，不能静默使用旧缓存并声称“最新”。仅补充本规则不执行数据重生成；用户另行明确要求按固定旧输入复现时，使用离线流程并标明其为历史版本。此前各次生成的来源记录反映当时实际操作，不因新增要求而改写。
 
@@ -90,7 +151,7 @@ schema v1 新增可选 `medalSources`，记录 `cpcfinderSnapshot`、`cpcfinderC
 
 `generate_preview_data` 命令默认通过 `preview_sources` 下载最新 XCPC Rating、XCPC Elo 和 CPC Finder；不接受缓存路径悄然代替最新来源。新目录保存在 `data-cache/preview-sources-{时间}/`，可用 `--source-cache` 指定不存在的目录。XCPC Rating 校验完整分页、人数、唯一记录及下载前后元数据；CPC Finder 校验完整分页、人数、唯一选手及下载前后第一页和赛事目录一致；Elo 为单文件快照。失败不会退回旧缓存，也不会输出新的前瞻。成功后记录每个输入文件 SHA-256 和来源版本；前瞻新增 `sourcesFetchedAt` 记录实际下载时间。最新指上游当前公开版本，不保证上游即时收录全部比赛；CPC Finder 缺失奖牌由本地正式 SRK 补齐。
 
-离线重建必须显式传 `--offline`、三项缓存路径及 `--snapshot-date`；历史前瞻不允许用当前在线数据重建。生成器仍不联网刷新本地赛季 Rating、SRK 历史和 NOI/IOI 缓存，生成前须先按对应数据流程更新和核对。下文旧快照的重建命令已明确标记 `--offline`。此次武汉使用已包含成都的赛季 Rating/SRK，NOI/IOI 仍为现有缓存，不声称这些来源刚刚重新下载。
+离线重建必须显式传 `--offline`、三项缓存路径及 `--snapshot-date`；历史前瞻不允许用当前在线数据重建。生成器仍不联网刷新本地赛季 Rating、SRK 历史和 NOI/IOI 缓存；生成前须按对应流程核对赛季 Rating 和 SRK 历史，NOI/IOI 按上述例外沿用。下文旧快照的重建命令已明确标记 `--offline`。此次武汉使用已包含成都的赛季 Rating/SRK，NOI/IOI 仍为现有缓存，不声称这些来源刚刚重新下载。
 
 | 前瞻 | XCPC Rating / Elo 来源日期（北京时间） | 本赛季 Rating 截至 | CPC Finder 基线 |
 | --- | --- | --- | --- |

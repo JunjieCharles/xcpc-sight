@@ -13,6 +13,58 @@ function team(id, ranks, extra = {}) {
     medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
 }
 
+test('Leshan verified roster publishes current ratings and a clickable full preview', async () => {
+  const read = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
+  const p = validatePreview(await read('../static/data/previews/ccpc-2026-leshan.json'));
+  const roster = await read('../static/data/rosters/ccpc-2026-leshan.json');
+  assert.equal(p.teams.length, 348);
+  assert.equal(p.teams.filter(t => !t.excluded).length, 300);
+  assert.equal(p.matchingSummary.members, 1039);
+  assert.equal(roster.source.sha256, '87db137b70960b9749eee2f0abd966a0807d10d1692543eca96f6ea81a7dbb7a');
+  assert.equal(p.snapshotDate, '2026-11-02');
+  assert.equal(p.sourceSnapshots.xcpcrating, '2026-11-01T11:26:37.766839+00:00');
+  assert.equal(p.sourcesFetchedAt, '2026-11-01T16:20:55.575465+00:00');
+  assert.equal(p.hostSchool, '乐山师范学院');
+  assert.ok(!p.hideContestTime);
+  assert.equal(p.dateOnly, true);
+  assert.equal(formatPreviewTime(p), '比赛日期：2026年11月8日');
+  assert.equal(previewContestDate(p), '2026-11-08');
+  assert.equal(formatPreviewTime({ ...p, sortAt: '2026-11-07T16:00:00Z' }), '比赛日期：2026年11月8日');
+  assert.throws(() => validatePreview({ ...p, dateOnly: 'true' }), /dateOnly/);
+  assert.equal(p.sortAt, '2026-11-08T00:00:00+08:00');
+  assert.deepEqual(previewPowerMetricIds(p), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
+  assert.equal(p.sourceSnapshots.currentSeason, '2026-11-01T10:00:00+08:00');
+  assert.ok(p.teams.some(t => t.currentSeasonHistory.some(h => h.contestId === 'icpc2026wuhan')));
+  assert.deepEqual(p.medalSources.addedContestIds, []);
+  assert.ok(p.medalSources.cpcfinderCoveredContestIds.includes('icpc2026wuhan'));
+  assert.ok(p.teams.flatMap(t => t.members).every(m => Object.values(m.medalSupplement).every(v => v === 0)));
+  assert.equal(p.teams.flatMap(t => t.members).find(m => m.name === '赵嘉源').ratings.currentSeason, 1448);
+  for (const [i, t] of p.teams.entries()) {
+    assert.equal(t.school, roster.teams[i].school);
+    assert.equal(t.name, roster.teams[i].name);
+    assert.equal(t.excluded, roster.teams[i].excluded);
+    assert.deepEqual(t.members.map(m => m.name), roster.teams[i].members);
+    assert.ok(t.members.every(m => m.name !== '无无'));
+  }
+  assert.deepEqual(p.teams.find(t => t.name === 'Feel the Russian Style').members.map(m => m.name),
+    ['蔡居宏', 'Timur Gizatullin', 'DEMIDOV Ilia']);
+  for (const source of p.metricSources) {
+    assert.ok(Date.parse(p.sourceSnapshots[source.id]) < Date.parse(p.sortAt));
+    assert.equal(p.teams.flatMap(t => t.members).filter(m => m.ratings[source.id] !== null).length,
+      p.matchingSummary[source.id]);
+  }
+  assert.equal(previewNavigationGroups([p]).regional[0], p);
+  const summaries = (await read('../static/data/regional-cutoffs/2026-2027.json')).contests;
+  const rows = previewNavigationGroups([p], p.id, summaries).regional.filter(t => t.id === p.id);
+  assert.deepEqual(rows, [p]);
+  assert.equal(rows[0].summaryOnly, undefined);
+  assert.equal(p.unlisted, undefined);
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 11, gold: 71, silver: 213, bronze: 451 });
+  assert.deepEqual(summaries.find(t => t.id === p.id).cutoffs, buildPreviewCutoffs(p));
+  const { selectPreviewContest } = await import('../static/js/preview.mjs');
+  assert.equal(selectPreviewContest([p], null, null, new Date('2026-11-02T00:00:00+08:00')), p);
+});
+
 test('Wuhan is public and its complete preview replaces the cutoff summary', async () => {
   const wuhan = validatePreview(JSON.parse(await readFile(new URL('../static/data/previews/icpc-2026-wuhan.json', import.meta.url), 'utf8')));
   const summaries = JSON.parse(await readFile(new URL('../static/data/regional-cutoffs/2026-2027.json', import.meta.url), 'utf8')).contests;

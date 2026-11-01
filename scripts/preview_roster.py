@@ -19,11 +19,14 @@ def parse_roster_rows(rows):
     rows = iter(rows)
     required = ("学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID")
     ccpc_headers = ("序号", "所属学校", "中文队名", "队员1姓名", "队员2姓名", "队员3姓名")
+    print_headers = ("序号", "所属学校", "中文队名", "队员1", "队员2", "队员3", "队伍类型")
     header = None
     teams = []
     seen = set()
     for row_number, row in enumerate(rows, 1):
         if header is None:
+            if all(key in row for key in print_headers):
+                return parse_ccpc_print_rows(rows, row, row_number)
             if all(key in row for key in ccpc_headers):
                 return parse_ccpc_roster_rows(rows, row, row_number)
             if all(key in row for key in required):
@@ -54,6 +57,36 @@ def parse_roster_rows(rows):
     if not teams:
         raise ValueError("roster: missing identity headers or empty roster")
     return teams
+
+
+def parse_ccpc_print_rows(rows, header, header_number):
+    """Read CCPC printing exports, retaining eligibility and ignoring footer formulas."""
+    keys = ("序号", "所属学校", "中文队名", "队员1", "队员2", "队员3", "队伍类型")
+    if any(header.count(key) != 1 for key in keys):
+        raise ValueError(f"roster row {header_number}: duplicate identity header")
+    positions = [header.index(key) for key in keys]
+    converted = [[None]] * (header_number - 1) + [
+        ["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID"]
+    ]
+    footer = False
+    for row_number, row in enumerate(rows, header_number + 1):
+        if not any(value is not None for value in row):
+            converted.append([None])
+            continue
+        serial, school, name, *rest = [row[i] if i < len(row) else None for i in positions]
+        *members, kind = rest
+        if serial == "统计" and school is None and name is None and kind is None and not footer:
+            footer = True
+            converted.append([None])
+            continue
+        if footer:
+            raise ValueError(f"roster row {row_number}: unexpected row after statistics")
+        if type(serial) is not int or serial < 1:
+            raise ValueError(f"roster row {row_number}: invalid 序号")
+        # The printing export uses “无无” for vacant member slots.
+        members = [None if member == "无无" else member for member in members]
+        converted.append([school, name, kind, *members, str(serial)])
+    return parse_roster_rows(converted)
 
 
 def parse_ccpc_roster_rows(rows, header_row, header_number):

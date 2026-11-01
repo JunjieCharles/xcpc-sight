@@ -154,6 +154,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--snapshot-date")
     parser.add_argument("--hide-contest-time", action="store_true",
                         help="Hide the contest time when its exact start is unconfirmed")
+    parser.add_argument("--date-only", action="store_true",
+                        help="Show the known contest date without a start time")
     parser.add_argument("--preview-id", default=PREVIEW_ID)
     parser.add_argument("--preview-title", default=PREVIEW_TITLE)
     parser.add_argument("--host-school", help="Hosting university for the regional table")
@@ -512,6 +514,7 @@ def build_document(args: argparse.Namespace) -> dict[str, object]:
         "sortAt": args.sort_at,
         **({"endAt": args.end_at} if getattr(args, "end_at", None) else {}),
         **({"hideContestTime": True} if getattr(args, "hide_contest_time", False) else {}),
+        **({"dateOnly": True} if getattr(args, "date_only", False) else {}),
         "snapshotDate": args.snapshot_date,
         "teamSource": {
             "title": (args.teams.name if team_format in ("xlsx", "roster") else
