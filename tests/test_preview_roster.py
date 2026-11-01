@@ -357,7 +357,7 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert (tmp_path / "previews/ccpc-2026-changchun.json").is_file()
     summaries = json.loads((tmp_path / "regional-cutoffs/2026-2027.json").read_text("utf-8"))
     assert {c["id"] for c in summaries["contests"]} == {
-        "icpc-2026-chengdu", "icpc-2026-wuhan",
+        "icpc-2026-chengdu", "icpc-2026-wuhan", "ccpc-2026-leshan",
     }
     index = json.loads((tmp_path / "index.json").read_text("utf-8"))
     entry = next(e for e in index["series"] if e["id"] == "2026-2027")

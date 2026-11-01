@@ -84,7 +84,7 @@ python scripts/generate_review_data.py
 
 默认下载指定版本的首场 SRK，校验 SHA-256 后生成 `static/data/reviews/2026-2027.json`，不刷新赛前评分或索引。使用 `--srk` 可离线生成；其他场次参数、官方移除队伍的映射与匹配规则见[复盘生成说明](doc/post-contest-review.md)。
 
-西安、长春、成都、武汉已计入本赛季 Rating，共 7 场、9214 名选手。赛后复盘为各项排名指标显示金银铜各档的精确预测命中率（同档命中数 / 预测该档队数）及计数，包含网络赛排名指标。武汉复盘覆盖 369 支正式队伍，默认展示该场。准备好前六份固定 SRK 和武汉结果后，可离线重建本赛季 Rating 并更新武汉复盘，保留其他场次复盘：
+西安、长春、成都、武汉已计入本赛季 Rating，共 7 场、9212 名选手。赛后复盘为各项排名指标显示金银铜各档的精确预测命中率（同档命中数 / 预测该档队数）及计数，包含网络赛排名指标。武汉复盘覆盖 369 支正式队伍，默认展示该场。准备好前六份固定 SRK 和武汉结果后，可离线重建本赛季 Rating 并更新武汉复盘，保留其他场次复盘：
 
 ```bash
 python -m scripts.publish_wuhan_2026_results --input-dir data-cache/results-20261101-rankland --previous-input-dir data-cache/results-20261101-rankland

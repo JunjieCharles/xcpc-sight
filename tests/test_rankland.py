@@ -1,6 +1,42 @@
 import httpx
+import pytest
 
 from core import RankLandClient, normalize_srk_contest
+from rating import calculate_series_ratings, project_series_rating_data
+
+
+@pytest.mark.parametrize("coach_position", [0, 1, 2, 3])
+def test_coach_is_removed_before_three_player_limit(coach_position):
+    payload = srk()
+    members = [{"name": name} for name in ("甲", "乙", "丙")]
+    members.insert(coach_position, {"name": "老师", "role": "coach"})
+    payload["rows"][1]["user"]["teamMembers"] = members
+    contest = normalize_srk_contest(payload, contest_uk="regional", series="icpc2025")
+    assert contest.teams[1].members == ("甲", "乙", "丙")
+
+
+@pytest.mark.parametrize("coach", [
+    {"name": "邓泽林", "role": "coach"},
+    {"name": "老师", "role": " Coach "},
+    {"name": {"zh-CN": "老师"}, "role": {"fallback": "coach"}},
+    {"name": "老师（教练）"},
+    {"name": "Teacher (coach)"},
+])
+def test_two_player_team_coach_never_enters_rating_pool(coach):
+    payload = srk()
+    payload["rows"][1]["user"]["teamMembers"] = [
+        {"name": "魏宇彬"}, {"name": "潘若瑜"}, coach,
+    ]
+    contest = normalize_srk_contest(payload, contest_uk="regional", series="icpc2025")
+    assert contest.teams[1].members == ("魏宇彬", "潘若瑜")
+    actual = project_series_rating_data(calculate_series_ratings([contest]),
+                                       series_id="test", title="Test")
+    payload["rows"][1]["user"]["teamMembers"].pop()
+    clean = normalize_srk_contest(payload, contest_uk="regional", series="icpc2025")
+    expected = project_series_rating_data(calculate_series_ratings([clean]),
+                                         series_id="test", title="Test")
+    assert actual == expected
+    assert {c["member"] for c in actual["competitors"]} == {"魏宇彬", "潘若瑜", "乙", "丙"}
 
 
 def srk(title: str = "Regional") -> dict:

@@ -12,6 +12,7 @@ import httpx
 
 from .errors import DataValidationError, RankLandError
 from .models import Contest, ContestProvenance, TeamResult
+from .normalization import is_coach_name
 from .ranking import rebuild_competition_ranks
 
 JsonObject = dict[str, Any]
@@ -162,7 +163,8 @@ def _member_names(user: Mapping[str, Any], path: str) -> tuple[str, ...]:
     for index, raw_member in enumerate(members):
         member = _object(raw_member, f"{path}.teamMembers[{index}]")
         name = _text(member.get("name")).strip()
-        if not name:
+        role = _text(member.get("role")).strip().casefold()
+        if not name or role == "coach" or is_coach_name(name):
             continue
         if len(members) == 1 and len(name.split()) >= 3:
             names.extend(name.split())
