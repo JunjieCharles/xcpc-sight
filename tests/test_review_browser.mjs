@@ -179,14 +179,14 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
       await send("Page.navigate", { url: new URL("?series=2026-2027&view=review", siteUrl).href });
       await waitFor("document.querySelectorAll('.review-metric-card').length === 5 && !document.querySelector('#review-view').hidden");
-      assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026chengdu");
-      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 6);
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026wuhan");
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 7);
       assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.review-metric-card'), n => n.dataset.metric).sort()"), ["currentSeason", "onlineRanks", "power", "xcpcElo", "xcpcrating"]);
-      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-3).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu"]);
-      assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 75\.0% \(24\/32\).*银 63\.5% \(40\/63\).*铜 55\.2% \(53\/96\)/);
-      assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026chengdu");
+      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-4).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu", "icpc2026wuhan"]);
+      assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 73\.0% \(27\/37\).*银 47\.3% \(35\/74\).*铜 47\.2% \(51\/108\)/);
+      assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026wuhan");
       assert.ok(!(await evaluate("document.querySelector('#review-sources').textContent")).includes("CPC Finder"));
-      for (const id of ["icpc2026chengdu", "ccpc2026changchun", "icpc2026xi_an"]) {
+      for (const id of ["icpc2026wuhan", "icpc2026chengdu", "ccpc2026changchun", "icpc2026xi_an"]) {
         await evaluate(`(() => { const select = document.querySelector('#review-contest-select'); select.value = '${id}'; select.dispatchEvent(new Event('change')); })()`);
         await waitFor(`new URL(location.href).searchParams.get('reviewContest') === '${id}'`);
         await settle();

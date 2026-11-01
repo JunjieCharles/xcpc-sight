@@ -33,9 +33,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   )));
   assert.equal(series.contests[0].id, "icpc2026preliminary-1");
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
-  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "ccpc2026changchun", "icpc2026xi_an", "icpc2026chengdu"]);
+  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "ccpc2026changchun", "icpc2026xi_an", "icpc2026chengdu", "icpc2026wuhan"]);
   assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(series.competitors.length, 9151);
+  assert.equal(series.competitors.length, 9214);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
   assert.equal(participants.length, 7380);
@@ -65,6 +65,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.equal(series.contests[5].startAt, "2026-10-25T09:10:00+08:00");
   assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === 5).length, 957);
   assert.equal(series.competitors.filter(c => c.participations[0].contestIndex === 5).length, 52);
+  assert.equal(series.contests[6].startAt, "2026-11-01T10:00:00+08:00");
+  assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === 6).length, 1107);
+  assert.equal(series.competitors.filter(c => c.participations[0].contestIndex === 6).length, 63);
   for (const person of series.competitors) {
     const history = person.participations;
     for (let i = 1; i < history.length; i++) assert.equal(history[i].before, history[i - 1].after);
