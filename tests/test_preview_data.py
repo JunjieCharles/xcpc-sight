@@ -328,6 +328,34 @@ def test_second_preview_metadata_and_cached_source_date(
         assert "currentSeason" not in document["teams"][0]["ratings"]
 
 
+def test_nanjing_reviewed_ocr_names_and_recovered_ratings() -> None:
+    root = Path(__file__).parents[1]
+    roster = generator.load_json(root / "static/data/rosters/icpc-2026-nanjing.json")
+    preview = generator.load_json(root / "static/data/previews/icpc-2026-nanjing.json")
+    expected = [
+        (38, 2, "滕鎧泽"), (96, 1, "胡文劼"), (117, 1, "黄暄骜"),
+        (117, 2, "刘铖"), (125, 0, "谢锴立"), (149, 0, "高偲宸"),
+        (149, 1, "陈梓慠"), (182, 2, "徐骁扬"), (192, 1, "赵沨"),
+        (280, 0, "冯澳垲"), (319, 1, "王祾祯"), (342, 2, "宋俊璁"),
+        (365, 2, "王思邈"),
+    ]
+    assert [(c["row"], c["memberIndex"], c["after"])
+            for c in roster["source"]["review"]["corrections"]] == expected
+    for row, index, name in expected:
+        assert roster["teams"][row - 1]["members"][index] == name
+        member = preview["teams"][row - 1]["members"][index]
+        assert member["name"] == name
+        assert member["ratings"]["xcpcElo"] is not None
+        if row != 365:
+            assert member["ratings"]["currentSeason"] is not None
+    # Restore the identity and its history, not just the displayed spelling.
+    assert preview["teams"][181]["members"][2]["ratings"]["currentSeason"] == 1825
+    assert preview["matchingSummary"] == {
+        "members": 1116, "xcpcrating": 991, "xcpcElo": 1028,
+        "previousSeason": 544, "cpcfinder": 697, "currentSeason": 966,
+    }
+
+
 def test_nanjing_current_ratings_use_seven_contests_without_ladies() -> None:
     root = Path(__file__).resolve().parents[1]
     series = root / "static/data/series/2026-2027.json"
