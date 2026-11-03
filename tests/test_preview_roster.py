@@ -224,6 +224,32 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
             assert team["ratings"][metric] == normalized_lse_rating(values)
 
 
+def test_leshan_revised_roster_replacements_and_affiliations():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).parents[1] / "static/data"
+    roster = json.loads((root / "rosters/ccpc-2026-leshan.json").read_text("utf-8"))
+    preview = json.loads((root / "previews/ccpc-2026-leshan.json").read_text("utf-8"))
+    assert roster["source"]["file"] == "2026CCPC(乐山)-参赛队伍-检验信息.xlsx"
+    assert roster["source"]["sheet"] == "修改"
+    for index, school, name, members, ranks in [
+        (21, "北京邮电大学", "橙雨星瞳", ["安澍", "冯仁宇", "安奕轩"], [240, 218, 109]),
+        (313, "郑州轻工业大学", "燎原之盒", ["杜永恒", "牛培宇", "李俊芃"],
+         [1217, 1085, 1036]),
+    ]:
+        assert roster["teams"][index] == {
+            "school": school, "name": name, "members": members, "excluded": False,
+        }
+        assert preview["teams"][index]["onlineRanks"] == ranks
+    assert not {"三只企鹅", "轻度睡眠"} & {t["name"] for t in roster["teams"]}
+    for school, count in [("四川省成都市树德中学", 5), ("四川省泸州高级中学校", 2),
+                          ("个人参赛", 4)]:
+        teams = [t for t in roster["teams"] if t["school"] == school]
+        assert len(teams) == count
+        assert all(t["excluded"] for t in teams)
+
+
 def test_xian_manual_starred_teams_and_two_member_team():
     import json
     from pathlib import Path

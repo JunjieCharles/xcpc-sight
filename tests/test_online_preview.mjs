@@ -64,10 +64,11 @@ test('Leshan verified roster publishes current ratings and a clickable full prev
   assert.equal(p.teams.length, 348);
   assert.equal(p.teams.filter(t => !t.excluded).length, 300);
   assert.equal(p.matchingSummary.members, 1039);
-  assert.equal(roster.source.sha256, '87db137b70960b9749eee2f0abd966a0807d10d1692543eca96f6ea81a7dbb7a');
-  assert.equal(p.snapshotDate, '2026-11-02');
-  assert.equal(p.sourceSnapshots.xcpcrating, '2026-11-01T11:26:37.766839+00:00');
-  assert.equal(p.sourcesFetchedAt, '2026-11-01T16:20:55.575465+00:00');
+  assert.equal(roster.source.sha256, '368b343eccd92e449b749b9ac87c86bf189d6252003d942e806a7770fcf7c949');
+  assert.equal(p.snapshotDate, '2026-11-04');
+  assert.equal(p.sourceSnapshots.xcpcrating, '2026-11-02T22:03:35.788344+00:00');
+  assert.ok(Date.parse(p.sourcesFetchedAt) >= Date.parse('2026-11-04T00:00:00+08:00'));
+  assert.ok(Date.parse(p.sourcesFetchedAt) < Date.parse(p.sortAt));
   assert.equal(p.hostSchool, '乐山师范学院');
   assert.ok(!p.hideContestTime);
   assert.equal(p.dateOnly, true);
@@ -103,7 +104,7 @@ test('Leshan verified roster publishes current ratings and a clickable full prev
   assert.deepEqual(rows, [p]);
   assert.equal(rows[0].summaryOnly, undefined);
   assert.equal(p.unlisted, undefined);
-  assert.deepEqual(buildPreviewCutoffs(p), { cup: 11, gold: 71, silver: 213, bronze: 451 });
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 11, gold: 71, silver: 213, bronze: 462 });
   assert.deepEqual(summaries.find(t => t.id === p.id).cutoffs, buildPreviewCutoffs(p));
   const { selectPreviewContest } = await import('../static/js/preview.mjs');
   assert.equal(selectPreviewContest([p], null, null, new Date('2026-11-02T00:00:00+08:00')), p);
@@ -475,7 +476,7 @@ test('summary-only stations validate, load independently, and yield to full prev
   assert.equal(leshan.id, 'ccpc-2026-leshan');
   assert.equal(previewContestDate(leshan), '2026-11-08');
   assert.equal(leshan.hostSchool, '乐山师范学院');
-  assert.deepEqual(leshan.cutoffs, { cup: 11, gold: 71, silver: 213, bronze: 451 });
+  assert.deepEqual(leshan.cutoffs, { cup: 11, gold: 71, silver: 213, bronze: 462 });
   assert.deepEqual([leshan.teamCount, leshan.officialTeamCount, leshan.excludedTeamCount, leshan.matchedOfficialTeamCount], [348, 300, 48, 293]);
   assert.equal(groups.regional.at(-1).summaryOnly, true);
   assert.ok(!('teams' in leshan));
