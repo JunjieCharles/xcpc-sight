@@ -14,6 +14,18 @@ from scripts.preview_roster import (
 HEADERS = ["学校或单位", "中文队名", "类型", "队员1", "队员2", "队员3", "队伍 ID", "ICPC1"]
 
 
+def frozen_regional_normalizer(path):
+    from scripts.generate_preview_data import load_normalizer
+
+    normalizer = load_normalizer(path)
+    # These snapshots predate the Nanjing bilingual alias; never backfill them.
+    new_alias = DefaultNormalizer().school("蒙古国立大学(Монгол Улсын Их Сургууль)")
+    return DefaultNormalizer(school_aliases={
+        alias: canonical for alias, canonical in normalizer.school_aliases.items()
+        if alias != new_alias
+    }, member_aliases=normalizer.member_aliases)
+
+
 def test_reviewed_identity_roster_keeps_eligibility_and_ignores_scores():
     rows = [{"school": "学校", "name": "女队", "members": ["甲", "乙"],
              "excluded": False, "ratings": {"untrusted": 9999}},
@@ -164,12 +176,12 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
     from pathlib import Path
 
     from rating import normalized_lse_rating
-    from scripts.generate_preview_data import PersonIndex, load_normalizer, load_previous_series
+    from scripts.generate_preview_data import PersonIndex, load_previous_series
 
     root = Path(__file__).parents[1]
     preview = json.loads((root / f"static/data/previews/{contest_id}.json").read_text("utf-8"))
     roster = json.loads((root / f"static/data/rosters/{contest_id}.json").read_text("utf-8"))
-    normalizer = load_normalizer(root / "config/school-aliases.json")
+    normalizer = frozen_regional_normalizer(root / "config/school-aliases.json")
     series = json.loads((root / "static/data/series/2026-2027.json").read_text("utf-8"))
     # Replay only pre-contest histories after the season adds these regional results.
     from datetime import datetime
@@ -327,10 +339,8 @@ def test_wuhan_official_manual_and_all_reviewed_identities():
     import re
     from pathlib import Path
 
-    from scripts.generate_preview_data import load_normalizer
-
     root = Path(__file__).parents[1]
-    normalizer = load_normalizer(root / "config/school-aliases.json")
+    normalizer = frozen_regional_normalizer(root / "config/school-aliases.json")
     roster = json.loads((root / "static/data/rosters/icpc-2026-wuhan.json").read_text("utf-8"))
     preview = json.loads((root / "static/data/previews/icpc-2026-wuhan.json").read_text("utf-8"))
     pdf = root / "static/sources/icpc-2026-wuhan-manual.pdf"
@@ -397,3 +407,9 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert len(wuhan["teams"]) == 438
     roster = json.loads((tmp_path / "rosters/icpc-2026-wuhan.json").read_text("utf-8"))
     assert len(roster["teams"]) == 438
+    nanjing = json.loads((tmp_path / "previews/icpc-2026-nanjing.json").read_text("utf-8"))
+    roster = json.loads((tmp_path / "rosters/icpc-2026-nanjing.json").read_text("utf-8"))
+    assert len(nanjing["teams"]) == len(roster["teams"]) == 372
+    assert sum(not t["excluded"] for t in roster["teams"]) == 332
+    assert roster["source"]["url"] == "https://mp.weixin.qq.com/s/p2RZ4n0ZUIHEfM4AgfgCAQ"
+    assert nanjing["teamSource"]["url"] == roster["source"]["url"]

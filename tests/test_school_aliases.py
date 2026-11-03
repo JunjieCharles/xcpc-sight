@@ -20,6 +20,9 @@ def test_complete_local_list_and_school_rename() -> None:
     assert normalizer.school("Tsinghua University") == "清华大学"
     assert normalizer.school("Taizhou University") not in {"台州学院", "泰州学院"}
     assert normalizer.school("Wuyi University") not in {"五邑大学", "武夷学院"}
+    assert normalizer.school("蒙古国立大学(Монгол Улсын Их Сургууль)") == normalizer.school(
+        "National University of Mongolia"
+    )
 
 
 @pytest.mark.parametrize("reverse", [False, True])

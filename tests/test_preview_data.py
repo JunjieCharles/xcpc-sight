@@ -328,6 +328,21 @@ def test_second_preview_metadata_and_cached_source_date(
         assert "currentSeason" not in document["teams"][0]["ratings"]
 
 
+def test_nanjing_current_ratings_use_seven_contests_without_ladies() -> None:
+    root = Path(__file__).resolve().parents[1]
+    series = root / "static/data/series/2026-2027.json"
+    normalizer = generator.load_normalizer(root / "config/school-aliases.json")
+    records, _ = generator.load_previous_series(series)
+    index = generator.PersonIndex(records, normalizer)
+    preview = generator.load_json(root / "static/data/previews/icpc-2026-nanjing.json")
+    for team in preview["teams"]:
+        for member in team["members"]:
+            matched = index.match(member["name"], team["school"])
+            assert member["ratings"]["currentSeason"] == (matched.rating if matched else None)
+    assert "ccpc2026ladies" not in preview["medalSources"]["addedContestIds"]
+    assert "ccpc2026ladies" not in preview["medalSources"]["cpcfinderCoveredContestIds"]
+
+
 def test_default_publication_includes_all_preview_snapshots() -> None:
     from scripts.generate_static_data import preview_specs
 
@@ -335,10 +350,10 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
         "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan",
-        "ccpc-2026-leshan",
+        "ccpc-2026-leshan", "icpc-2026-nanjing",
     ]
     assert [len(document["teams"]) for document in documents] == [
-        2535, 2636, 2173, 418, 336, 328, 438, 348,
+        2535, 2636, 2173, 418, 336, 328, 438, 348, 372,
     ]
     for document in documents[:2]:
         matches = [

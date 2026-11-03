@@ -13,6 +13,50 @@ function team(id, ranks, extra = {}) {
     medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
 }
 
+test('Nanjing Chinese roster publishes four-dimensional preview with provisional special characters', async () => {
+  const read = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
+  const p = validatePreview(await read('../static/data/previews/icpc-2026-nanjing.json'));
+  const roster = await read('../static/data/rosters/icpc-2026-nanjing.json');
+  assert.equal(p.teams.length, 372);
+  assert.equal(p.teams.filter(t => !t.excluded).length, 332);
+  assert.equal(p.matchingSummary.members, 1116);
+  assert.equal(p.hostSchool, '南京航空航天大学');
+  assert.equal(p.dateOnly, true);
+  assert.equal(formatPreviewTime(p), '比赛日期：2026年11月8日');
+  assert.equal(p.teamSource.url, 'https://mp.weixin.qq.com/s/p2RZ4n0ZUIHEfM4AgfgCAQ');
+  assert.equal(p.snapshotDate, '2026-11-03');
+  assert.equal(p.unlisted, undefined);
+  assert.deepEqual(previewPowerMetricIds(p), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
+  assert.equal(p.teams[194].name, '7'); // Chinese image overrides registration CSV's 0007.
+  const special = p.teams[358];
+  assert.equal(special.school, '南京外国语学校');
+  assert.equal(special.name, '这㊣犸 n 乂ix ⧖ ၎昊ôᴬ○1');
+  assert.deepEqual(special.members.map(m => m.name), ['高近仁', '曹轩铭', '逢锦骏']);
+  assert.equal(special.excluded, true);
+  assert.equal(roster.source.transcriptionNotes[0].status, 'provisional');
+  assert.equal(roster.source.transcriptionNotes[0].value, special.name);
+  for (const [i, t] of p.teams.entries()) {
+    assert.equal(t.school, roster.teams[i].school);
+    assert.equal(t.name, roster.teams[i].name);
+    assert.equal(t.excluded, roster.teams[i].excluded);
+    assert.deepEqual(t.members.map(m => m.name), roster.teams[i].members);
+    for (const h of [...t.currentSeasonHistory, ...t.previousSeasonHistory]) {
+      assert.ok(!h.contestId.includes('ladies'));
+      assert.ok(Date.parse(h.startAt) < Date.parse(p.sortAt));
+    }
+  }
+  assert.ok(!JSON.stringify(p.medalSources).includes('ladies'));
+  for (const source of p.metricSources) {
+    assert.ok(Date.parse(p.sourceSnapshots[source.id]) < Date.parse(p.sortAt));
+    assert.equal(p.teams.flatMap(t => t.members).filter(m => m.ratings[source.id] !== null).length,
+      p.matchingSummary[source.id]);
+  }
+  const leshan = validatePreview(await read('../static/data/previews/ccpc-2026-leshan.json'));
+  const { selectPreviewContest } = await import('../static/js/preview.mjs');
+  assert.equal(selectPreviewContest([leshan, p], null, null, new Date('2026-11-03T00:00:00+08:00')), p);
+  assert.equal(previewNavigationGroups([leshan, p]).regional[0], p);
+});
+
 test('Leshan verified roster publishes current ratings and a clickable full preview', async () => {
   const read = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
   const p = validatePreview(await read('../static/data/previews/ccpc-2026-leshan.json'));

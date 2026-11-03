@@ -14,6 +14,15 @@ ELO_URL = "https://zzzzzzyt.github.io/xcpc-elo/data.js"
 CPC_BASE = "https://cpcfinder.com/api/"
 
 
+def _contest_catalog(document: dict) -> dict:
+    """Ignore unstable ordering of same-date contests, not content changes."""
+    rows = document["data"]
+    ids = [row["contestId"] for row in rows]
+    if len(ids) != len(set(ids)):
+        raise ValueError("CPC Finder: duplicate contest IDs")
+    return {**document, "data": sorted(rows, key=lambda row: row["contestId"])}
+
+
 def fetch_sources(root: Path, client: httpx.Client, *, workers: int = 4) -> dict:
     """Download without falling back to old caches; record versions and hashes.
 
@@ -84,7 +93,8 @@ def fetch_sources(root: Path, client: httpx.Client, *, workers: int = 4) -> dict
     if len(rows) != pagination["total"] or len({r["studentId"] for r in rows}) != len(rows):
         raise ValueError("CPC Finder: incomplete or duplicate student rows")
     if (get_json(CPC_BASE + "student", params) != first
-            or get_json(CPC_BASE + "contest", contest_params) != contests):
+            or _contest_catalog(get_json(CPC_BASE + "contest", contest_params))
+            != _contest_catalog(contests)):
         raise ValueError("CPC Finder changed during download; retry in a new cache")
     for path in sorted(root.rglob("*")):
         if path.is_file():

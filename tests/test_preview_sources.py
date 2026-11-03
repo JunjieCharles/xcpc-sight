@@ -7,11 +7,13 @@ import pytest
 from scripts.preview_sources import CPC_BASE, ELO_URL, RATING_BASE, fetch_sources, prepare_sources
 
 
-def transport(*, duplicate=False, changing=False):
+def transport(*, duplicate=False, changing=False, reorder_contests=False,
+              change_contest=False, duplicate_contest=False):
     meta_calls = 0
+    contest_calls = 0
 
     def handler(request):
-        nonlocal meta_calls
+        nonlocal meta_calls, contest_calls
         url = str(request.url).split("?")[0]
         if url == RATING_BASE + "meta.json":
             meta_calls += 1
@@ -29,7 +31,14 @@ def transport(*, duplicate=False, changing=False):
             data = {"pagination": {"current": page, "pages": 2, "total": 2, "pageSize": 100},
                     "data": [{"studentId": str(page)}]}
         elif url == CPC_BASE + "contest":
-            data = {"data": [{"contestId": 80, "dataStatus": "OK"}]}
+            contest_calls += 1
+            rows = [{"contestId": 80, "dataStatus": "OK"},
+                    {"contestId": 80 if duplicate_contest else 81, "dataStatus": "OK"}]
+            if change_contest and contest_calls > 1:
+                rows[0]["dataStatus"] = "PENDING_CONTEST"
+            if reorder_contests and contest_calls > 1:
+                rows.reverse()
+            data = {"data": rows}
         else:
             raise AssertionError(url)
         return httpx.Response(200, json=data)
@@ -47,13 +56,20 @@ def test_complete_download_records_versions_and_hashes(tmp_path):
             fetch_sources(root, client)
 
 
-@pytest.mark.parametrize("option", ["duplicate", "changing"])
+@pytest.mark.parametrize("option", ["duplicate", "changing", "change_contest", "duplicate_contest"])
 def test_incomplete_or_changing_sources_do_not_get_success_manifest(tmp_path, option):
     with httpx.Client(transport=transport(**{option: True})) as client:
         root = tmp_path / "bad"
         with pytest.raises(ValueError):
             fetch_sources(root, client, workers=1)
         assert not (root / "manifest.json").exists()
+
+
+def test_same_date_contest_reordering_does_not_invalidate_snapshot(tmp_path):
+    with httpx.Client(transport=transport(reorder_contests=True)) as client:
+        manifest = fetch_sources(tmp_path / "reordered", client, workers=1)
+    assert manifest["counts"]["cpcfinder"] == 2
+    assert (tmp_path / "reordered/manifest.json").is_file()
 
 
 def test_fresh_generation_cannot_silently_reuse_cached_paths():
