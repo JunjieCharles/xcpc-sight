@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261101-77";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261104-79";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -178,7 +178,15 @@ export function validatePreview(document) {
   object(document.teamSource, "preview.teamSource");
   for (const key of ["title", "url", "note"]) string(document.teamSource[key], `preview.teamSource.${key}`);
   array(document.metricSources, "preview.metricSources");
-  if (!document.metricSources.length) fail("preview.metricSources", "expected at least one source");
+  if (document.onlineRanksOnly !== undefined && typeof document.onlineRanksOnly !== "boolean") {
+    fail("preview.onlineRanksOnly", "expected boolean");
+  }
+  if (document.onlineRanksOnly) {
+    if (document.metricSources.length || !document.onlineContests
+      || JSON.stringify(document.powerMetrics) !== '["onlineRanks"]') {
+      fail("preview.onlineRanksOnly", "expected online ranks without rating sources");
+    }
+  } else if (!document.metricSources.length) fail("preview.metricSources", "expected at least one source");
   const metricIds = new Set();
   document.metricSources.forEach((source, index) => {
     const path = `preview.metricSources[${index}]`;

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261101-77";
+} from "./data.mjs?v=20261104-79";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261101-77";
+} from "./problem-rating.mjs?v=20261104-79";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261101-77";
+} from "./preview.mjs?v=20261104-79";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261101-77";
+} from "./review.mjs?v=20261104-79";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -834,7 +834,8 @@ function renderPreviewRows() {
     activePreviewTooltip.remove();
     activePreviewTooltip = null;
   }
-  const columns = state.preview.metricSources.length + 5 + (state.preview.onlineContests ? 1 : 0);
+  const onlineOnly = state.preview.onlineRanksOnly === true;
+  const columns = onlineOnly ? 4 : state.preview.metricSources.length + 5 + (state.preview.onlineContests ? 1 : 0);
   const teamCount = state.preview.teams.filter(team => !team.excluded).length;
   renderVirtualRows({
     container: elements.previewScroll,
@@ -887,7 +888,7 @@ function renderPreviewRows() {
         className: "preview-members-cell",
         title: memberNames,
       }, memberChildren));
-      row.append(node("td", { className: "preview-metric-cell preview-power-cell"
+      if (!onlineOnly) row.append(node("td", { className: "preview-metric-cell preview-power-cell"
         + previewRankMedalClass("power", state.previewPower.get(team.id).rank, teamCount, team.excluded, state.preview.contestStage, previewPowerMetricIds(state.preview)) }, [
         previewPowerControl(team),
       ]));
@@ -912,7 +913,7 @@ function renderPreviewRows() {
           (rating, isMember) => previewRatingNode(source.id, rating, isMember),
         )]));
       }
-      row.append(node("td", { className: "preview-metric-cell preview-medals" }, [
+      if (!onlineOnly) row.append(node("td", { className: "preview-metric-cell preview-medals" }, [
         previewValueControl(
           team,
           team.medals,
@@ -962,7 +963,7 @@ function renderPreviewHeader() {
     previewSortHeader("学校", "school"),
     previewSortHeader("中文队名", "name", "队伍"),
     previewSortHeader("成员", "members"),
-    previewSortHeader("综合战力", "power"),
+    ...(state.preview.onlineRanksOnly ? [] : [previewSortHeader("综合战力", "power")]),
   );
   if (state.preview.onlineContests) {
     const heading = previewSortHeader("网络赛排名", "onlineRanks");
@@ -971,10 +972,11 @@ function renderPreviewHeader() {
     row.append(heading);
   }
   for (const source of previewColumnSources(state.preview.metricSources)) row.append(previewSortHeader(source.title, source.id));
-  row.append(previewSortHeader("奖牌（三人总和）", "medals"));
+  if (!state.preview.onlineRanksOnly) row.append(previewSortHeader("奖牌（三人总和）", "medals"));
   elements.previewHead.replaceChildren(row);
   const table = elements.previewHead.closest("table");
-  const widths = [200, 170, 190, 96, ...(state.preview.onlineContests ? [174] : []), ...state.preview.metricSources.map(() => 112), 150];
+  const widths = state.preview.onlineRanksOnly ? [200, 170, 190, 174]
+    : [200, 170, 190, 96, ...(state.preview.onlineContests ? [174] : []), ...state.preview.metricSources.map(() => 112), 150];
   table.style.setProperty("--preview-table-width", `${widths.reduce((sum, width) => sum + width, 0)}px`);
   table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((sum, width) => sum + width, 0)}px`);
   table.querySelector("colgroup")?.remove();
@@ -1010,6 +1012,10 @@ function renderPreviewSources() {
 
 function showPreview(updateUrl = false) {
   if (!state.preview) return showSeries();
+  if (state.preview.onlineRanksOnly && !["school", "name", "members", "onlineRanks"].includes(state.previewSort)) {
+    state.previewSort = "onlineRanks";
+    state.previewOrder = "desc";
+  }
   state.view = "preview";
   state.contestId = "";
   state.competitorId = "";

@@ -74,6 +74,8 @@ python scripts/generate_problem_rating_static_data.py
 
 ### 赛前前瞻与赛后复盘
 
+沈阳前瞻包含 415 队（400 正式、15 打星），暂时仅展示三场网络赛排名指标，保留成员 NOI／IOI 标记与两季历史战绩，名单来源只提供 PDF 手册。直达参数为 `?series=2026-2027&view=preview&previewContest=icpc-2026-shenyang`，名单与数据契约见[沈阳前瞻说明](doc/season-2026-2027-preview.md#2026-11-04-沈阳网络赛排名前瞻)。
+
 乐山完整前瞻包含 348 队（正式 300、打星 48），使用检验版名单及 11 月 2 日核查的赛前指标。可点击赛站表中的乐山行，或通过 `?series=2026-2027&view=preview&previewContest=ccpc-2026-leshan` 直达；来源、核查限制与重建见[乐山前瞻说明](doc/season-2026-2027-preview.md#2026-11-02-乐山完整前瞻发布)。
 
 新前瞻生成时默认下载最新 XCPC Rating、XCPC Elo 和 CPC Finder，生成后固定为赛前快照；旧缓存重建须显式使用 `--offline`。奖牌由 CPC Finder 基线加上尚未收录的本赛季赛前获奖记录，按成员累计；有本赛季区域赛历史时需提供 `--current-history-srk-root`，已有快照可用 `python -m scripts.preview_medals` 定向补齐。来源日期、避免重复计数的规则和命令见[奖牌补齐与指标时效](doc/season-2026-2027-preview.md#2026-10-28-本赛季奖牌补齐与指标时效审计)。

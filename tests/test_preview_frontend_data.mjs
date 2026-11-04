@@ -41,7 +41,7 @@ test("loads all published previews from the index and preserves contest selectio
     json: async () => JSON.parse(await readFile(new URL(url), "utf8")),
   }));
   const previews = await store.getPreviews(entry);
-  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary", "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan", "ccpc-2026-leshan", "icpc-2026-nanjing"]);
+  assert.deepEqual(previews.map(p => p.id), ["icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary", "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan", "ccpc-2026-leshan", "icpc-2026-nanjing", "icpc-2026-shenyang"]);
   const second = previews[1];
   assert.equal(previews[0].ratingAggregation, undefined);
   assert.equal(second.ratingAggregation, "normalized-lse");
@@ -437,7 +437,7 @@ test("renders the compact preview table without snapshot prose or hint icons", a
   assert.match(appModule, /elements\.previewMetricSources\.append/);
   assert.match(appModule, /renderSourceLinks\(elements\.previewMetricSources, "数据来源："/);
   assert.match(appModule, /renderPreviewNavigation\(\)/);
-  assert.match(appModule, /const widths = \[200, 170, 190, 96,/);
+  assert.match(appModule, /const widths = state.preview.onlineRanksOnly \? \[200, 170, 190, 174\][\s\S]*?: \[200, 170, 190, 96,/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-table-width"/);
   assert.match(appModule, /table\.style\.setProperty\("--preview-non-frozen-width"/);
   assert.doesNotMatch(appModule, /table\.style\.setProperty\("--preview-data-width"/);

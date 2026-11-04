@@ -214,3 +214,90 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
     await fetch(`${debuggerUrl}/json/close/${target.id}`);
   }
 });
+
+test('Shenyang online-only preview: desktop/mobile, source, sorting and eligibility', {
+  skip: !debuggerUrl, timeout: 60000,
+}, async () => {
+  const target = await (await fetch(`${debuggerUrl}/json/new?about:blank`, { method: 'PUT' })).json();
+  const socket = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }));
+  let id = 0;
+  const pending = new Map(), errors = [];
+  socket.addEventListener('message', event => {
+    const message = JSON.parse(event.data);
+    if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails);
+    const request = pending.get(message.id);
+    if (!request) return;
+    pending.delete(message.id);
+    if (message.error) request.reject(new Error(JSON.stringify(message.error)));
+    else request.resolve(message.result);
+  });
+  const send = (method, params = {}) => new Promise((resolve, reject) => {
+    pending.set(++id, { resolve, reject });
+    socket.send(JSON.stringify({ id, method, params }));
+  });
+  const evaluate = async expression => {
+    const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+    assert.equal(result.exceptionDetails, undefined);
+    return result.result.value;
+  };
+  const waitFor = async expression => {
+    for (let i = 0; i < 150; i++) {
+      if (await evaluate(expression)) return;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    assert.fail(`Timed out: ${expression}`);
+  };
+  const current = id => `document.querySelector('#preview-navigation button[aria-pressed="true"]')?.dataset.previewId === '${id}'`;
+  try {
+    await send('Page.enable');
+    await send('Runtime.enable');
+    for (const width of [1440, 390]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
+      await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview&previewContest=icpc-2026-shenyang&previewSort=xcpcrating` });
+      await waitFor(current('icpc-2026-shenyang'));
+      await waitFor(`document.querySelector('#preview-team-source a')?.getAttribute('href') === './sources/icpc-2026-shenyang-manual.pdf'`);
+      assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true);
+      assert.equal(await evaluate(`document.querySelectorAll('a[href$=".xlsx"]').length`), 0);
+      assert.equal(await evaluate(`document.body.innerText.includes('东北大学')`), true);
+      assert.equal(await evaluate(`document.body.innerText.includes('2026年11月15日')`), true);
+      for (const [type, count] of [['official', 400], ['starred', 15], ['all', 415]]) {
+        await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);
+        await waitFor(`document.querySelector('#result-count').textContent === '${count} 支队伍'`);
+      }
+      await evaluate(`document.querySelector('#preview-team-source').scrollIntoView()`);
+      assert.equal(await evaluate(`document.querySelectorAll('#preview-head th').length`), 4);
+      assert.equal(await evaluate(`document.querySelectorAll('#preview-body .preview-power-cell, #preview-body .preview-medals').length`), 0);
+      assert.equal(await evaluate(`document.querySelector('#preview-head th[aria-sort]')?.textContent.includes('网络赛排名')`), true);
+      assert.equal(await evaluate(`document.querySelector('.preview-school-rank-note').textContent.includes('NOI')`), true);
+      assert.ok(await evaluate(`document.querySelectorAll('#preview-body .has-noi').length > 0`));
+      assert.ok(await evaluate(`document.querySelectorAll('#preview-body .has-ioi').length > 0`));
+      await send('Page.bringToFront');
+      await evaluate(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
+      await evaluate(`document.querySelector('#preview-body .preview-team-identity').focus({ preventScroll: true })`);
+      await waitFor(`document.querySelector('.preview-tooltip-visible')?.textContent.includes('本赛季比赛记录')`);
+      assert.ok(await evaluate(`document.querySelector('.preview-tooltip-visible').textContent.includes('上赛季比赛记录')`));
+      await evaluate(`document.querySelector('#preview-body .preview-member-control').focus({ preventScroll: true })`);
+      await waitFor(`document.querySelector('.preview-tooltip-visible')?.classList.contains('preview-achievement-tooltip')`);
+      await evaluate(`document.activeElement.blur()`);
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        const shot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/shenyang-${width}.png`, Buffer.from(shot.data, 'base64'));
+      }
+      await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-nanjing"]').click()`);
+      await waitFor(current('icpc-2026-nanjing'));
+      assert.equal(await evaluate(`document.querySelector('#preview-head').textContent.includes('综合战力')`), true);
+      await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-shenyang"]').click()`);
+      await waitFor(current('icpc-2026-shenyang'));
+      assert.equal(await evaluate(`document.querySelector('#preview-head').textContent.includes('综合战力')`), false);
+      console.log('checked', width, await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="icpc-2026-shenyang"] .preview-cutoff-value'), el => el.textContent)`));
+    }
+    assert.deepEqual(errors, []);
+    const pdf = await fetch(`${siteUrl}sources/icpc-2026-shenyang-manual.pdf`);
+    assert.equal(pdf.status, 200);
+    assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+  } finally {
+    socket.close();
+    await fetch(`${debuggerUrl}/json/close/${target.id}`);
+  }
+});

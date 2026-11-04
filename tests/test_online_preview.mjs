@@ -13,6 +13,25 @@ function team(id, ranks, extra = {}) {
     medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
 }
 
+test('Shenyang publishes only online ranks with the PDF source and 400 official teams', async () => {
+  const p = validatePreview(JSON.parse(await readFile(
+    new URL('../static/data/previews/icpc-2026-shenyang.json', import.meta.url), 'utf8')));
+  assert.equal(p.teams.length, 415);
+  assert.equal(p.teams.filter(t => !t.excluded).length, 400);
+  assert.equal(p.teamSource.url, './sources/icpc-2026-shenyang-manual.pdf');
+  assert.equal(p.onlineRanksOnly, true);
+  assert.deepEqual(p.metricSources, []);
+  assert.deepEqual(p.powerMetrics, ['onlineRanks']);
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 6, gold: 102, silver: 335, bronze: 597 });
+  for (const mutate of [q => { q.onlineRanksOnly = 'true'; },
+    q => { delete q.onlineRanksOnly; }, q => { delete q.onlineContests; },
+    q => { q.powerMetrics = ['medals']; }]) {
+    const invalid = structuredClone(p);
+    mutate(invalid);
+    assert.throws(() => validatePreview(invalid));
+  }
+});
+
 test('Nanjing Chinese roster publishes four-dimensional preview with provisional special characters', async () => {
   const read = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
   const p = validatePreview(await read('../static/data/previews/icpc-2026-nanjing.json'));

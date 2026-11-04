@@ -439,3 +439,67 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert sum(not t["excluded"] for t in roster["teams"]) == 332
     assert roster["source"]["url"] == "https://mp.weixin.qq.com/s/p2RZ4n0ZUIHEfM4AgfgCAQ"
     assert nanjing["teamSource"]["url"] == roster["source"]["url"]
+    shenyang = json.loads((tmp_path / "previews/icpc-2026-shenyang.json").read_text("utf-8"))
+    roster = json.loads((tmp_path / "rosters/icpc-2026-shenyang.json").read_text("utf-8"))
+    assert len(shenyang["teams"]) == len(roster["teams"]) == 415
+    assert shenyang["teamSource"]["url"] == roster["source"]["url"]
+
+
+def test_shenyang_identity_pdf_source_and_online_only_metrics():
+    import hashlib
+    import json
+    from pathlib import Path
+
+    from scripts.generate_preview_data import load_normalizer
+
+    root = Path(__file__).parents[1]
+    data = root / "static/data"
+    roster = json.loads((data / "rosters/icpc-2026-shenyang.json").read_text("utf-8"))
+    preview = json.loads((data / "previews/icpc-2026-shenyang.json").read_text("utf-8"))
+    identities = roster["teams"]
+    digest = hashlib.sha256(json.dumps(
+        identities, ensure_ascii=False, separators=(",", ":")
+    ).encode()).hexdigest()
+    assert digest == "30a5975fe424db05a94c50025b1e0438b0b8abc3073f9e6a4ea06f86e84c4c0c"
+    assert digest == roster["source"]["identitySha256"]
+    assert len(identities) == 415
+    assert sum(not t["excluded"] for t in identities) == 400
+    assert sum(len(t["members"]) for t in identities) == 1245
+    assert preview["sortAt"] == "2026-11-15T09:00:00+08:00"
+    assert preview["endAt"] == "2026-11-15T14:00:00+08:00"
+    assert preview["hostSchool"] == "东北大学"
+    assert preview["teamSource"]["url"] == "./sources/icpc-2026-shenyang-manual.pdf"
+    pdf = root / "static/sources/icpc-2026-shenyang-manual.pdf"
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == roster["source"]["sha256"]
+    assert ".xlsx" not in json.dumps(preview["teamSource"])
+    normalizer = load_normalizer(root / "config/school-aliases.json")
+    series = json.loads((data / "series/2026-2027.json").read_text("utf-8"))
+    assert preview["onlineRanksOnly"] is True
+    assert preview["metricSources"] == []
+    projected = deepcopy(preview["teams"])
+    attach_online_ranks(projected, online_rank_index(series, normalizer, preview["sortAt"]),
+                        normalizer)
+    assert projected == preview["teams"]
+    for row, team in zip(identities, preview["teams"], strict=True):
+        assert row["school"] == team["school"]
+        assert row["name"] == team["name"]
+        assert row["excluded"] == team.get("excluded", False)
+        assert row["members"] == [m["name"] for m in team["members"]]
+        assert team["ratings"] == {}
+        assert "currentSeasonHistory" in team
+        assert "previousSeasonHistory" in team
+        for member in team["members"]:
+            assert member["ratings"] == {}
+            assert member["medals"] == {"gold": 0, "silver": 0, "bronze": 0}
+    details = [{"id": t["id"], "currentSeasonHistory": t["currentSeasonHistory"],
+                "previousSeasonHistory": t["previousSeasonHistory"],
+                "achievements": [m["achievements"] for m in t["members"]]}
+               for t in preview["teams"]]
+    assert hashlib.sha256(json.dumps(
+        details, ensure_ascii=False, separators=(",", ":")
+    ).encode()).hexdigest() == "233f7302122a8ff56f35201d5f299ed939995aea1fe3f37752316dd6a49985f6"
+    assert sum(len(t["currentSeasonHistory"]) for t in preview["teams"]) == 275
+    assert sum(len(t["previousSeasonHistory"]) for t in preview["teams"]) == 782
+    for competition, count in [("noi", 87), ("ioi", 3)]:
+        assert sum(any(a["competition"] == competition for a in m["achievements"])
+                   for t in preview["teams"] for m in t["members"]) == count
