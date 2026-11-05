@@ -32,28 +32,32 @@ test('Shenyang publishes only online ranks with the PDF source and 400 official 
   }
 });
 
-test('Nanjing Chinese roster publishes four-dimensional preview with provisional special characters', async () => {
+test('Nanjing official manual publishes four-dimensional preview with documented glyph fallback', async () => {
   const read = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
   const p = validatePreview(await read('../static/data/previews/icpc-2026-nanjing.json'));
   const roster = await read('../static/data/rosters/icpc-2026-nanjing.json');
-  assert.equal(p.teams.length, 372);
+  assert.equal(p.teams.length, 374);
   assert.equal(p.teams.filter(t => !t.excluded).length, 332);
-  assert.equal(p.matchingSummary.members, 1116);
+  assert.equal(p.matchingSummary.members, 1122);
   assert.equal(p.hostSchool, '南京航空航天大学');
   assert.equal(p.dateOnly, true);
   assert.equal(formatPreviewTime(p), '比赛日期：2026年11月8日');
-  assert.equal(p.teamSource.url, 'https://mp.weixin.qq.com/s/p2RZ4n0ZUIHEfM4AgfgCAQ');
-  assert.equal(p.snapshotDate, '2026-11-03');
+  assert.equal(p.teamSource.url, './sources/icpc-2026-nanjing-manual.pdf');
+  assert.equal(p.teamSource.title, '第51届ICPC亚洲区域赛南京竞赛手册.pdf');
+  assert.equal(p.snapshotDate, '2026-11-05');
   assert.equal(p.unlisted, undefined);
   assert.deepEqual(previewPowerMetricIds(p), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
-  assert.equal(p.teams[194].name, '7'); // Chinese image overrides registration CSV's 0007.
+  assert.equal(p.teams[194].name, '7'); // Confirmed by the official manual.
   const special = p.teams[358];
   assert.equal(special.school, '南京外国语学校');
-  assert.equal(special.name, '这㊣犸 n 乂ix ⧖ ၎昊ôᴬ○1');
-  assert.deepEqual(special.members.map(m => m.name), ['高近仁', '曹轩铭', '逢锦骏']);
+  assert.equal(special.name, '这㊄犸ｎ爻ⅸꇻ๘윶ôﭥၢ1');
+  assert.deepEqual(special.members.map(m => m.name), ['高近仁', '曹轩铭', '逄锦骏']);
   assert.equal(special.excluded, true);
   assert.equal(roster.source.transcriptionNotes[0].status, 'provisional');
   assert.equal(roster.source.transcriptionNotes[0].value, special.name);
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 5, gold: 77, silver: 303, bronze: 665 });
+  assert.deepEqual(p.teams.slice(-2).map(t => t.name), ['unmazing', '盒子信U队']);
+  assert.ok(p.teams.slice(-2).every(t => t.excluded));
   for (const [i, t] of p.teams.entries()) {
     assert.equal(t.school, roster.teams[i].school);
     assert.equal(t.name, roster.teams[i].name);

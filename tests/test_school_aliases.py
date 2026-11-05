@@ -26,6 +26,12 @@ def test_complete_local_list_and_school_rename() -> None:
     for school in ["成都市树德中学", "泸州高级中学校"]:
         assert normalizer.school("四川省" + school) == normalizer.school(school)
     assert normalizer.school("个人参赛") != normalizer.school("代码源")
+    for short, full in [
+        ("楷登电子", "上海楷登电子科技有限公司"),
+        ("洛谷科技", "上海洛谷网络科技有限公司"),
+        ("顽岩资产", "上海顽岩私募基金管理有限公司"),
+    ]:
+        assert normalizer.school(short) == normalizer.school(full)
 
 
 @pytest.mark.parametrize("reverse", [False, True])

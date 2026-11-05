@@ -340,7 +340,7 @@ def test_nanjing_reviewed_ocr_names_and_recovered_ratings() -> None:
         (365, 2, "王思邈"),
     ]
     assert [(c["row"], c["memberIndex"], c["after"])
-            for c in roster["source"]["review"]["corrections"]] == expected
+            for c in roster["source"]["previousSource"]["review"]["corrections"]] == expected
     for row, index, name in expected:
         assert roster["teams"][row - 1]["members"][index] == name
         member = preview["teams"][row - 1]["members"][index]
@@ -351,8 +351,8 @@ def test_nanjing_reviewed_ocr_names_and_recovered_ratings() -> None:
     # Restore the identity and its history, not just the displayed spelling.
     assert preview["teams"][181]["members"][2]["ratings"]["currentSeason"] == 1825
     assert preview["matchingSummary"] == {
-        "members": 1116, "xcpcrating": 991, "xcpcElo": 1028,
-        "previousSeason": 544, "cpcfinder": 697, "currentSeason": 966,
+        "members": 1122, "xcpcrating": 991, "xcpcElo": 1030,
+        "previousSeason": 544, "cpcfinder": 699, "currentSeason": 966,
     }
 
 
@@ -381,7 +381,7 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
         "ccpc-2026-leshan", "icpc-2026-nanjing", "icpc-2026-shenyang",
     ]
     assert [len(document["teams"]) for document in documents] == [
-        2535, 2636, 2173, 418, 336, 328, 438, 348, 372, 415,
+        2535, 2636, 2173, 418, 336, 328, 438, 348, 374, 415,
     ]
     for document in documents[:2]:
         matches = [

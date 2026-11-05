@@ -18,11 +18,14 @@ def frozen_regional_normalizer(path):
     from scripts.generate_preview_data import load_normalizer
 
     normalizer = load_normalizer(path)
-    # These snapshots predate the Nanjing bilingual alias; never backfill them.
-    new_alias = DefaultNormalizer().school("蒙古国立大学(Монгол Улсын Их Сургууль)")
+    # These frozen snapshots predate the Nanjing aliases; never backfill them.
+    new_aliases = {DefaultNormalizer().school(name) for name in [
+        "蒙古国立大学(Монгол Улсын Их Сургууль)", "上海楷登电子科技有限公司",
+        "上海洛谷网络科技有限公司", "上海顽岩私募基金管理有限公司",
+    ]}
     return DefaultNormalizer(school_aliases={
         alias: canonical for alias, canonical in normalizer.school_aliases.items()
-        if alias != new_alias
+        if alias not in new_aliases
     }, member_aliases=normalizer.member_aliases)
 
 
@@ -459,9 +462,9 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert len(roster["teams"]) == 438
     nanjing = json.loads((tmp_path / "previews/icpc-2026-nanjing.json").read_text("utf-8"))
     roster = json.loads((tmp_path / "rosters/icpc-2026-nanjing.json").read_text("utf-8"))
-    assert len(nanjing["teams"]) == len(roster["teams"]) == 372
+    assert len(nanjing["teams"]) == len(roster["teams"]) == 374
     assert sum(not t["excluded"] for t in roster["teams"]) == 332
-    assert roster["source"]["url"] == "https://mp.weixin.qq.com/s/p2RZ4n0ZUIHEfM4AgfgCAQ"
+    assert roster["source"]["url"] == "./sources/icpc-2026-nanjing-manual.pdf"
     assert nanjing["teamSource"]["url"] == roster["source"]["url"]
     shenyang = json.loads((tmp_path / "previews/icpc-2026-shenyang.json").read_text("utf-8"))
     roster = json.loads((tmp_path / "rosters/icpc-2026-shenyang.json").read_text("utf-8"))
