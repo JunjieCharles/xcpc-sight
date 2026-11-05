@@ -83,10 +83,13 @@ test('Leshan verified roster publishes current ratings and a clickable full prev
   assert.equal(p.teams.length, 348);
   assert.equal(p.teams.filter(t => !t.excluded).length, 300);
   assert.equal(p.matchingSummary.members, 1039);
-  assert.equal(roster.source.sha256, '368b343eccd92e449b749b9ac87c86bf189d6252003d942e806a7770fcf7c949');
-  assert.equal(p.snapshotDate, '2026-11-04');
-  assert.equal(p.sourceSnapshots.xcpcrating, '2026-11-02T22:03:35.788344+00:00');
-  assert.ok(Date.parse(p.sourcesFetchedAt) >= Date.parse('2026-11-04T00:00:00+08:00'));
+  assert.equal(roster.source.sha256, '29af971938ca8e0197d8b8d134ee231ddc348b77e16e018cd225153b19754758');
+  assert.equal(p.teamSource.url, './sources/ccpc-2026-leshan-manual.pdf');
+  assert.equal(p.teamSource.title, '2026年CCPC（乐山）比赛手册.pdf');
+  assert.equal(p.snapshotDate, '2026-11-05');
+  assert.equal(p.sourceSnapshots.xcpcrating, '2026-11-03T19:53:29.276259+00:00');
+  assert.equal(p.sourceSnapshots.xcpcElo, '2026-11-04T13:55:31.904Z');
+  assert.ok(Date.parse(p.sourcesFetchedAt) >= Date.parse('2026-11-05T00:00:00+08:00'));
   assert.ok(Date.parse(p.sourcesFetchedAt) < Date.parse(p.sortAt));
   assert.equal(p.hostSchool, '乐山师范学院');
   assert.ok(!p.hideContestTime);

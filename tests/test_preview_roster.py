@@ -224,15 +224,39 @@ def test_published_regional_ranks_and_ratings_match_local_series(contest_id, cou
             assert team["ratings"][metric] == normalized_lse_rating(values)
 
 
-def test_leshan_revised_roster_replacements_and_affiliations():
+def test_leshan_official_manual_preserves_verified_identities_and_affiliations():
+    import hashlib
     import json
     from pathlib import Path
 
     root = Path(__file__).parents[1] / "static/data"
     roster = json.loads((root / "rosters/ccpc-2026-leshan.json").read_text("utf-8"))
     preview = json.loads((root / "previews/ccpc-2026-leshan.json").read_text("utf-8"))
-    assert roster["source"]["file"] == "2026CCPC(乐山)-参赛队伍-检验信息.xlsx"
-    assert roster["source"]["sheet"] == "修改"
+    assert roster["source"]["file"] == "2026年CCPC（乐山）比赛手册.pdf"
+    assert roster["source"]["pdfPages"] == [22, 32]
+    assert roster["source"]["printedPages"] == [20, 30]
+    assert "sheet" not in roster["source"]
+    assert preview["teamSource"]["title"] == roster["source"]["file"]
+    assert preview["teamSource"]["url"] == roster["source"]["url"] == (
+        "./sources/ccpc-2026-leshan-manual.pdf"
+    )
+    pdf = root.parent / preview["teamSource"]["url"].removeprefix("./")
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == roster["source"]["sha256"] == (
+        "29af971938ca8e0197d8b8d134ee231ddc348b77e16e018cd225153b19754758"
+    )
+    # All 348 identities match the manual after ignoring layout whitespace and
+    # eligibility stars; retain existing display spelling and snapshot order.
+    assert hashlib.sha256(json.dumps(
+        roster["teams"], ensure_ascii=False, separators=(",", ":")
+    ).encode()).hexdigest() == "04312ba1dc8b06f64078c855522e3998357976072cef0d9917f5a8ea276aed76"
+    assert len(roster["teams"]) == 348
+    assert sum(not t["excluded"] for t in roster["teams"]) == 300
+    assert sum(len(t["members"]) for t in roster["teams"]) == 1039
+    summaries = json.loads((root / "regional-cutoffs/2026-2027.json").read_text("utf-8"))
+    summary = next(c for c in summaries["contests"] if c["id"] == preview["id"])
+    assert summary["sources"]["rosterSha256"] == roster["source"]["sha256"]
+    assert summary["sources"]["rosterUrl"] == preview["teamSource"]["url"]
+    assert summary["cutoffs"] == {"cup": 11, "gold": 71, "silver": 213, "bronze": 462}
     for index, school, name, members, ranks in [
         (21, "北京邮电大学", "橙雨星瞳", ["安澍", "冯仁宇", "安奕轩"], [240, 218, 109]),
         (313, "郑州轻工业大学", "燎原之盒", ["杜永恒", "牛培宇", "李俊芃"],
