@@ -287,6 +287,14 @@ test('Shenyang online-only preview: desktop/mobile, source, sorting and eligibil
       await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-nanjing"]').click()`);
       await waitFor(current('icpc-2026-nanjing'));
       assert.equal(await evaluate(`document.querySelector('#preview-head').textContent.includes('综合战力')`), true);
+      assert.equal(await evaluate(`document.querySelector('#preview-head th[aria-sort="descending"]')?.textContent.includes('综合战力')`), true);
+      assert.equal(await evaluate(`new URL(location.href).searchParams.get('previewSort')`), null);
+      await evaluate('history.back()');
+      await waitFor(current('icpc-2026-shenyang'));
+      assert.equal(await evaluate(`document.querySelector('#preview-head th[aria-sort]')?.textContent.includes('网络赛排名')`), true);
+      await evaluate('history.forward()');
+      await waitFor(current('icpc-2026-nanjing'));
+      assert.equal(await evaluate(`document.querySelector('#preview-head th[aria-sort="descending"]')?.textContent.includes('综合战力')`), true);
       await evaluate(`document.querySelector('tr[data-preview-id="icpc-2026-shenyang"]').click()`);
       await waitFor(current('icpc-2026-shenyang'));
       assert.equal(await evaluate(`document.querySelector('#preview-head').textContent.includes('综合战力')`), false);

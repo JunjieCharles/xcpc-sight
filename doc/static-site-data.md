@@ -187,6 +187,26 @@ python -m http.server 8000 --directory static
 
 ## 前端测试
 
+### Safari 虚拟列表滚动位置
+
+收到 MacBook Safari 26.3.1 及手机端滚动跳回顶部的反馈。在 Windows 的 Playwright WebKit 26.0 中，以桌面 1440px 和手机 390px 视口复现：鼠标停在前瞻或复盘表格内，连续滚轮下滚后 `scrollTop` 回到 0；相同环境的选手总榜未复现。此测试环境不是 macOS／iOS Safari 真机，不能替代反馈设备上的确认。
+
+共用 `renderVirtualRows` 在替换可见行前记录纵向和横向偏移，替换后读取布局，只在偏移改变时恢复。覆盖选手总榜、单场榜、前瞻和复盘；保留原来的筛选／切换比赛主动归零行为。不在每帧无条件写滚动位置，以免干扰正常滚动或惯性。此次不修改数据、排序和榜单内容。
+
+离线单元测试模拟替换行时双轴偏移被清零，验证恢复、可见行范围、占位高度、正常滚动不写偏移，以及空筛选主动归零。可选 HTTP 浏览器回归 `tests/browser_virtual_scroll.py` 覆盖两种尺寸、五种榜单场景（含沈阳仅网络赛模式）、连续上下滚动、横向偏移保持、末行、DOM 行数上限、窗口尺寸变化和筛选归零。默认离线测试不安装或启动浏览器。
+
+本次验证：106 项前端离线测试、Ruff、WebKit 与 Chrome 各 10 组 HTTP 浏览器场景均通过。
+
+已安装 Playwright 的本地环境可执行以下命令；Chrome 检查使用已安装的 Google Chrome，WebKit 需要单独下载测试引擎：
+
+```bash
+python -m playwright install webkit
+python -m http.server 8000 --directory static
+# 在另一个终端执行
+python tests/browser_virtual_scroll.py --browser webkit
+python tests/browser_virtual_scroll.py --browser chromium
+```
+
 ### 站点标志
 
 `static/assets/xcpc-sight.svg` 是页头和浏览器标签栏共用的可编辑矢量标志，

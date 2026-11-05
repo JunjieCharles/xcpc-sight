@@ -197,26 +197,41 @@ test("preview and review default to the latest timestamp and preserve explicit c
   }
 });
 
-test("review preview selection does not overwrite the remembered preview contest", async () => {
+test("preview switching restores default sorting without overwriting selection during review", async () => {
   const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
   const functions = ["previewPreference", "choosePreview"].map(name =>
     source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`))[0],
   ).join("\n");
   const old = { id: "old", sortAt: "2026-09-06", teams: [], metricSources: [] };
   const newest = { id: "new", sortAt: "2026-09-12", teams: [], metricSources: [] };
-  const state = { previews: [old, newest] };
+  const onlineOnly = { ...old, id: "online-only", onlineRanksOnly: true };
+  const state = { previews: [old, newest, onlineOnly] };
   const choose = runInNewContext(`${functions}\nchoosePreview`, {
     state, buildPreviewPower, buildPreviewRanks, previewPowerMetricIds,
     selectPreviewContest: (previews, id, saved) => selectPreviewContest(previews, id, saved, new Date('2026-10-14T00:00:00+08:00')),
   });
   choose();
   assert.equal(state.previewContestId, "new");
+  assert.equal(state.previewSort, "power");
+  assert.equal(state.previewOrder, "desc");
+  choose("online-only");
+  assert.equal(state.previewSort, "onlineRanks");
+  state.previewOrder = "asc";
   choose("old");
+  assert.equal(state.previewSort, "power");
+  assert.equal(state.previewOrder, "desc");
+  state.previewSort = "medals";
+  state.previewOrder = "asc";
   choose("new", false);
   assert.equal(state.preview.id, "new");
   assert.equal(state.previewContestId, "old");
   choose(state.previewContestId);
   assert.equal(state.preview, old);
+  assert.equal(state.previewSort, "medals");
+  assert.equal(state.previewOrder, "asc");
+  choose("new");
+  assert.equal(state.previewSort, "power");
+  assert.equal(state.previewOrder, "desc");
 });
 
 test("default preview uses Beijing today and upcoming dates, preferring ICPC on the same date", () => {

@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261104-79";
+} from "./data.mjs?v=20261105-81";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261104-79";
+} from "./problem-rating.mjs?v=20261105-81";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,11 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261104-79";
+} from "./preview.mjs?v=20261105-81";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261104-79";
+} from "./review.mjs?v=20261105-81";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -270,7 +270,14 @@ function renderVirtualRows({ container, body, items, columns, createRow }) {
   if (start) fragment.append(spacer(start * ROW_HEIGHT, columns));
   for (let index = start; index < end; index += 1) fragment.append(createRow(items[index], index));
   if (end < items.length) fragment.append(spacer((items.length - end) * ROW_HEIGHT, columns));
+  const scrollTop = container.scrollTop;
+  const scrollLeft = container.scrollLeft;
   body.replaceChildren(fragment);
+  // WebKit can reset the scroll offset when replacing a sticky table's rows.
+  // Read the resulting layout and restore only changed offsets, so ordinary
+  // scrolling does not receive redundant writes that interrupt momentum.
+  if (container.scrollTop !== scrollTop) container.scrollTop = scrollTop;
+  if (container.scrollLeft !== scrollLeft) container.scrollLeft = scrollLeft;
 }
 
 function scheduleSeriesRows() {
@@ -1120,6 +1127,10 @@ function previewPreference(id) {
 
 function choosePreview(id, remember = true) {
   state.preview = selectPreviewContest(state.previews, id, previewPreference());
+  if (remember && state.previewContestId !== state.preview.id) {
+    state.previewSort = state.preview.onlineRanksOnly ? "onlineRanks" : "power";
+    state.previewOrder = "desc";
+  }
   if (remember) state.previewContestId = state.preview.id;
   const metrics = state.preview.metricSources.map(s => s.id);
   state.previewPower = buildPreviewPower(state.preview.teams, metrics, previewPowerMetricIds(state.preview));

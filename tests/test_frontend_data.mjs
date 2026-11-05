@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import {
   carriedRatings,
@@ -19,6 +20,44 @@ import {
   validateSeries,
   writeQueryState,
 } from "../static/js/data.mjs";
+
+test("virtual rows retain both scroll offsets after WebKit resets them during replacement", async () => {
+  const source = await readFile(new URL("../static/js/app.mjs", import.meta.url), "utf8");
+  const fn = source.match(/function renderVirtualRows\([^]*?\n\}/)[0];
+  const render = runInNewContext(`${fn}\nrenderVirtualRows`, {
+    ROW_HEIGHT: 44, OVERSCAN: 8,
+    document: { createDocumentFragment: () => ({ children: [], append(child) { this.children.push(child); } }) },
+    spacer: (height) => ({ height }),
+  });
+  for (const resets of [true, false]) {
+    let top = 4400, left = 240;
+    const writes = [], rendered = [];
+    const container = {
+      clientHeight: 440,
+      get scrollTop() { return top; },
+      set scrollTop(value) { writes.push(["top", value]); top = value; },
+      get scrollLeft() { return left; },
+      set scrollLeft(value) { writes.push(["left", value]); left = value; },
+    };
+    const body = { replaceChildren(fragment) {
+      rendered.push(...fragment.children);
+      if (resets) { top = 0; left = 0; }
+    } };
+    const items = Array.from({ length: 1000 }, (_, index) => index);
+    render({ container, body, items, columns: 5, createRow: (item) => ({ item }) });
+    assert.equal(top, 4400);
+    assert.equal(left, 240);
+    assert.equal(rendered[0].height, 92 * 44);
+    assert.equal(rendered[1].item, 92);
+    assert.equal(rendered.at(-1).height, (1000 - 118) * 44);
+    assert.deepEqual(writes, resets ? [["top", 4400], ["left", 240]] : []);
+    // An intentional filter reset must remain at the top, including no results.
+    top = 0; left = 0; writes.length = 0;
+    render({ container, body, items: [], columns: 5, createRow: () => assert.fail() });
+    assert.equal(top, 0);
+    assert.deepEqual(writes, []);
+  }
+});
 
 test("published 2026-2027 ratings start a new season alongside its preview", async () => {
   const index = validateIndex(JSON.parse(await readFile(
