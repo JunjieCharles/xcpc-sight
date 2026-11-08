@@ -1,5 +1,19 @@
 # 2026–2027 赛季与前瞻
 
+## 2026-11-08 南京赛后 Rating
+
+计入 [RankLand 南京正式结果](https://rl.algoux.cn/ranklist/icpc2026nanjing)，本赛季累计 **9274 名选手、8 场比赛**。332 支正式队伍全部有提交，新增 996 条个人参赛记录，其中 62 人本赛季首次参赛；42 支打星不参与。使用原有七场固定输入加南京，从空状态重算；逐项核对前七场参赛记录与未参加南京者的最终分均保持一致，最终分范围仍为 1236–2014。女生赛及邀请赛不进入本次输入，其他赛季不更新。
+
+南京 file `112868693578563584`，SHA-256 `f9259b71d87acab2808a00ce4b70c7a4f72f18b8521b2e64dcaae02bdcc5a5d6`，文件发布于北京时间 2026-11-08 18:59:53；下载地址为 `https://cdn.algoux.cn/rankland/file/112868693578563584/icpc2026nanjing.srk.json`，下载字节已与 API 哈希核验。实际开赛时间为 09:30。
+
+将南京 SRK 按 `{id}.srk.json` 保存到 `--input-dir`，将武汉发布脚本固定的七份历史 SRK 保存到 `--previous-input-dir`，执行：
+
+```bash
+python -m scripts.publish_nanjing_2026_results --input-dir data-cache/results-20261108-rankland --previous-input-dir data-cache/results-20261101-rankland
+```
+
+脚本验证八份哈希，完成全部计算和名单关联后，仅写 `series/2026-2027.json` 与 `reviews/2026-2027.json`；支持 `--data-dir`。全部前瞻、名单、其他系列和索引保持原样。测试覆盖离线生成、重复运行一致、旧复盘与前瞻保留、哈希失败不写入；前端回归固定新增人数、参赛次数与 Rating 连续性。复盘数据与验证见[南京赛后复盘](post-contest-review.md#2026-11-08-南京赛后复盘)。
+
 ## 2026-11-05 南京正式手册核验
 
 南京名单来源改为用户提供的[《第51届ICPC亚洲区域赛南京竞赛手册》](../static/sources/icpc-2026-nanjing-manual.pdf)，完整原件 SHA-256 为 `5f52e783acdde591df68517e2b74740c08c8ed386b2afa2abc62358a2b142d8e`。提取并目视复核印刷页 11–24（PDF 第 15–28 页）的全部名单；PDF 第 12 页确认正式赛为 **2026-11-08 09:30–14:30（北京时间）**，承办学校为南京航空航天大学。本次核查时未开赛，CPC Finder 状态为 `PENDING_CONTEST`。页面保留仅显示日期的设置，`sortAt` 零点仍仅用于日期排序。

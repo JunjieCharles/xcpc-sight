@@ -11,7 +11,7 @@ const preview = validatePreview(await read("./fixtures/review/preview.json"));
 const review = validateReview(await read("./fixtures/review/results.json"), [preview]);
 const contest = review.contests[0];
 const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
-const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan"]
+const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan", "icpc-2026-nanjing"]
   .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
 
 test("published review titles match their linked preview titles", async () => {
@@ -301,7 +301,7 @@ test("published second preliminary joins all teams and compares all seven pre-co
   const p = validatePreview(await read("../static/data/previews/icpc-2026-preliminary-2.json"));
   const ccpc = validatePreview(await read("../static/data/previews/ccpc-2026-preliminary.json"));
   const r = validateReview(await read("../static/data/reviews/2026-2027.json"), [first, p, ccpc, ...regionalPreviews]);
-  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu", "icpc2026wuhan"]);
+  assert.deepEqual(r.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu", "icpc2026wuhan", "icpc2026nanjing"]);
   const c = r.contests[1];
   assert.equal(c.previewId, p.id);
   assert.equal(c.startAt, "2026-09-12T13:00:00+08:00");
@@ -394,8 +394,8 @@ test("regional reviews preserve preview power and compare only its constituent m
   for (const p of regionalPreviews) {
     const c = doc.contests.find(c => c.previewId === p.id);
     const original = structuredClone(p);
-    const activeCount = c.id === "icpc2026wuhan" ? 369 : c.id === "icpc2026chengdu" ? 319 : c.id === "icpc2026xi_an" ? 402 : 298;
-    assert.equal(c.source.fileId, c.id === "icpc2026wuhan" ? "110327570620391424" : c.id === "icpc2026chengdu" ? "107769046547718144" : c.id === "icpc2026xi_an" ? "105318714861256704" : "105706787390464000");
+    const activeCount = c.id === "icpc2026nanjing" ? 332 : c.id === "icpc2026wuhan" ? 369 : c.id === "icpc2026chengdu" ? 319 : c.id === "icpc2026xi_an" ? 402 : 298;
+    assert.equal(c.source.fileId, c.id === "icpc2026nanjing" ? "112868693578563584" : c.id === "icpc2026wuhan" ? "110327570620391424" : c.id === "icpc2026chengdu" ? "107769046547718144" : c.id === "icpc2026xi_an" ? "105318714861256704" : "105706787390464000");
     assert.equal(c.source.url, `https://rl.algoux.cn/ranklist/${c.id}`);
     const power = buildPreviewPower(p.teams, p.metricSources.map(m => m.id), previewPowerMetricIds(p));
     assert.deepEqual(reviewMetrics(p).map(m => m.id), Object.keys(expected[c.id]));
@@ -462,9 +462,27 @@ test("Chengdu joins every official team and preserves fixed medal boundaries", a
 });
 
 
+test("Nanjing joins all official teams with fixed medal boundaries", async () => {
+  const p = regionalPreviews.find(p => p.id === "icpc-2026-nanjing");
+  const c = (await read("../static/data/reviews/2026-2027.json")).contests.at(-1);
+  assert.equal(c.id, "icpc2026nanjing");
+  assert.equal(c.startAt, "2026-11-08T09:30:00+08:00");
+  assert.equal(c.source.sha256, "f9259b71d87acab2808a00ce4b70c7a4f72f18b8521b2e64dcaae02bdcc5a5d6");
+  assert.equal(c.teams.length, 332);
+  assert.equal(new Set(c.teams.map(t => t.resultTeamId)).size, 332);
+  assert.deepEqual(new Set(c.teams.map(t => t.previewTeamId)), new Set(p.teams.filter(t => !t.excluded).map(t => t.id)));
+  assert.deepEqual(["gold", "silver", "bronze"].map(m => c.teams.filter(t => t.actualMedal === m).length), [33, 66, 99]);
+  for (const t of c.teams) {
+    assert.equal(t.hasActivity, true);
+    assert.equal(t.resultStatus, undefined);
+    assert.equal(t.actualMedal, t.actualRank <= 33 ? "gold" : t.actualRank <= 99 ? "silver" : t.actualRank <= 198 ? "bronze" : null);
+  }
+  assert.throws(() => buildReviewAnalysis(p, c, "previousSeason"), /Unknown review metric/);
+});
+
 test("Wuhan joins all official teams and keeps silver boundary ties together", async () => {
   const p = regionalPreviews.find(p => p.id === "icpc-2026-wuhan");
-  const c = (await read("../static/data/reviews/2026-2027.json")).contests.at(-1);
+  const c = (await read("../static/data/reviews/2026-2027.json")).contests.find(c => c.id === "icpc2026wuhan");
   assert.equal(c.id, "icpc2026wuhan");
   assert.equal(c.startAt, "2026-11-01T10:00:00+08:00");
   assert.equal(c.source.sha256, "b72266f7fe737bb6cd2ed08d0e72e929a2c63b2404d067358a4bcd5b2488068a");
