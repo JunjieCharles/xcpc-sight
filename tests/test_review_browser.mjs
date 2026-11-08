@@ -180,13 +180,13 @@ test("changing review metrics preserves page and table scroll, clamping only at 
       await send("Page.navigate", { url: new URL("?series=2026-2027&view=review", siteUrl).href });
       await waitFor("document.querySelectorAll('.review-metric-card').length === 5 && !document.querySelector('#review-view').hidden");
       assert.equal(await evaluate("document.querySelector('#review-contest-select').value"), "icpc2026nanjing");
-      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 8);
+      assert.equal(await evaluate("document.querySelector('#review-contest-select').options.length"), 9);
       assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.review-metric-card'), n => n.dataset.metric).sort()"), ["currentSeason", "onlineRanks", "power", "xcpcElo", "xcpcrating"]);
-      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-5).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu", "icpc2026wuhan", "icpc2026nanjing"]);
+      assert.deepEqual(await evaluate("Array.from(document.querySelector('#review-contest-select').options).slice(-6).map(o => o.value)"), ["icpc2026xi_an", "ccpc2026changchun", "icpc2026chengdu", "icpc2026wuhan", "icpc2026nanjing", "ccpc2026leshan"]);
       assert.match(await evaluate("document.querySelector('[data-metric=power] .review-medal-accuracy').textContent"), /金 69\.7% \(23\/33\).*银 60\.6% \(40\/66\).*铜 58\.8% \(57\/97\)/);
       assert.equal(await evaluate("document.querySelector('#review-sources a').href"), "https://rl.algoux.cn/ranklist/icpc2026nanjing");
       assert.ok(!(await evaluate("document.querySelector('#review-sources').textContent")).includes("CPC Finder"));
-      for (const id of ["icpc2026nanjing", "icpc2026wuhan", "icpc2026chengdu", "ccpc2026changchun", "icpc2026xi_an"]) {
+      for (const id of ["ccpc2026leshan", "icpc2026nanjing", "icpc2026wuhan", "icpc2026chengdu", "ccpc2026changchun", "icpc2026xi_an"]) {
         await evaluate(`(() => { const select = document.querySelector('#review-contest-select'); select.value = '${id}'; select.dispatchEvent(new Event('change')); })()`);
         await waitFor(`new URL(location.href).searchParams.get('reviewContest') === '${id}'`);
         await settle();

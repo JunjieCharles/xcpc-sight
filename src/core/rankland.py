@@ -204,7 +204,7 @@ def _team_drafts(payload: Any, contest_uk: str) -> tuple[str, datetime, list[dic
                 "explicit_rank": _integer(row.get("rank"), 0),
                 "solved": solved,
                 "penalty": _milliseconds(score.get("time")),
-                "official": _boolean(user.get("official"), False),
+                "official": _boolean(user.get("official", True), False),
                 "has_activity": has_activity or solved > 0,
             }
         )

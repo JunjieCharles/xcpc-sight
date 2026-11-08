@@ -103,6 +103,17 @@ def test_srk_normalization_excludes_unofficial_from_rank_and_preserves_ties() ->
     assert contest.teams[3].has_activity is True
 
 
+def test_srk_omitted_official_defaults_true_and_preserves_explicit_guests():
+    payload = srk()
+    expected = normalize_srk_contest(payload, contest_uk="regional", series="ccpc2026")
+    for row in payload["rows"][1:]:
+        del row["user"]["official"]
+    actual = normalize_srk_contest(payload, contest_uk="regional", series="ccpc2026")
+    assert actual == expected
+    assert [team.official for team in actual.teams] == [False, True, True, True]
+    assert calculate_series_ratings([actual]) == calculate_series_ratings([expected])
+
+
 def test_srk_normalization_cleans_school_display_qualifier() -> None:
     payload = srk()
     payload["rows"][1]["user"]["organization"] = "北京师范大学珠海校区（非独立法人）"

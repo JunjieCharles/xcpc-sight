@@ -360,7 +360,19 @@ def test_nanjing_current_ratings_use_seven_contests_without_ladies() -> None:
     root = Path(__file__).resolve().parents[1]
     series = root / "static/data/series/2026-2027.json"
     normalizer = generator.load_normalizer(root / "config/school-aliases.json")
-    records, _ = generator.load_previous_series(series)
+    # Freeze the comparison at the preview cutoff, even after regional results publish.
+    document = generator.load_json(series)
+    before = {i for i, c in enumerate(document["contests"])
+              if c["startAt"][:10] < "2026-11-08"}
+    assert len(before) == 7
+    assert all(document["contests"][i]["id"] != "ccpc2026ladies" for i in before)
+    records = []
+    for person in document["competitors"]:
+        history = [p for p in person["participations"] if p["contestIndex"] in before]
+        if history:
+            records.append(generator.PersonRecord(
+                person["member"], person["school"], history[-1]["after"],
+            ))
     index = generator.PersonIndex(records, normalizer)
     preview = generator.load_json(root / "static/data/previews/icpc-2026-nanjing.json")
     for team in preview["teams"]:
