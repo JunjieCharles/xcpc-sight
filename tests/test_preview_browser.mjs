@@ -50,6 +50,8 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       };
     }` });
     await send('Runtime.enable');
+    await send('Network.enable');
+    await send('Network.setCacheDisabled', { cacheDisabled: true });
     for (const width of [1440, 390]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview` });
@@ -251,6 +253,8 @@ test('Shenyang complete preview: desktop/mobile, source, sorting and eligibility
   try {
     await send('Page.enable');
     await send('Runtime.enable');
+    await send('Network.enable');
+    await send('Network.setCacheDisabled', { cacheDisabled: true });
     for (const width of [1440, 390]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width === 390 });
       await send('Page.navigate', { url: `${siteUrl}?series=2026-2027&view=preview&previewContest=icpc-2026-shenyang&previewSort=xcpcrating` });
@@ -312,6 +316,14 @@ test('Shenyang complete preview: desktop/mobile, source, sorting and eligibility
         await evaluate(`document.querySelector('#preview-team-source').scrollIntoView()`);
         const shot = await send('Page.captureScreenshot', { format: 'png' });
         await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/jingzhou-${width}.png`, Buffer.from(shot.data, 'base64'));
+      }
+      await send('Page.bringToFront');
+      await evaluate(`document.querySelector('#preview-body .preview-team-identity').dispatchEvent(new MouseEvent('mouseenter'))`);
+      await waitFor(`document.querySelector('.preview-tooltip-visible')?.textContent.includes('12th CCPC 乐山')`);
+      assert.equal(await evaluate(`document.querySelector('.preview-tooltip-visible [title="第十二届中国大学生程序设计竞赛（乐山）"]')?.textContent`), '12th CCPC 乐山');
+      if (process.env.PREVIEW_SCREENSHOT_DIR) {
+        const shot = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(`${process.env.PREVIEW_SCREENSHOT_DIR}/leshan-history-${width}.png`, Buffer.from(shot.data, 'base64'));
       }
     }
     assert.deepEqual(errors, []);

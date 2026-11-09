@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261105-81";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261109-82";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -37,7 +37,7 @@ export function previewHistoryTitle(record) {
   const edition = ({ "十一": 11, "十二": 12 })[editionText] ?? Number(editionText);
   const place = /总决赛/u.test(title) ? (competition === "ICPC" ? "EC-Final" : "Final")
     : title.match(/(?:区域赛|竞赛)\s*([\u4e00-\u9fff]{2,4})站/u)?.[1]
-      ?? title.match(/区域赛[（(]([^）)]+)[）)]/u)?.[1]
+      ?? title.match(/(?:区域赛|竞赛)\s*[（(]([^）)]+?)(?:站)?[）)]/u)?.[1]
       ?? (title.includes("Hong Kong Regional") ? "香港" : null);
   if (!edition || !place) return title;
   const suffix = edition % 100 >= 11 && edition % 100 <= 13 ? "th"

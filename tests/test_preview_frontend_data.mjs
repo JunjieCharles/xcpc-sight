@@ -530,6 +530,10 @@ test("validates team history and abbreviates regional and final titles", async (
   assert.equal(validatePreview(document), document);
   assert.equal(previewHistoryTitle(record), "50th ICPC 成都");
   assert.equal(previewHistoryTitle({ contestId: "ccpc2026changchun", contestTitle: "2026 年第十二届中国大学生程序设计竞赛 长春站 正式赛" }), "12th CCPC 长春");
+  for (const title of ["第十二届中国大学生程序设计竞赛（乐山）", "第十二届中国大学生程序设计竞赛 (乐山站)"]) {
+    assert.equal(previewHistoryTitle({ contestId: "ccpc2026leshan", contestTitle: title }), "12th CCPC 乐山");
+  }
+  assert.equal(previewHistoryTitle({ contestId: "ccpc2026unknown", contestTitle: "未知赛事" }), "未知赛事");
   assert.equal(previewHistoryTitle({ contestId: "ccpc2025final", contestTitle: "第十一届中国大学生程序设计竞赛总决赛" }), "11th CCPC Final");
   assert.equal(previewHistoryTitle({ contestId: "icpc2025hongkong", contestTitle: "The 50th ICPC Asia Hong Kong Regional Contest" }), "50th ICPC 香港");
   for (const [field, value, error] of [
