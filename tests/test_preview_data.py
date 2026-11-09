@@ -390,10 +390,10 @@ def test_default_publication_includes_all_preview_snapshots() -> None:
     assert [document["id"] for document in documents] == [
         "icpc-2026-preliminary-1", "icpc-2026-preliminary-2", "ccpc-2026-preliminary",
         "icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan",
-        "ccpc-2026-leshan", "icpc-2026-nanjing", "icpc-2026-shenyang",
+        "ccpc-2026-leshan", "icpc-2026-nanjing", "icpc-2026-shenyang", "ccpc-2026-jingzhou",
     ]
     assert [len(document["teams"]) for document in documents] == [
-        2535, 2636, 2173, 418, 336, 328, 438, 348, 374, 415,
+        2535, 2636, 2173, 418, 336, 328, 438, 348, 374, 415, 320,
     ]
     for document in documents[:2]:
         matches = [

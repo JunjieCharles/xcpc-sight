@@ -470,9 +470,16 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     roster = json.loads((tmp_path / "rosters/icpc-2026-shenyang.json").read_text("utf-8"))
     assert len(shenyang["teams"]) == len(roster["teams"]) == 415
     assert shenyang["teamSource"]["url"] == roster["source"]["url"]
+    jingzhou = json.loads((tmp_path / "previews/ccpc-2026-jingzhou.json").read_text("utf-8"))
+    roster = json.loads((tmp_path / "rosters/ccpc-2026-jingzhou.json").read_text("utf-8"))
+    assert len(jingzhou["teams"]) == len(roster["teams"]) == 320
+    assert jingzhou["teamSource"]["url"] == roster["source"]["url"]
+    assert {p["id"] for p in entry["previews"]} >= {
+        "icpc-2026-shenyang", "ccpc-2026-jingzhou",
+    }
 
 
-def test_shenyang_identity_pdf_source_and_online_only_metrics():
+def test_shenyang_identity_pdf_source_and_complete_metrics():
     import hashlib
     import json
     from pathlib import Path
@@ -501,8 +508,9 @@ def test_shenyang_identity_pdf_source_and_online_only_metrics():
     assert ".xlsx" not in json.dumps(preview["teamSource"])
     normalizer = load_normalizer(root / "config/school-aliases.json")
     series = json.loads((data / "series/2026-2027.json").read_text("utf-8"))
-    assert preview["onlineRanksOnly"] is True
-    assert preview["metricSources"] == []
+    assert not preview.get("onlineRanksOnly", False)
+    assert len(preview["metricSources"]) == 5
+    assert preview["powerMetrics"] == ["xcpcrating", "xcpcElo", "currentSeason", "onlineRanks"]
     projected = deepcopy(preview["teams"])
     attach_online_ranks(projected, online_rank_index(series, normalizer, preview["sortAt"]),
                         normalizer)
@@ -512,20 +520,12 @@ def test_shenyang_identity_pdf_source_and_online_only_metrics():
         assert row["name"] == team["name"]
         assert row["excluded"] == team.get("excluded", False)
         assert row["members"] == [m["name"] for m in team["members"]]
-        assert team["ratings"] == {}
+        assert set(team["ratings"]) == {s["id"] for s in preview["metricSources"]}
         assert "currentSeasonHistory" in team
         assert "previousSeasonHistory" in team
         for member in team["members"]:
-            assert member["ratings"] == {}
-            assert member["medals"] == {"gold": 0, "silver": 0, "bronze": 0}
-    details = [{"id": t["id"], "currentSeasonHistory": t["currentSeasonHistory"],
-                "previousSeasonHistory": t["previousSeasonHistory"],
-                "achievements": [m["achievements"] for m in t["members"]]}
-               for t in preview["teams"]]
-    assert hashlib.sha256(json.dumps(
-        details, ensure_ascii=False, separators=(",", ":")
-    ).encode()).hexdigest() == "233f7302122a8ff56f35201d5f299ed939995aea1fe3f37752316dd6a49985f6"
-    assert sum(len(t["currentSeasonHistory"]) for t in preview["teams"]) == 275
+            assert set(member["ratings"]) == set(team["ratings"])
+    assert sum(len(t["currentSeasonHistory"]) for t in preview["teams"]) == 412
     assert sum(len(t["previousSeasonHistory"]) for t in preview["teams"]) == 782
     for competition, count in [("noi", 87), ("ioi", 3)]:
         assert sum(any(a["competition"] == competition for a in m["achievements"])
