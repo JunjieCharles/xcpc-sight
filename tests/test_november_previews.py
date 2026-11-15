@@ -22,7 +22,7 @@ def test_added_teams_use_frozen_ratings_and_preserve_all_original_teams():
     reviews = read(DATA / "reviews/2026-2027.json")
     for pid, baseline in expected.items():
         p = read(DATA / f"previews/{pid}.json")
-        n = baseline["originalTeamCount"]
+        n = baseline.get("retainedOriginalTeamCount", baseline["originalTeamCount"])
         digest = hashlib.sha256(json.dumps(p["teams"][:n], ensure_ascii=False,
                                           separators=(",", ":")).encode()).hexdigest()
         assert digest == baseline["originalTeamsSha256"]
@@ -39,7 +39,7 @@ def test_added_teams_use_frozen_ratings_and_preserve_all_original_teams():
 
 @pytest.mark.parametrize("cid,total,official,members,history", [
     ("icpc-2026-shenyang", 416, 401, 1248, 412),
-    ("ccpc-2026-jingzhou", 322, 301, 963, 410),
+    ("ccpc-2026-jingzhou", 321, 300, 960, 409),
 ])
 def test_latest_complete_previews(cid, total, official, members, history):
     p = read(DATA / f"previews/{cid}.json")
@@ -113,7 +113,7 @@ def test_jingzhou_manual_identity_and_schedule():
     digest = hashlib.sha256(json.dumps(roster["teams"], ensure_ascii=False,
                                       separators=(",", ":")).encode()).hexdigest()
     assert digest == source["identitySha256"] == (
-        "aeb537dd298db431d3fca3fe33d17c3f07daa1f819aab83baf0fa34d30fb751d")
+        "9baef99e3b49aa8c7b146114d10ebbdd13182beab93b1f526a57c429b929b0db")
     assert source["originalIdentitySha256"] == (
         "81f99fa3a09b18eaa600c01ce3d69fc20919de6423fa00e5e230a16d5309a293")
     assert source["pdfPages"] == [23, 31]
@@ -122,4 +122,9 @@ def test_jingzhou_manual_identity_and_schedule():
     assert p["hostSchool"] == "长江大学"
     assert p["sortAt"] == "2026-11-15T09:30:00+08:00"
     assert p["endAt"] == "2026-11-15T14:30:00+08:00"
-    assert roster["teams"][223]["members"] == ["林泽宇", "魏子安"]
+    assert roster["teams"][222]["members"] == ["林泽宇", "魏子安"]
+    assert not any(t["id"] == "t_260fc04dc78d66ccda61" for t in p["teams"])
+    assert not any(t["school"] == "贵州大学" and t["name"] == "贵大2对"
+                   for t in roster["teams"])
+    assert p["rosterSupplement"]["removedPreviewTeamIds"] == ["t_260fc04dc78d66ccda61"]
+    assert not (ROOT / "config/review-removed-results/ccpc2026jingzhou.json").exists()

@@ -14,11 +14,11 @@ const byId = analysis => Object.fromEntries(analysis.rows.map(t => [t.id, t]));
 const regionalPreviews = await Promise.all(["icpc-2026-xian", "ccpc-2026-changchun", "icpc-2026-chengdu", "icpc-2026-wuhan", "icpc-2026-nanjing", "ccpc-2026-leshan", "icpc-2026-shenyang", "ccpc-2026-jingzhou"]
   .map(async id => validatePreview(await read(`../static/data/previews/${id}.json`))));
 
-test("November 15 reviews cover final official rosters and preserve silver ties and missing results", async () => {
+test("November 15 reviews cover final official rosters and exclude the removed preview team", async () => {
   const doc = await read("../static/data/reviews/2026-2027.json");
   for (const [id, count, active, medals, edges, sha] of [
     ["icpc2026shenyang", 401, 401, [40, 81, 119], [40, 120, 240], "71bf9079b565ffa843b945bd9bb90b53e53e2b8eefd3297c460f81c875dac1f5"],
-    ["ccpc2026jingzhou", 301, 300, [30, 60, 90], [30, 90, 180], "8a097d795d16bf05ffb541b17235997929e592d45d68850be74b55bc079b448c"],
+    ["ccpc2026jingzhou", 300, 300, [30, 60, 90], [30, 90, 180], "8a097d795d16bf05ffb541b17235997929e592d45d68850be74b55bc079b448c"],
   ]) {
     const c = doc.contests.find(c => c.id === id);
     const p = regionalPreviews.find(p => p.id === c.previewId);
@@ -37,11 +37,8 @@ test("November 15 reviews cover final official rosters and preserve silver ties 
       assert.equal(c.teams.filter(t => t.actualRank === 120).length, 2);
       assert.ok(!buildReviewAnalysis(p, c, "power").rows.some(t => t.id === "t_e976fc1eb2b05c4dea27"));
     } else {
-      const removed = c.teams.filter(t => t.resultStatus === "removed");
-      assert.deepEqual(removed.map(t => t.previewTeamId), ["t_260fc04dc78d66ccda61"]);
-      assert.equal(removed[0].actualRank, null);
-      assert.equal(removed[0].hasActivity, null);
-      assert.ok(!buildReviewAnalysis(p, c, "power").rows.some(t => t.id === removed[0].previewTeamId));
+      assert.ok(c.teams.every(t => !t.resultStatus && t.hasActivity));
+      assert.ok(!c.teams.some(t => t.previewTeamId === "t_260fc04dc78d66ccda61"));
     }
   }
 });

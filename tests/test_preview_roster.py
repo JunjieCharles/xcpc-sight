@@ -472,7 +472,7 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert shenyang["teamSource"]["url"] == roster["source"]["url"]
     jingzhou = json.loads((tmp_path / "previews/ccpc-2026-jingzhou.json").read_text("utf-8"))
     roster = json.loads((tmp_path / "rosters/ccpc-2026-jingzhou.json").read_text("utf-8"))
-    assert len(jingzhou["teams"]) == len(roster["teams"]) == 322
+    assert len(jingzhou["teams"]) == len(roster["teams"]) == 321
     assert jingzhou["teamSource"]["url"] == roster["source"]["url"]
     assert {p["id"] for p in entry["previews"]} >= {
         "icpc-2026-shenyang", "ccpc-2026-jingzhou",

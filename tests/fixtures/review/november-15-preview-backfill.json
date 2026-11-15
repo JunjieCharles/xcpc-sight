@@ -40,7 +40,7 @@
   },
   "ccpc-2026-jingzhou": {
     "originalTeamCount": 320,
-    "originalTeamsSha256": "3d170cb57a7bba46adce18fcce6fc301954506f57f7f80e92618c6ead3e2fcf6",
+    "originalTeamsSha256": "03a173f17f08094ba164a5eb92585af617ff6445ac698f06ead3bef3f999c485",
     "addedMembers": [
       {
         "school": "黑龙江大学",
@@ -108,6 +108,7 @@
           "currentSeason": 1307
         }
       }
-    ]
+    ],
+    "retainedOriginalTeamCount": 319
   }
 }
