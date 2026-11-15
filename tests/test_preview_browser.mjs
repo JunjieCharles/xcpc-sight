@@ -110,7 +110,7 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await evaluate('window.scrollTo(0, 0)');
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
-      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '369', '332', '300', '400', '299']);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '369', '332', '300', '401', '301']);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-cutoff-table thead th').length`), 8);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
         ['icpc-2026-xian', 'ccpc-2026-changchun', 'icpc-2026-chengdu', 'icpc-2026-wuhan',
@@ -264,7 +264,7 @@ test('Shenyang complete preview: desktop/mobile, source, sorting and eligibility
       assert.equal(await evaluate(`document.querySelectorAll('a[href$=".xlsx"]').length`), 0);
       assert.equal(await evaluate(`document.body.innerText.includes('东北大学')`), true);
       assert.equal(await evaluate(`document.body.innerText.includes('2026年11月15日')`), true);
-      for (const [type, count] of [['official', 400], ['starred', 15], ['all', 415]]) {
+      for (const [type, count] of [['official', 401], ['starred', 15], ['all', 416]]) {
         await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);
         await waitFor(`document.querySelector('#result-count').textContent === '${count} 支队伍'`);
       }
@@ -308,7 +308,7 @@ test('Shenyang complete preview: desktop/mobile, source, sorting and eligibility
       assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true);
       assert.equal(await evaluate(`document.querySelector('#preview-head th[aria-sort="descending"]')?.textContent.includes('综合战力')`), true);
       assert.equal(await evaluate(`document.querySelector('#preview-team-source').textContent.includes('临时版')`), true);
-      for (const [type, count] of [['official', 299], ['starred', 21], ['all', 320]]) {
+      for (const [type, count] of [['official', 301], ['starred', 21], ['all', 322]]) {
         await evaluate(`document.querySelector('[data-team-type="${type}"]').click()`);
         await waitFor(`document.querySelector('#result-count').textContent === '${count} 支队伍'`);
       }

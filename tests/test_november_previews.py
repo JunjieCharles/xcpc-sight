@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.generate_preview_data import PersonIndex, load_normalizer, load_previous_series
+from scripts.generate_preview_data import PersonIndex, PersonRecord, load_normalizer
 from scripts.preview_roster import attach_online_ranks, online_rank_index
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,9 +17,29 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def test_added_teams_use_frozen_ratings_and_preserve_all_original_teams():
+    expected = read(ROOT / "tests/fixtures/review/november-15-preview-backfill.json")
+    reviews = read(DATA / "reviews/2026-2027.json")
+    for pid, baseline in expected.items():
+        p = read(DATA / f"previews/{pid}.json")
+        n = baseline["originalTeamCount"]
+        digest = hashlib.sha256(json.dumps(p["teams"][:n], ensure_ascii=False,
+                                          separators=(",", ":")).encode()).hexdigest()
+        assert digest == baseline["originalTeamsSha256"]
+        assert p["rosterSupplement"]["ratingSnapshotDate"] == "2026-11-09"
+        assert [{"school": t["school"], "name": m["name"], "ratings": m["ratings"]}
+                for t in p["teams"][n:] for m in t["members"]] == baseline["addedMembers"]
+        c = next(c for c in reviews["contests"] if c["previewId"] == pid)
+        added = {t["id"] for t in p["teams"][n:]}
+        assert added == set(p["rosterSupplement"]["previewTeamIds"])
+        assert {t["resultTeamId"] for t in c["teams"] if t["previewTeamId"] in added} == (
+            set(p["rosterSupplement"]["resultTeamIds"]))
+        assert all(t["hasActivity"] for t in c["teams"] if t["previewTeamId"] in added)
+
+
 @pytest.mark.parametrize("cid,total,official,members,history", [
-    ("icpc-2026-shenyang", 415, 400, 1245, 412),
-    ("ccpc-2026-jingzhou", 320, 299, 957, 408),
+    ("icpc-2026-shenyang", 416, 401, 1248, 412),
+    ("ccpc-2026-jingzhou", 322, 301, 963, 410),
 ])
 def test_latest_complete_previews(cid, total, official, members, history):
     p = read(DATA / f"previews/{cid}.json")
@@ -48,7 +68,15 @@ def test_latest_complete_previews(cid, total, official, members, history):
     ]
     normalizer = load_normalizer(ROOT / "config/school-aliases.json")
     series_path = DATA / "series/2026-2027.json"
-    index = PersonIndex(load_previous_series(series_path)[0], normalizer)
+    series = read(series_path)
+    cutoff = datetime.fromisoformat(p["sourceSnapshots"]["currentSeason"])
+    records = []
+    for person in series["competitors"]:
+        prior = [h for h in person["participations"] if datetime.fromisoformat(
+            series["contests"][h["contestIndex"]]["startAt"]) <= cutoff]
+        if prior:
+            records.append(PersonRecord(person["member"], person["school"], prior[-1]["after"]))
+    index = PersonIndex(records, normalizer)
     projected = json.loads(json.dumps(p["teams"]))
     attach_online_ranks(projected, online_rank_index(read(series_path), normalizer, p["sortAt"]),
                         normalizer)
@@ -85,6 +113,8 @@ def test_jingzhou_manual_identity_and_schedule():
     digest = hashlib.sha256(json.dumps(roster["teams"], ensure_ascii=False,
                                       separators=(",", ":")).encode()).hexdigest()
     assert digest == source["identitySha256"] == (
+        "aeb537dd298db431d3fca3fe33d17c3f07daa1f819aab83baf0fa34d30fb751d")
+    assert source["originalIdentitySha256"] == (
         "81f99fa3a09b18eaa600c01ce3d69fc20919de6423fa00e5e230a16d5309a293")
     assert source["pdfPages"] == [23, 31]
     assert p["teamSource"]["url"] == source["url"]

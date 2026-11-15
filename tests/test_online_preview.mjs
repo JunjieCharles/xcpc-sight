@@ -13,16 +13,16 @@ function team(id, ranks, extra = {}) {
     medals: { gold: 0, silver: 0, bronze: 0 }, ...extra };
 }
 
-test('Shenyang publishes a complete preview with the PDF source and 400 official teams', async () => {
+test('Shenyang publishes a complete preview with the PDF source and 401 official teams', async () => {
   const p = validatePreview(JSON.parse(await readFile(
     new URL('../static/data/previews/icpc-2026-shenyang.json', import.meta.url), 'utf8')));
-  assert.equal(p.teams.length, 415);
-  assert.equal(p.teams.filter(t => !t.excluded).length, 400);
+  assert.equal(p.teams.length, 416);
+  assert.equal(p.teams.filter(t => !t.excluded).length, 401);
   assert.equal(p.teamSource.url, './sources/icpc-2026-shenyang-manual.pdf');
   assert.equal(p.onlineRanksOnly, undefined);
   assert.equal(p.metricSources.length, 5);
   assert.deepEqual(p.powerMetrics, ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
-  assert.deepEqual(buildPreviewCutoffs(p), { cup: 6, gold: 102, silver: 335, bronze: 597 });
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 6, gold: 104, silver: 338, bronze: 609 });
   // Keep online-only schema coverage independent of a particular published station.
   const onlineOnly = structuredClone(p);
   onlineOnly.onlineRanksOnly = true;
@@ -43,15 +43,15 @@ test('Jingzhou publishes four-dimensional preview, temporary roster, cutoffs and
     new URL(`../static/data/previews/${id}.json`, import.meta.url), 'utf8')));
   const p = await read('ccpc-2026-jingzhou');
   const shenyang = await read('icpc-2026-shenyang');
-  assert.equal(p.teams.length, 320);
-  assert.equal(p.teams.filter(t => !t.excluded).length, 299);
-  assert.equal(p.matchingSummary.members, 957);
+  assert.equal(p.teams.length, 322);
+  assert.equal(p.teams.filter(t => !t.excluded).length, 301);
+  assert.equal(p.matchingSummary.members, 963);
   assert.equal(p.hostSchool, '长江大学');
   assert.match(p.teamSource.title, /临时版/);
   assert.equal(p.teamSource.url, './sources/ccpc-2026-jingzhou-manual.pdf');
   assert.deepEqual(previewPowerMetricIds(p), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
-  assert.deepEqual(buildPreviewCutoffs(p), { cup: 4, gold: 77, silver: 243, bronze: 532 });
-  assert.equal(p.teams.filter(t => !t.excluded && t.onlineRanks.some(r => r !== null)).length, 285);
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 4, gold: 78, silver: 246, bronze: 545 });
+  assert.equal(p.teams.filter(t => !t.excluded && t.onlineRanks.some(r => r !== null)).length, 287);
   assert.deepEqual(previewNavigationGroups([p, shenyang]).regional.map(c => c.id),
     ['icpc-2026-shenyang', 'ccpc-2026-jingzhou']);
   const { selectPreviewContest } = await import('../static/js/preview.mjs');

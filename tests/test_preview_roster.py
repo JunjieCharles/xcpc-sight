@@ -468,11 +468,11 @@ def test_static_generator_copies_xian_identity_source(tmp_path, monkeypatch):
     assert nanjing["teamSource"]["url"] == roster["source"]["url"]
     shenyang = json.loads((tmp_path / "previews/icpc-2026-shenyang.json").read_text("utf-8"))
     roster = json.loads((tmp_path / "rosters/icpc-2026-shenyang.json").read_text("utf-8"))
-    assert len(shenyang["teams"]) == len(roster["teams"]) == 415
+    assert len(shenyang["teams"]) == len(roster["teams"]) == 416
     assert shenyang["teamSource"]["url"] == roster["source"]["url"]
     jingzhou = json.loads((tmp_path / "previews/ccpc-2026-jingzhou.json").read_text("utf-8"))
     roster = json.loads((tmp_path / "rosters/ccpc-2026-jingzhou.json").read_text("utf-8"))
-    assert len(jingzhou["teams"]) == len(roster["teams"]) == 320
+    assert len(jingzhou["teams"]) == len(roster["teams"]) == 322
     assert jingzhou["teamSource"]["url"] == roster["source"]["url"]
     assert {p["id"] for p in entry["previews"]} >= {
         "icpc-2026-shenyang", "ccpc-2026-jingzhou",
@@ -494,11 +494,11 @@ def test_shenyang_identity_pdf_source_and_complete_metrics():
     digest = hashlib.sha256(json.dumps(
         identities, ensure_ascii=False, separators=(",", ":")
     ).encode()).hexdigest()
-    assert digest == "30a5975fe424db05a94c50025b1e0438b0b8abc3073f9e6a4ea06f86e84c4c0c"
+    assert digest == "b7dc530e20fea5ec7e94d7112d4cf4fee3bc47cfd7108af1176c344be1b6fc2d"
     assert digest == roster["source"]["identitySha256"]
-    assert len(identities) == 415
-    assert sum(not t["excluded"] for t in identities) == 400
-    assert sum(len(t["members"]) for t in identities) == 1245
+    assert len(identities) == 416
+    assert sum(not t["excluded"] for t in identities) == 401
+    assert sum(len(t["members"]) for t in identities) == 1248
     assert preview["sortAt"] == "2026-11-15T09:00:00+08:00"
     assert preview["endAt"] == "2026-11-15T14:00:00+08:00"
     assert preview["hostSchool"] == "东北大学"

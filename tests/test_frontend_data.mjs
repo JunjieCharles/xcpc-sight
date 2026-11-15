@@ -72,9 +72,9 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   )));
   assert.equal(series.contests[0].id, "icpc2026preliminary-1");
   assert.equal(series.contests[0].startAt, "2026-09-06T13:00:00+08:00");
-  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "ccpc2026changchun", "icpc2026xi_an", "icpc2026chengdu", "icpc2026wuhan", "ccpc2026leshan", "icpc2026nanjing"]);
+  assert.deepEqual(series.contests.map(c => c.id), ["icpc2026preliminary-1", "icpc2026preliminary-2", "ccpc2026preliminary", "ccpc2026changchun", "icpc2026xi_an", "icpc2026chengdu", "icpc2026wuhan", "ccpc2026leshan", "icpc2026nanjing", "ccpc2026jingzhou", "icpc2026shenyang"]);
   assert.equal(series.contests[1].startAt, "2026-09-12T13:00:00+08:00");
-  assert.equal(series.competitors.length, 9318);
+  assert.equal(series.competitors.length, 9461);
   const participants = series.competitors.flatMap((person) => person.participations)
     .filter((participation) => participation.contestIndex === 0);
   assert.equal(participants.length, 7380);
@@ -114,6 +114,14 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
   assert.equal(series.contests[8].startAt, "2026-11-08T09:30:00+08:00");
   assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === 8).length, 996);
   assert.equal(series.competitors.filter(c => c.participations[0].contestIndex === 8).length, 62);
+  for (const [i, startAt, participants, debut] of [
+    [9, "2026-11-15T09:40:00+08:00", 897, 48],
+    [10, "2026-11-15T09:00:00+08:00", 1203, 95],
+  ]) {
+    assert.equal(series.contests[i].startAt, startAt);
+    assert.equal(series.competitors.flatMap(c => c.participations).filter(p => p.contestIndex === i).length, participants);
+    assert.equal(series.competitors.filter(c => c.participations[0].contestIndex === i).length, debut);
+  }
   for (const [school, member] of [["长沙理工大学", "邓泽林"], ["佛山大学", "闫凯"]]) {
     assert.ok(!series.competitors.some(c => c.school === school && c.member === member));
   }
@@ -124,7 +132,7 @@ test("published 2026-2027 ratings start a new season alongside its preview", asy
     assert.equal(person.finalRating, history.at(-1).after);
   }
   assert.equal(Math.min(...series.competitors.map(c => c.finalRating)), 1236);
-  assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 2014);
+  assert.equal(Math.max(...series.competitors.map(c => c.finalRating)), 2046);
   const removedOnly = [
     "c_c439791f8573ea5031da75fcf95edbee77783ff94d187ce5b3087026d510ea2e",
     "c_1fb32128d4959beb18b40384d92df5a893077874ddef65d3c3df82d6c61876ad",

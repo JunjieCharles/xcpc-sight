@@ -1,0 +1,113 @@
+{
+  "icpc-2026-shenyang": {
+    "originalTeamCount": 415,
+    "originalTeamsSha256": "b44e2764f839a253c2a3abd0164cad6ce31789737c5a448bc73b1a72231f519b",
+    "addedMembers": [
+      {
+        "school": "山东理工大学",
+        "name": "袁振轩",
+        "ratings": {
+          "xcpcrating": null,
+          "xcpcElo": null,
+          "previousSeason": null,
+          "cpcfinder": null,
+          "currentSeason": null
+        }
+      },
+      {
+        "school": "山东理工大学",
+        "name": "王梦飞",
+        "ratings": {
+          "xcpcrating": null,
+          "xcpcElo": null,
+          "previousSeason": null,
+          "cpcfinder": null,
+          "currentSeason": null
+        }
+      },
+      {
+        "school": "山东理工大学",
+        "name": "翟振博",
+        "ratings": {
+          "xcpcrating": null,
+          "xcpcElo": null,
+          "previousSeason": null,
+          "cpcfinder": null,
+          "currentSeason": null
+        }
+      }
+    ]
+  },
+  "ccpc-2026-jingzhou": {
+    "originalTeamCount": 320,
+    "originalTeamsSha256": "3d170cb57a7bba46adce18fcce6fc301954506f57f7f80e92618c6ead3e2fcf6",
+    "addedMembers": [
+      {
+        "school": "黑龙江大学",
+        "name": "刘基淯",
+        "ratings": {
+          "xcpcrating": 1417.05,
+          "xcpcElo": 1362,
+          "previousSeason": 1317,
+          "cpcfinder": 26.84,
+          "currentSeason": 1325
+        }
+      },
+      {
+        "school": "黑龙江大学",
+        "name": "倪子钧",
+        "ratings": {
+          "xcpcrating": 1385.89,
+          "xcpcElo": 1301,
+          "previousSeason": 1311,
+          "cpcfinder": 0.0,
+          "currentSeason": 1324
+        }
+      },
+      {
+        "school": "黑龙江大学",
+        "name": "何恩培",
+        "ratings": {
+          "xcpcrating": 1442.94,
+          "xcpcElo": 1380,
+          "previousSeason": 1327,
+          "cpcfinder": 46.23,
+          "currentSeason": 1335
+        }
+      },
+      {
+        "school": "三峡大学",
+        "name": "刘熙",
+        "ratings": {
+          "xcpcrating": 1347.75,
+          "xcpcElo": 1255,
+          "previousSeason": 1346,
+          "cpcfinder": 0.0,
+          "currentSeason": 1307
+        }
+      },
+      {
+        "school": "三峡大学",
+        "name": "隗嘉乐",
+        "ratings": {
+          "xcpcrating": 1396.9,
+          "xcpcElo": 1257,
+          "previousSeason": 1354,
+          "cpcfinder": 0.0,
+          "currentSeason": 1307
+        }
+      },
+      {
+        "school": "三峡大学",
+        "name": "邵传天",
+        "ratings": {
+          "xcpcrating": 1346.3,
+          "xcpcElo": 1250,
+          "previousSeason": null,
+          "cpcfinder": 0.0,
+          "currentSeason": 1307
+        }
+      }
+    ]
+  }
+}
