@@ -1,5 +1,5 @@
 // Pure qualification calculations. Unknown results are never filled with predicted teams.
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-95";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-96";
 
 const check = (condition, path, message) => {
   if (!condition) throw new TypeError(`${path}: ${message}`);
@@ -175,7 +175,7 @@ export function buildQualification(data, mode) {
           role = "candidate";
           certainty = safe.has(key) ? "safe" : "risk";
           reason = "本校在当前出线区域内的另一支候选队，学校只能选一队；候选范围随后续结果变化。";
-        } else {
+        } else if (position <= current.frontier) {
           role = "duplicate";
           reason = mode === "wf" ? "本校已在更早位置计入；该行未新增高校名额。" : "相同学校及三名成员的队伍已在更早赛站计入，不重复占名额。";
         }
@@ -183,7 +183,9 @@ export function buildQualification(data, mode) {
         role = "duplicate";
         reason = "本校在当前成绩推演中已达到 3 支队伍的成绩渠道上限。";
       }
-      cells.set(position, { team, role, certainty, reason, pressure, hosting, row, column, position, order: atOwnPosition ? selected.order : null });
+      // ECF school order: teams of one school ranked by first appearance in the traversal.
+      const schoolRank = mode === "ecf" ? [...schoolTeams, team.key].indexOf(team.key) + 1 : null;
+      cells.set(position, { team, role, certainty, reason, pressure, hosting, schoolRank, row, column, position, order: atOwnPosition ? selected.order : null });
       schoolTeams.add(team.key);
       earlierSchoolTeams.set(team.schoolKey, schoolTeams);
     }
@@ -202,6 +204,7 @@ export function buildQualification(data, mode) {
     if (cell.role === "candidate") cell.certainty = safe.has(cell.team.schoolKey) ? "safe" : "risk";
   }
   return { mode, stations, quota, cap, current, conservative, cells, safe, pendingCount, maxRows,
+    hongkong: mode === "ecf" ? data.stations.find(s => s.region === "hongkong") ?? null : null,
     boundaryRow: Math.floor(current.frontier / stations.length) + 1 };
 }
 
@@ -219,8 +222,8 @@ export function qualificationRegionEdges(position, columns, frontier) {
 export function cellPresentation(cell) {
   if (cell.role === "candidate") return { className: "candidate", label: "可选队伍", detail: cell.certainty === "safe" ? "本校确定有名额" : "本校名额仍待定" };
   if (cell.role === "selected") return cell.certainty === "safe"
-    ? { className: "safe", label: "确定有名额", detail: "当前出线位置" }
-    : { className: `pressure-${cell.pressure?.level ?? "low"}`, label: "当前出线 待定", detail: "具体名额尚未锁定" };
+    ? { className: "safe", label: "确定出线", detail: "当前出线位置" }
+    : { className: `pressure-${cell.pressure?.level ?? "low"}`, label: "待定出线", detail: "具体名额尚未锁定" };
   return cell.role === "duplicate"
     ? { className: "duplicate", label: "重复 / 达上限", detail: "不新增名额" }
     : { className: "outside", label: "当前未出线", detail: "" };

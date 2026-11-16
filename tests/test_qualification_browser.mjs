@@ -89,12 +89,12 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         assert.equal(await evaluate("document.querySelectorAll('.qualification-boundary, .qualification-risk').length"), 0);
         assert.equal(await evaluate("document.querySelectorAll('.qualification-host-mark').length"), mode === "wf" ? 1 : 0);
         if (mode === "wf") {
-          assert.equal(await evaluate("document.querySelector('.qualification-host-mark').textContent"), "承办学校");
+          assert.equal(await evaluate("document.querySelector('.qualification-host-mark').textContent"), "承办学校资格");
           assert.match(await evaluate("document.querySelector('.qualification-host-mark').title"), /沈阳站校排第 7.*资格待核验/);
           assert.equal(await evaluate("getComputedStyle(document.querySelector('td.qualification-host-performance')).backgroundColor"), "rgb(233, 220, 243)");
-          assert.equal(await evaluate("(() => { const tag = document.querySelector('.qualification-host-mark'); const a = tag.getBoundingClientRect(); const b = tag.previousElementSibling.getBoundingClientRect(); const cell = tag.closest('td').getBoundingClientRect(); return a.left >= b.right && a.right <= cell.right && a.width > 0; })()"), true, "host marker fits beside school");
+          assert.equal(await evaluate("(() => { const tag = document.querySelector('.qualification-host-mark'); const a = tag.getBoundingClientRect(); const cell = tag.closest('td').getBoundingClientRect(); return a.left >= cell.left && a.right <= cell.right && a.width > 0; })()"), true, "host marker fits inside its cell");
         }
-        assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '当前出线 待定')"), true);
+        assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '待定出线')"), true);
         assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-high').length > 0"));
         if (mode === "ecf") assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-low').length > 0"));
         assert.equal(await evaluate("document.querySelectorAll('td.qualification-region-top').length"), mode === "wf" ? 8 : 7);
@@ -112,11 +112,8 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         }
         assert.ok(await evaluate("document.querySelectorAll('.qualification-safe').length > 1"));
         const rows = await evaluate("document.querySelectorAll('.qualification-table tbody tr').length");
-        assert.ok(rows >= 5);
-        await evaluate("document.querySelector('.qualification-team summary').click()");
-        assert.equal(await evaluate("document.querySelector('.qualification-team').open"), true);
-        assert.equal(await evaluate("getComputedStyle(document.querySelector('.qualification-team[open] .qualification-members')).whiteSpace"), "normal");
-        await evaluate("document.querySelector('.qualification-team summary').click()");
+        assert.ok(rows >= (mode === "wf" ? 10 : 5));
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-team summary, .qualification-team details, details.qualification-team').length"), 0, "cells are not expandable");
         await evaluate("document.querySelector('#qualification-view').scrollIntoView({block: 'start'})");
         await new Promise(resolve => setTimeout(resolve, 150));
         const screenshot = await send("Page.captureScreenshot", { format: "png" });

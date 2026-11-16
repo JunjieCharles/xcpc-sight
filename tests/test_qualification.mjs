@@ -6,10 +6,10 @@ test("both boards use one pending label with pressure colors and distinct guaran
   for (const level of ["low", "medium", "high"]) {
     const cell = { role: "selected", certainty: "risk", pressure: { level } };
     assert.deepEqual(cellPresentation(cell), {
-      className: `pressure-${level}`, label: "当前出线 待定", detail: "具体名额尚未锁定",
+      className: `pressure-${level}`, label: "待定出线", detail: "具体名额尚未锁定",
     });
     assert.equal(cell.certainty, "risk");
-    assert.equal(cellPresentation({ ...cell, certainty: "safe" }).label, "确定有名额");
+    assert.equal(cellPresentation({ ...cell, certainty: "safe" }).label, "确定出线");
   }
   for (const role of ["duplicate", "outside"]) {
     assert.equal(cellPresentation({ role }).className, role);
@@ -104,6 +104,19 @@ test("ECF deduplicates roster across stations, limits schools to three, excludes
   assert.deepEqual([...m.current.selected.keys()], ["A-1", "A-2", "C-1", "A-3", "B-1"]);
   assert.equal(m.cells.get(1).role, "duplicate");
   assert.equal(m.cells.get(6).role, "duplicate");
+});
+
+test("outside takes priority over duplicate beyond the frontier and ECF shows school order", () => {
+  const d = data([station("one", [team("A"), team("A", 2, 2)]), station("two", [team("C"), team("A", 1, 2)])], { ecfMainlandQuota: 2 });
+  const ecf = buildQualification(d, "ecf");
+  assert.equal(ecf.current.frontier, 1);
+  assert.equal(ecf.cells.get(3).role, "outside");
+  assert.equal(ecf.cells.get(2).role, "outside");
+  assert.deepEqual([0, 1, 2, 3].map(p => ecf.cells.get(p).schoolRank), [1, 1, 2, 1]);
+  assert.ok([...buildQualification(d, "wf").cells.values()].every(c => c.schoolRank === null));
+  const hk = { ...pending("hk", 115), region: "hongkong" };
+  assert.equal(buildQualification(data([...d.stations, hk], { ecfMainlandQuota: 2 }), "ecf").hongkong.id, "hk");
+  assert.equal(ecf.hongkong, null);
 });
 
 test("pending unique schools bound WF slots; already qualified schools remain alternatives", () => {
