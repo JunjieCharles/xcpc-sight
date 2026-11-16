@@ -10,13 +10,13 @@
     {"title": "2026 EC Final 名额分配办法", "url": "https://icpc.pku.edu.cn/tzgg/109d767bb4464b24a5aa18563b65238e.htm"}
   ],
   "stations": [
-    {"id": "icpc2026xi_an", "title": "西安", "region": "mainland", "status": "finished"},
-    {"id": "icpc2026chengdu", "title": "成都", "region": "mainland", "status": "finished"},
-    {"id": "icpc2026wuhan", "title": "武汉", "region": "mainland", "status": "finished"},
-    {"id": "icpc2026nanjing", "title": "南京", "region": "mainland", "status": "finished"},
-    {"id": "icpc2026shenyang", "title": "沈阳", "region": "mainland", "status": "finished"},
-    {"id": "icpc2026nanchang", "title": "南昌", "region": "mainland", "status": "pending", "date": "2026-12-20", "estimatedCount": 360, "source": {"title": "南昌名额分配方案", "url": "https://icpc.pku.edu.cn/tzgg/b4d55e13589b47d384b6c854702acc86.htm"}},
-    {"id": "icpc2026shanghai", "title": "上海", "region": "mainland", "status": "pending", "date": "2026-12-06", "estimatedCount": 336, "source": {"title": "上海名额分配方案（正式 336 队）", "url": "https://icpc.pku.edu.cn/tzgg/7d3cbb4896de4774873be489d780a82b.htm"}},
-    {"id": "icpc2026hongkong", "title": "香港", "region": "hongkong", "status": "pending", "date": "2027-01-10", "estimatedCount": 115, "source": {"title": "港澳名额分配方案（正式 95+20 队）", "url": "https://icpc.pku.edu.cn/tzgg/374c9f5210bd4ff287068ec82d56dde2.htm"}}
+    {"id": "icpc2026xi_an", "title": "西安", "region": "mainland", "status": "finished", "hostSchool": "西北工业大学", "hostSource": "https://icpc.pku.edu.cn/docs/2026-09/414cce375b4e4ce99dafececfb6ac3f5.pdf"},
+    {"id": "icpc2026chengdu", "title": "成都", "region": "mainland", "status": "finished", "hostSchool": "电子科技大学", "hostSource": "https://icpc.pku.edu.cn/docs/2026-09/8bb3449cf16246568dbccbaa631cc242.pdf"},
+    {"id": "icpc2026wuhan", "title": "武汉", "region": "mainland", "status": "finished", "hostSchool": "武汉大学", "hostSource": "https://icpc.pku.edu.cn/docs/2026-09/bb7392b3bfde45dda21e1975945e63bf.pdf"},
+    {"id": "icpc2026nanjing", "title": "南京", "region": "mainland", "status": "finished", "hostSchool": "南京航空航天大学", "hostSource": "https://icpc.pku.edu.cn/tzgg/1fb98fa9d73a476b853c348bd8dabed3.htm"},
+    {"id": "icpc2026shenyang", "title": "沈阳", "region": "mainland", "status": "finished", "hostSchool": "东北大学", "hostSource": "https://icpc.pku.edu.cn/tzgg/1cc97f0e462547c7963cd1b314df6c57.htm"},
+    {"id": "icpc2026nanchang", "title": "南昌", "region": "mainland", "status": "pending", "date": "2026-12-20", "estimatedCount": 360, "hostSchool": "江西师范大学", "hostSource": "https://icpc.pku.edu.cn/docs/2026-11/aeee3a1fced849d8b28ec6edb9d89c23.pdf", "source": {"title": "南昌名额分配方案", "url": "https://icpc.pku.edu.cn/tzgg/b4d55e13589b47d384b6c854702acc86.htm"}},
+    {"id": "icpc2026shanghai", "title": "上海", "region": "mainland", "status": "pending", "date": "2026-12-06", "estimatedCount": 336, "hostSchool": "上海大学", "hostSource": "https://icpc.pku.edu.cn/docs/2026-10/390553972c6041edb3e02109b7d54fa9.pdf", "source": {"title": "上海名额分配方案（正式 336 队）", "url": "https://icpc.pku.edu.cn/tzgg/7d3cbb4896de4774873be489d780a82b.htm"}},
+    {"id": "icpc2026hongkong", "title": "香港", "region": "hongkong", "status": "pending", "date": "2027-01-10", "estimatedCount": 115, "hostSchool": "香港大学", "hostSource": "https://i.cs.hku.hk/~icpc/", "source": {"title": "港澳名额分配方案（正式 95+20 队）", "url": "https://icpc.pku.edu.cn/tzgg/374c9f5210bd4ff287068ec82d56dde2.htm"}}
   ]
 }

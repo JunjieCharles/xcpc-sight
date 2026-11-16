@@ -60,3 +60,18 @@ def test_pinned_source_hash_failure_and_offline_build(tmp_path):
         build_document(config, [tmp_path], review, {})
     with pytest.raises(ValueError, match="not found"):
         build_document(config, [tmp_path / "missing"], review, {})
+
+
+def test_host_metadata_matches_config_and_survives_projection():
+    root = Path(__file__).resolve().parents[1]
+    config = json.loads((root / "config/qualification-2026-2027.json").read_text(encoding="utf-8"))
+    snapshot_path = root / "static/data/qualification/2026-2027.json"
+    published = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    by_id = {station["id"]: station for station in published["stations"]}
+    for spec in config["stations"]:
+        assert by_id[spec["id"]]["hostSchool"] == spec["hostSchool"]
+        assert by_id[spec["id"]]["hostSource"] == spec["hostSource"]
+    spec = config["stations"][0]
+    projected = project_station(spec, raw(), DefaultNormalizer())
+    assert projected["hostSchool"] == spec["hostSchool"]
+    assert projected["hostSource"] == spec["hostSource"]

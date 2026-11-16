@@ -46,6 +46,38 @@ function data(stations, extra = {}) {
 }
 const pending = (id, n = 2) => station(id, [], { status: "pending", estimatedCount: n });
 
+test("hosting marks use other-station school top ten without allocating C slots", () => {
+  const teams = [team("First", 1, 1), team("First", 2, 2),
+    ...Array.from({ length: 8 }, (_, i) => team(`Other${i}`, 1, i + 3)),
+    team("Host10", 1, 20), team("Host11", 1, 21)];
+  const hostMetadata = school => ({ hostSchool: school, hostSource: "https://example.org/invitation" });
+  const d = data([station("away", teams),
+    station("own", [team("Host10")], hostMetadata("Host10")),
+    { ...pending("future"), ...hostMetadata("Host11") }]);
+  const plain = structuredClone(d);
+  plain.stations.forEach(s => { delete s.hostSchool; delete s.hostSource; });
+  const model = buildQualification(d, "wf");
+  const marked = [...model.cells.values()].filter(c => c.hosting);
+  assert.equal(marked.length, 1);
+  assert.equal(marked[0].team.schoolKey, "Host10");
+  assert.equal(marked[0].team.rank, 20, "threshold uses school rank, not raw team rank");
+  assert.deepEqual(marked[0].hosting, { schoolRank: 10, stations: ["own"] });
+  assert.deepEqual(model.current, buildQualification(plain, "wf").current);
+  assert.deepEqual(model.safe, buildQualification(plain, "wf").safe);
+  assert.ok([...buildQualification(d, "ecf").cells.values()].every(c => c.hosting === null));
+  d.stations[2].hostSchool = "First";
+  assert.ok([...buildQualification(d, "wf").cells.values()].some(c => c.hosting?.stations.includes("future")), "pending hosts count");
+  d.stations[2].hostSource = "";
+  assert.throws(() => validateQualification(d), /host school\/source/);
+});
+
+test("published host metadata marks only Wuhan University's Shenyang school rank seven", () => {
+  const snapshot = JSON.parse(fs.readFileSync(new URL("../static/data/qualification/2026-2027.json", import.meta.url)));
+  const model = buildQualification(snapshot, "wf");
+  const marked = [...model.cells.values()].filter(c => c.hosting);
+  assert.deepEqual(marked.map(c => [c.team.schoolKey, model.stations[c.column].title, c.hosting.schoolRank]), [["武汉大学", "沈阳", 7]]);
+});
+
 test("station order uses scored formal counts and estimates, with date tie-break", () => {
   const d = data([station("large-roster", [team("A"), team("B", 1, 2, 0), team("C", 1, 3, 0)]),
     station("earlier", [team("D"), team("E", 1, 2)], { date: "2026-10-01" }), pending("future", 2)]);

@@ -1,5 +1,5 @@
 // Pure qualification calculations. Unknown results are never filled with predicted teams.
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-93";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-95";
 
 const check = (condition, path, message) => {
   if (!condition) throw new TypeError(`${path}: ${message}`);
@@ -25,6 +25,9 @@ export function validateQualification(data) {
     check(["finished", "pending"].includes(station.status), path, "invalid status");
     check(Array.isArray(station.teams), path, "missing teams");
     check(nonempty(station.source?.title) && /^https:\/\//.test(station.source?.url), path, "missing source");
+    if (station.hostSchool !== undefined || station.hostSource !== undefined) {
+      check(nonempty(station.hostSchool) && /^https:\/\//.test(station.hostSource), path, "invalid host school/source");
+    }
     if (station.status === "pending") {
       check(integer(station.estimatedCount, 1) && station.teams.length === 0, path, "pending requires estimate and no results");
       continue;
@@ -136,6 +139,11 @@ export function buildQualification(data, mode) {
       if (!team) continue;
       const key = mode === "wf" ? team.schoolKey : team.key;
       const selected = current.selected.get(key);
+      const hostStations = mode === "wf" ? stations.filter(s => s.hostSchool === team.schoolKey) : [];
+      // Record only the ordinary regional performance threshold, not C-slot eligibility.
+      // A school's own host station cannot supply the qualifying performance.
+      const hosting = row < 10 && hostStations.length && !hostStations.some(s => s.id === station.id)
+        ? { schoolRank: row + 1, stations: hostStations.map(s => s.title) } : null;
       const schoolTeams = earlierSchoolTeams.get(team.schoolKey) ?? new Set();
       const atOwnPosition = selected?.position === position;
       let role = "outside";
@@ -175,7 +183,7 @@ export function buildQualification(data, mode) {
         role = "duplicate";
         reason = "本校在当前成绩推演中已达到 3 支队伍的成绩渠道上限。";
       }
-      cells.set(position, { team, role, certainty, reason, pressure, row, column, position, order: atOwnPosition ? selected.order : null });
+      cells.set(position, { team, role, certainty, reason, pressure, hosting, row, column, position, order: atOwnPosition ? selected.order : null });
       schoolTeams.add(team.key);
       earlierSchoolTeams.set(team.schoolKey, schoolTeams);
     }

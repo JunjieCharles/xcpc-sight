@@ -87,6 +87,13 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
           "高：前方一半或更少的未赛位置新增占位，就会触及总名额限制。",
         ]);
         assert.equal(await evaluate("document.querySelectorAll('.qualification-boundary, .qualification-risk').length"), 0);
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-host-mark').length"), mode === "wf" ? 1 : 0);
+        if (mode === "wf") {
+          assert.equal(await evaluate("document.querySelector('.qualification-host-mark').textContent"), "承办学校");
+          assert.match(await evaluate("document.querySelector('.qualification-host-mark').title"), /沈阳站校排第 7.*资格待核验/);
+          assert.equal(await evaluate("getComputedStyle(document.querySelector('td.qualification-host-performance')).backgroundColor"), "rgb(233, 220, 243)");
+          assert.equal(await evaluate("(() => { const tag = document.querySelector('.qualification-host-mark'); const a = tag.getBoundingClientRect(); const b = tag.previousElementSibling.getBoundingClientRect(); const cell = tag.closest('td').getBoundingClientRect(); return a.left >= b.right && a.right <= cell.right && a.width > 0; })()"), true, "host marker fits beside school");
+        }
         assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '当前出线 待定')"), true);
         assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-high').length > 0"));
         if (mode === "ecf") assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-low').length > 0"));

@@ -1,6 +1,6 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-93";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-95";
 import { buildPreviewPower, buildPreviewRanks, previewPowerMetricIds, compareOnlineRanks,
-  sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20261116-93";
+  sortPreviewTeams, searchPreviewTeams } from "./preview.mjs?v=20261116-95";
 
 const validated = new WeakMap();
 const analyses = new WeakMap();

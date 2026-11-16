@@ -57,6 +57,10 @@
 .qualification-team summary:hover .qualification-team-name { text-decoration: underline; text-underline-offset: 3px; }
 .qualification-badge { position: absolute; top: 0; right: 0; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 .2rem; font-size: .6rem; line-height: 1.25; font-weight: 600; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
 .qualification-school { display: block; min-width: 0; color: inherit; font-weight: 700; line-height: 1.25; }
+.qualification-school-line { display: flex; align-items: baseline; gap: .25rem; min-width: 0; }
+.qualification-host-mark { flex: 0 0 auto; padding: 0 .2rem; border: 1px solid #9775b0; border-radius: 2px; background: #f0e7f7; color: #663a85; font-size: .6rem; line-height: 1.25; white-space: nowrap; }
+.qualification-host-key, td.qualification-host-performance { background: #e9dcf3; color: #563375; }
+.qualification-host-detail { display: block; margin-top: .3rem; color: #663a85; }
 .qualification-team-name { color: var(--ink); line-height: 1.25; }
 .qualification-members { line-height: 1.25; font-size: .69rem; opacity: .9; }
 .qualification-school, .qualification-team-name, .qualification-members { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,4 +1,4 @@
-import { buildQualification, cellPresentation, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261116-93";
+import { buildQualification, cellPresentation, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261116-95";
 
 function el(tag, className = "", text = "") {
   const element = document.createElement(tag);
@@ -38,6 +38,11 @@ export function renderQualification(container, data, mode) {
   const regionKey = el("span", "qualification-key qualification-region-key", "粗框：当前出线区域");
   regionKey.title = "按已知成绩逐行遍历至当前截止位置；框内包含重复队伍与待赛空位，不表示每格都获名额。";
   legend.append(regionKey);
+  if (mode === "wf") {
+    const hostKey = el("span", "qualification-key qualification-host-key", "承办学校：其他站校排前 10");
+    hostKey.title = "标记达到普通区域赛成绩门槛的格子；Hosting Team 名额仍待申请与资格核验。";
+    legend.append(hostKey);
+  }
   const channels = el("div", "qualification-channels");
   if (mode === "wf") {
     const trial = el("div", "qualification-channel");
@@ -164,9 +169,20 @@ export function renderQualification(container, data, mode) {
           const name = el("span", "qualification-team-name", cell.team.name);
           const members = el("small", "qualification-members", cell.team.members.join(" · "));
           for (const item of [school, name, members]) item.title = item.textContent;
-          identity.append(school, badge);
+          const schoolLine = el("div", "qualification-school-line");
+          schoolLine.append(school);
+          let hostNote = "";
+          if (cell.hosting) {
+            td.classList.add("qualification-host-performance");
+            hostNote = `${cell.team.school}承办${cell.hosting.stations.join("、")}站，在其他赛站（${station.title}）取得校排第 ${cell.hosting.schoolRank}，达到普通区域赛前 10 的成绩门槛。Hosting Team 每年最多 2 校；申请、连续两年享用限制及 EC Final 顺位仍待核验，已通过 A/B 晋级的高校不占此名额。`;
+            const host = el("span", "qualification-host-mark", "承办学校");
+            host.title = `承办${cell.hosting.stations.join("、")}站；${station.title}站校排第 ${cell.hosting.schoolRank}，达到普通区域赛成绩门槛，优惠资格待核验。`;
+            schoolLine.append(host);
+          }
+          identity.append(schoolLine, badge);
           summary.append(identity, name, members);
           const info = el("p", "qualification-cell-reason", `${presentation.detail} · 原榜 #${cell.team.rank} · ${cell.team.solved} 题。${cell.reason}`);
+          if (hostNote) info.append(el("span", "qualification-host-detail", hostNote));
           if (cell.pressure) {
             const pressure = cell.pressure;
             const schoolNote = pressure.schoolTolerance === null ? "" : `同校还可先新增 ${pressure.schoolTolerance} 支不同队伍；${pressure.schoolRisk ? "未排除同校竞争" : "同校上限不构成风险"}。`;
