@@ -76,6 +76,7 @@ export function validateIndex(document) {
     if (item.previewPath !== undefined) string(item.previewPath, `index.series[${i}].previewPath`);
     if (item.reviewPath !== undefined) string(item.reviewPath, `index.series[${i}].reviewPath`);
     if (item.regionalCutoffsPath !== undefined) string(item.regionalCutoffsPath, `index.series[${i}].regionalCutoffsPath`);
+    if (item.qualificationPath !== undefined) string(item.qualificationPath, `index.series[${i}].qualificationPath`);
     if (item.previews !== undefined) {
       array(item.previews, `index.series[${i}].previews`);
       if (!item.previews.length) fail(`index.series[${i}].previews`, "expected nonempty list");
@@ -100,7 +101,7 @@ export function validateIndex(document) {
     }
     if (ids.has(item.id)) fail(`index.series[${i}].id`, "duplicate series id");
     ids.add(item.id);
-    for (const path of [item.path, item.reviewPath, item.regionalCutoffsPath, ...(item.previews?.map(p => p.path) ?? [item.previewPath])].filter(Boolean)) {
+    for (const path of [item.path, item.reviewPath, item.regionalCutoffsPath, item.qualificationPath, ...(item.previews?.map(p => p.path) ?? [item.previewPath])].filter(Boolean)) {
       if (paths.has(path)) fail(`index.series[${i}]`, "duplicate data path");
       paths.add(path);
     }

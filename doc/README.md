@@ -2,10 +2,12 @@
 
 | 功能 | 文档 |
 | --- | --- |
+| ICPC EC Final 名额分配与 WF 晋级规则原件、版本和统计口径归档 | [icpc-advancement-rules.md](icpc-advancement-rules.md) |
+| WF 与 ECF 名额盘点页签、赛站规模估计、跨站去重及保守风险判断 | [qualification-tracker.md](qualification-tracker.md) |
 | 本地学校别名、更名维护与加载 | [school-aliases.md](school-aliases.md) |
 | 个人与报名实体 rating 规则、系列计算及队伍归一化 LSE 聚合 | [rating-rules.md](rating-rules.md) |
 | 题目难度 rating 的特征、训练、验证、XCPC 预测与静态展示 | [problem-rating.md](problem-rating.md) |
-| 多系列静态站点 JSON 数据契约、生成与零构建前端 | [static-site-data.md](static-site-data.md) |
+| 多系列静态站点 JSON 数据契约、生成、统一宽屏布局与零构建前端 | [static-site-data.md](static-site-data.md) |
 | 赛后复盘（含沈阳、荆州站）、指标符合度、金银铜精确预测命中率、队伍结果关联与排名对比 | [post-contest-review.md](post-contest-review.md) |
 | 首场网络赛 max、LSE 与混合聚合的离线对比实验 | [team-aggregation-first-preliminary.md](team-aggregation-first-preliminary.md) |
 | RankLand 数据获取与 SRK 转换 | [rankland-data.md](rankland-data.md) |

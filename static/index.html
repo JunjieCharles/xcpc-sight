@@ -6,7 +6,7 @@
   <meta name="description" content="XCPC rating 系列、比赛变化与参赛记录。">
   <title>XCPC Sight · Rating</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="./assets/xcpc-sight.svg">
-  <link rel="stylesheet" href="./styles.css?v=20261109-82">
+  <link rel="stylesheet" href="./styles.css?v=20261116-93">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -55,6 +55,10 @@
                 aria-controls="preview-view" aria-selected="false">赛前前瞻</button>
         <button id="review-tab" type="button" role="tab" hidden
                 aria-controls="review-view" aria-selected="false">赛后复盘</button>
+        <button id="wf-tab" type="button" role="tab" hidden
+                aria-controls="qualification-view" aria-selected="false">WF 名额盘点</button>
+        <button id="ecf-tab" type="button" role="tab" hidden
+                aria-controls="qualification-view" aria-selected="false">ECF 名额盘点</button>
       </div>
 
       <section id="participant-controls" class="controls" aria-label="搜索">
@@ -141,6 +145,8 @@
         </div>
       </section>
 
+      <section id="qualification-view" hidden aria-labelledby="qualification-title"></section>
+
       <div id="status" class="status" role="status">正在加载数据…</div>
       <section id="series-view" hidden aria-labelledby="series-title">
         <div class="section-heading">
@@ -217,6 +223,6 @@
   </main>
 
   <template id="error-template"><div class="error-panel"><h2>无法显示数据</h2><p></p><button type="button">重试</button></div></template>
-  <script type="module" src="./js/app.mjs?v=20261109-82"></script>
+  <script type="module" src="./js/app.mjs?v=20261116-93"></script>
 </body>
 </html>

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "2026-2027",
+  "asOf": "2026-11-16",
+  "disclaimer": "民间数据，仅供参考，不代表官方结果",
+  "ecfMainlandQuota": 230,
+  "ecfSchoolCap": 3,
+  "rules": [
+    {"title": "WF 晋级规则（2025-10-01 更新）", "url": "https://icpc.pku.edu.cn/tzgg/38783e6dda71402abbd1f6c28e6b6779.htm"},
+    {"title": "2026 EC Final 名额分配办法", "url": "https://icpc.pku.edu.cn/tzgg/109d767bb4464b24a5aa18563b65238e.htm"}
+  ],
+  "stations": [
+    {"id": "icpc2026xi_an", "title": "西安", "region": "mainland", "status": "finished"},
+    {"id": "icpc2026chengdu", "title": "成都", "region": "mainland", "status": "finished"},
+    {"id": "icpc2026wuhan", "title": "武汉", "region": "mainland", "status": "finished"},
+    {"id": "icpc2026nanjing", "title": "南京", "region": "mainland", "status": "finished"},
+    {"id": "icpc2026shenyang", "title": "沈阳", "region": "mainland", "status": "finished"},
+    {"id": "icpc2026nanchang", "title": "南昌", "region": "mainland", "status": "pending", "date": "2026-12-20", "estimatedCount": 360, "source": {"title": "南昌名额分配方案", "url": "https://icpc.pku.edu.cn/tzgg/b4d55e13589b47d384b6c854702acc86.htm"}},
+    {"id": "icpc2026shanghai", "title": "上海", "region": "mainland", "status": "pending", "date": "2026-12-06", "estimatedCount": 336, "source": {"title": "上海名额分配方案（正式 336 队）", "url": "https://icpc.pku.edu.cn/tzgg/7d3cbb4896de4774873be489d780a82b.htm"}},
+    {"id": "icpc2026hongkong", "title": "香港", "region": "hongkong", "status": "pending", "date": "2027-01-10", "estimatedCount": 115, "source": {"title": "港澳名额分配方案（正式 95+20 队）", "url": "https://icpc.pku.edu.cn/tzgg/374c9f5210bd4ff287068ec82d56dde2.htm"}}
+  ]
+}

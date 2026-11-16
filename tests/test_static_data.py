@@ -214,6 +214,10 @@ def test_published_index_matches_published_series_documents() -> None:
         if source.is_file():
             assert json.loads(source.read_text(encoding="utf-8"))["seriesId"] == entry["id"]
             entry["regionalCutoffsPath"] = f"regional-cutoffs/{source.name}"
+        qualification = data_dir / "qualification" / f"{entry['id']}.json"
+        if qualification.is_file():
+            assert json.loads(qualification.read_text(encoding="utf-8"))["seriesId"] == entry["id"]
+            entry["qualificationPath"] = f"qualification/{qualification.name}"
     assert index == projected
 
 
@@ -607,3 +611,20 @@ def test_generator_loads_2026_2027_season(monkeypatch) -> None:
     assert spec.path == "series/2026-2027.json"
     assert spec.title == "2026–2027 ICPC + CCPC"
     assert spec.load() == (contest,)
+
+
+def test_generator_copies_qualification_snapshot_without_refreshing(monkeypatch, tmp_path):
+    result, _, _ = result_fixture()
+    monkeypatch.setattr(generate_static_data, "series_specs", lambda: (
+        generate_static_data.SeriesSpec(
+            "2026-2027", "2026–2027 ICPC + CCPC", "series/2026-2027.json",
+            lambda: result.contests,
+        ),
+    ))
+    monkeypatch.setattr(generate_static_data, "preview_specs", lambda: ())
+    monkeypatch.setattr(generate_static_data, "calculate_series_ratings", lambda contests: result)
+    generate_static_data.generate_static_data(tmp_path)
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    path = index["series"][0]["qualificationPath"]
+    source = Path(__file__).parents[1] / "static/data" / path
+    assert (tmp_path / path).read_bytes() == source.read_bytes()

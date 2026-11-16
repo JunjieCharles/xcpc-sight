@@ -1,0 +1,62 @@
+import copy
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from core.normalization import DefaultNormalizer
+from scripts.generate_qualification_data import build_document, project_station
+
+FIXTURE = Path(__file__).parent / "fixtures/review/contest.srk.json"
+
+
+def raw():
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    data["rows"] = data["rows"][:1]
+    data["rows"][0]["user"]["teamMembers"] = [{"name": name} for name in ["甲", "乙", "丙"]]
+    return data
+
+
+def test_projection_identity_ignores_team_name_member_order_and_coaches():
+    payload = raw()
+    normalizer = DefaultNormalizer()
+    spec = {"id": "one", "title": "fixture", "region": "mainland"}
+    first = project_station(spec, payload, normalizer)
+    original = copy.deepcopy(payload)
+    payload["rows"][0]["user"]["teamMembers"].reverse()
+    payload["rows"][0]["user"]["teamMembers"].insert(0, {"name": "老师", "role": "coach"})
+    payload["rows"][0]["user"]["name"] = "renamed"
+    second = project_station({**spec, "id": "two"}, payload, normalizer)
+    assert first["teams"][0]["key"] == second["teams"][0]["key"]
+    assert "老师" not in second["teams"][0]["members"]
+    assert first == project_station(spec, original, normalizer)
+
+
+def test_partial_rosters_remain_distinct_and_stars_are_excluded():
+    payload = raw()
+    payload["rows"][0]["user"]["teamMembers"].pop()
+    first = project_station({"id": "one"}, payload, DefaultNormalizer())
+    second = project_station({"id": "two"}, payload, DefaultNormalizer())
+    assert first["teams"][0]["identityComplete"] is False
+    assert first["teams"][0]["key"] != second["teams"][0]["key"]
+    payload["rows"][0]["user"]["official"] = False
+    empty = project_station({"id": "one"}, payload, DefaultNormalizer())
+    assert empty["officialCount"] == empty["effectiveCount"] == 0
+
+
+def test_pinned_source_hash_failure_and_offline_build(tmp_path):
+    payload = raw()
+    binary = json.dumps(payload).encode()
+    (tmp_path / "one.srk.json").write_bytes(binary)
+    config = {"stations": [{"id": "one", "status": "finished"}]}
+    source = {"sha256": hashlib.sha256(binary).hexdigest()}
+    review = {"contests": [{"id": "one", "source": source}]}
+    doc = build_document(config, [tmp_path], review, {})
+    assert doc["stations"][0]["officialCount"] == 1
+    assert doc == build_document(config, [tmp_path], review, {})
+    source["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="SHA-256"):
+        build_document(config, [tmp_path], review, {})
+    with pytest.raises(ValueError, match="not found"):
+        build_document(config, [tmp_path / "missing"], review, {})

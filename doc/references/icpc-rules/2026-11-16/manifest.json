@@ -1,0 +1,72 @@
+{
+  "archiveDate": "2026-11-16",
+  "timezone": "Asia/Shanghai",
+  "files": [
+    {
+      "file": "ec-final-2026-notice.html",
+      "url": "https://icpc.pku.edu.cn/tzgg/109d767bb4464b24a5aa18563b65238e.htm",
+      "role": "notice",
+      "retrievedAt": "2026-11-16T12:51:51+08:00",
+      "contentType": "text/html",
+      "bytes": 9770,
+      "sha256": "7975ce9dcfa51aa82b84c6f9e89106ee57cdc4c14c3c089ee823af0538aaed65"
+    },
+    {
+      "file": "ec-final-2026-allocation.pdf",
+      "url": "https://icpc.pku.edu.cn/docs/2026-09/a49a6af14b9542fd8f7eccd9a22a0779.pdf",
+      "role": "notice-attachment",
+      "retrievedAt": "2026-11-16T12:51:52+08:00",
+      "contentType": "application/pdf",
+      "bytes": 238400,
+      "sha256": "6c577a6c223e8b94d267fcb27d37f0174dd0a893bb36dc85caad806b5146ed51",
+      "pages": 3
+    },
+    {
+      "file": "wf-advancement-notice.html",
+      "url": "https://icpc.pku.edu.cn/tzgg/38783e6dda71402abbd1f6c28e6b6779.htm",
+      "role": "notice",
+      "retrievedAt": "2026-11-16T12:51:52+08:00",
+      "contentType": "text/html",
+      "bytes": 10222,
+      "sha256": "1b31e9eaecb0feeb81fdf5b4b19c1bba81bd6994b6b3750e8585f69154cf222f"
+    },
+    {
+      "file": "wf-advancement-2025-09-02-superseded.pdf",
+      "url": "https://icpc.pku.edu.cn/docs/2025-09/09dd215f7fb04a1bb5e0df2b75982bd5.pdf",
+      "role": "superseded-attachment",
+      "retrievedAt": "2026-11-16T12:51:52+08:00",
+      "contentType": "application/pdf",
+      "bytes": 127986,
+      "sha256": "7a94bb77a4761475cf75509dd7c26294b4be7f07b94a22b3d0fc25da6c6840cb",
+      "pages": 1
+    },
+    {
+      "file": "wf-advancement-2025-10-01.pdf",
+      "url": "https://icpc.pku.edu.cn/docs/2025-10/26213fdb4e8b42a8b1bbeac4be4113d2.pdf",
+      "role": "updated-attachment",
+      "retrievedAt": "2026-11-16T12:51:53+08:00",
+      "contentType": "application/pdf",
+      "bytes": 130144,
+      "sha256": "2937b7de7170c5d1c6c7f08d0f0608f27837729387587fa69ca297b126a4d9db",
+      "pages": 2
+    },
+    {
+      "file": "wf-advancement-2025-10-01-page-1.png",
+      "url": "https://icpc.pku.edu.cn/images/2025-10/0dc9fb5c13734b4ca9b5b92f33c83fd0.png",
+      "role": "notice-image",
+      "retrievedAt": "2026-11-16T12:51:53+08:00",
+      "contentType": "image/png",
+      "bytes": 540681,
+      "sha256": "c18436dd4d94a49215bbbe99ce003293803e5669ee78a23c4ac6cfa054855cd9"
+    },
+    {
+      "file": "wf-advancement-2025-10-01-page-2.png",
+      "url": "https://icpc.pku.edu.cn/images/2025-10/a3374a8446f94308a93d7f6e13db575f.png",
+      "role": "notice-image",
+      "retrievedAt": "2026-11-16T12:51:54+08:00",
+      "contentType": "image/png",
+      "bytes": 203473,
+      "sha256": "50568479bf01db5b905375ef1f95f68ab7c1082f12ac47cebf688be3905d98de"
+    }
+  ]
+}

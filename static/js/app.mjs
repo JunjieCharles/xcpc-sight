@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261109-82";
+} from "./data.mjs?v=20261116-93";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261109-82";
+} from "./problem-rating.mjs?v=20261116-93";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,11 +40,14 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261109-82";
+} from "./preview.mjs?v=20261116-93";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261109-82";
+} from "./review.mjs?v=20261116-93";
+
+import { loadQualification } from "./qualification.mjs?v=20261116-93";
+import { renderQualification } from "./qualification-view.mjs?v=20261116-93";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -61,6 +64,9 @@ const elements = {
   problemRatingTab: document.querySelector("#problem-rating-tab"),
   previewTab: document.querySelector("#preview-tab"),
   reviewTab: document.querySelector("#review-tab"),
+  wfTab: document.querySelector("#wf-tab"),
+  ecfTab: document.querySelector("#ecf-tab"),
+  qualificationView: document.querySelector("#qualification-view"),
   reviewView: document.querySelector("#review-view"),
   reviewTitle: document.querySelector("#review-title"),
   reviewContestSelect: document.querySelector("#review-contest-select"),
@@ -130,6 +136,7 @@ const state = {
   series: null,
   index: null,
   siteIndex: null,
+  qualification: null,
   filtered: [],
   renderFrame: 0,
   problemAvailableSeries: new Set(),
@@ -236,10 +243,12 @@ function setUrl(mode = "replace") {
     view: state.view, contest: state.reviewContest?.id, metric: state.reviewMetric,
     sort: state.reviewSort, order: state.reviewOrder,
   });
+  if (["wf", "ecf"].includes(state.view)) url.searchParams.set("view", state.view);
   history[mode === "push" ? "pushState" : "replaceState"](null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function showError(error) {
+  elements.qualificationView.hidden = true;
   console.error(error);
   elements.status.hidden = true;
   elements.seriesView.hidden = true;
@@ -489,6 +498,12 @@ function applySearch({ resetScroll = true, updateUrl = true } = {}) {
 }
 
 function updateSeriesMode() {
+  const qualificationSupported = Boolean(state.seriesEntry?.qualificationPath);
+  elements.wfTab.hidden = !qualificationSupported;
+  elements.ecfTab.hidden = !qualificationSupported;
+  elements.wfTab.setAttribute("aria-selected", String(state.view === "wf"));
+  elements.ecfTab.setAttribute("aria-selected", String(state.view === "ecf"));
+  if (!["wf", "ecf"].includes(state.view)) elements.qualificationView.hidden = true;
   const participantsSupported = Boolean(state.seriesEntry?.path);
   const problemSupported = participantsSupported && state.problemAvailableSeries.has(state.seriesId);
   const previewSupported = Boolean(state.previews.length);
@@ -836,6 +851,11 @@ function previewRankMedalClass(metric, rank, teamCount, excluded = false, stage 
 
 function renderPreviewRows() {
   if (!state.preview || state.view !== "preview") return;
+  const table = elements.previewBody.closest("table");
+  const baseWidth = parseFloat(table.style.getPropertyValue("--preview-table-width"));
+  const dataColumns = table.querySelectorAll("col").length - 3;
+  // Share spare space among data columns; keep frozen widths and offsets aligned.
+  table.style.setProperty("--preview-column-extra", `${Math.max(0, (elements.previewScroll.clientWidth - baseWidth) / dataColumns)}px`);
   if (activePreviewTooltip) {
     activePreviewTooltip.classList.remove("preview-tooltip-visible");
     activePreviewTooltip.remove();
@@ -987,7 +1007,9 @@ function renderPreviewHeader() {
   table.style.setProperty("--preview-table-width", `${widths.reduce((sum, width) => sum + width, 0)}px`);
   table.style.setProperty("--preview-non-frozen-width", `${widths.slice(2).reduce((sum, width) => sum + width, 0)}px`);
   table.querySelector("colgroup")?.remove();
-  table.prepend(columnGroup(widths));
+  const group = columnGroup(widths);
+  for (let i = 3; i < widths.length; i++) group.children[i].style.width = `calc(${widths[i]}px + var(--preview-column-extra, 0px))`;
+  table.prepend(group);
 }
 
 function renderSourceLinks(container, label, sources) {
@@ -1177,8 +1199,10 @@ function renderReviewHeader() {
 function renderReviewRows() {
   if (state.view !== "review" || !state.reviewAnalysis) return;
   // clientWidth excludes the vertical scrollbar; cqw can include its gutter.
-  elements.reviewBody.closest("table").style.setProperty(
-    "--review-column-extra", `${Math.max(0, (elements.reviewScroll.clientWidth - 1150) / 5)}px`,
+  const table = elements.reviewBody.closest("table");
+  const baseWidth = parseFloat(table.style.getPropertyValue("--preview-table-width"));
+  table.style.setProperty(
+    "--review-column-extra", `${Math.max(0, (elements.reviewScroll.clientWidth - baseWidth) / 5)}px`,
   );
   if (activePreviewTooltip) {
     activePreviewTooltip.remove();
@@ -1951,6 +1975,8 @@ function updateSeriesNavigation() {
 async function loadSeries(seriesId, queryState = {}) {
   const loadVersion = ++seriesLoadVersion;
   state.view = "loading";
+  elements.qualificationView.hidden = true;
+  state.qualification = null;
   elements.status.hidden = false;
   elements.status.textContent = "正在加载数据…";
   elements.seriesView.hidden = true;
@@ -2009,7 +2035,9 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.searchInput.value = state.query;
   renderSchoolControls();
   updateSeriesMode();
-  if (queryState.view === "review" && entry.reviewPath) {
+  if (["wf", "ecf"].includes(queryState.view) && entry.qualificationPath) {
+    await showQualification(queryState.view);
+  } else if (queryState.view === "review" && entry.reviewPath) {
     await showReview(queryState);
   } else if (showRequestedPreview || !state.series) {
     elements.status.hidden = true;
@@ -2046,7 +2074,7 @@ async function initialize() {
     ...readPreviewQuery(location.href),
     ...readReviewQuery(location.href),
   };
-  if (["preview", "review"].includes(new URL(location.href).searchParams.get("view"))) query.view = new URL(location.href).searchParams.get("view");
+  if (["preview", "review", "wf", "ecf"].includes(new URL(location.href).searchParams.get("view"))) query.view = new URL(location.href).searchParams.get("view");
   for (const entry of index.series) {
     const button = node("button", {
       type: "button",
@@ -2071,6 +2099,29 @@ async function initialize() {
   const seriesId = index.series.some((entry) => entry.id === query.series) ? query.series : index.defaultSeriesId;
   await loadSeries(seriesId, query);
 }
+
+async function showQualification(mode, updateUrl = false) {
+  const entry = state.seriesEntry;
+  if (!entry?.qualificationPath) return showSeries();
+  state.view = mode;
+  state.contestId = "";
+  state.competitorId = "";
+  updateSeriesMode();
+  for (const view of [elements.seriesView, elements.previewView, elements.reviewView,
+    elements.problemRatingView, elements.detailView, elements.participantControls, elements.qualificationView]) view.hidden = true;
+  elements.status.hidden = false;
+  elements.status.textContent = "正在加载名额盘点…";
+  if (updateUrl) setUrl("push");
+  const data = state.qualification ?? await loadQualification(entry, INDEX_URL);
+  if (state.seriesEntry !== entry || state.view !== mode) return;
+  state.qualification = data;
+  renderQualification(elements.qualificationView, data, mode);
+  elements.status.hidden = true;
+  elements.qualificationView.hidden = false;
+}
+
+elements.wfTab.addEventListener("click", () => showQualification("wf", true).catch(showError));
+elements.ecfTab.addEventListener("click", () => showQualification("ecf", true).catch(showError));
 
 elements.searchInput.addEventListener("input", () => applySearch());
 document.querySelector('#preview-team-filter').addEventListener('click', event => {
@@ -2133,6 +2184,7 @@ elements.problemContestSort.addEventListener("click", () => setProblemSort("cont
 elements.problemRatingSort.addEventListener("click", () => setProblemSort("rating"));
 elements.seriesScroll.addEventListener("scroll", scheduleSeriesRows, { passive: true });
 elements.previewScroll.addEventListener("scroll", schedulePreviewRows, { passive: true });
+new ResizeObserver(schedulePreviewRows).observe(elements.previewScroll);
 window.addEventListener("resize", () => {
   scheduleSeriesRows();
   scheduleProblemChart();
@@ -2145,7 +2197,7 @@ window.addEventListener("popstate", () => {
     ...readPreviewQuery(location.href), ...readReviewQuery(location.href),
   };
   const view = new URL(location.href).searchParams.get("view");
-  if (["preview", "review"].includes(view)) query.view = view;
+  if (["preview", "review", "wf", "ecf"].includes(view)) query.view = view;
   const seriesId = state.siteIndex.series.some(entry => entry.id === query.series)
     ? query.series : state.siteIndex.defaultSeriesId;
   loadSeries(seriesId, query).catch(showError);
