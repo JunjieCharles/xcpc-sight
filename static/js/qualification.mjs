@@ -1,5 +1,5 @@
 // Pure qualification calculations. Unknown results are never filled with predicted teams.
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261116-96";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261117-104";
 
 const check = (condition, path, message) => {
   if (!condition) throw new TypeError(`${path}: ${message}`);
@@ -11,8 +11,14 @@ export function validateQualification(data) {
   check(data?.schemaVersion === 1, "qualification.schemaVersion", "unsupported version");
   check(nonempty(data.seriesId) && /^\d{4}-\d{2}-\d{2}$/.test(data.asOf), "qualification", "invalid series/date");
   check(data.disclaimer === "民间数据，仅供参考，不代表官方结果", "qualification.disclaimer", "required notice");
-  check(integer(data.ecfMainlandQuota, 1) && integer(data.ecfSchoolCap, 1), "qualification", "invalid quota");
-  check(Array.isArray(data.rules) && data.rules.length >= 2, "qualification.rules", "missing rules");
+  const ccpcf = data.kind === "ccpcf";
+  if (ccpcf) {
+    check(integer(data.firstQuota, 1) && integer(data.secondQuota, 1), "qualification", "invalid CCPCF quota");
+    check(nonempty(data.ruleSeason) && nonempty(data.ruleNotice), "qualification", "missing rule version");
+  } else {
+    check(integer(data.ecfMainlandQuota, 1) && integer(data.ecfSchoolCap, 1), "qualification", "invalid quota");
+  }
+  check(Array.isArray(data.rules) && data.rules.length >= (ccpcf ? 1 : 2), "qualification.rules", "missing rules");
   check(data.rules.every(rule => nonempty(rule.title) && /^https:\/\//.test(rule.url)), "qualification.rules", "invalid rule source");
   check(Array.isArray(data.stations) && data.stations.length > 0, "qualification.stations", "empty stations");
   const ids = new Set();
@@ -29,7 +35,7 @@ export function validateQualification(data) {
       check(nonempty(station.hostSchool) && /^https:\/\//.test(station.hostSource), path, "invalid host school/source");
     }
     if (station.status === "pending") {
-      check(integer(station.estimatedCount, 1) && station.teams.length === 0, path, "pending requires estimate and no results");
+      check((ccpcf || integer(station.estimatedCount, 1)) && station.teams.length === 0, path, "pending requires estimate and no results");
       continue;
     }
     check(integer(station.officialCount) && station.officialCount === station.teams.length, path, "official count mismatch");
@@ -41,7 +47,12 @@ export function validateQualification(data) {
       check([team.schoolKey, team.school, team.name].every(nonempty), path, "missing team identity");
       check(Array.isArray(team.members) && team.members.length >= 1 && team.members.length <= 3 && team.members.every(nonempty), path, "invalid members");
       check(typeof team.identityComplete === "boolean" && team.identityComplete === (team.members.length === 3), path, "invalid identity completeness");
-      check(integer(team.rank, 1) && team.rank >= lastRank && integer(team.solved), path, "invalid/unsorted result");
+      check(integer(team.rank, ccpcf ? 0 : 1) && team.rank >= lastRank && integer(team.solved), path, "invalid/unsorted result");
+      if (ccpcf) {
+        check(Array.isArray(team.memberKeys) && team.memberKeys.length === team.members.length
+          && team.memberKeys.every(nonempty) && new Set(team.memberKeys).size === team.memberKeys.length, path, "invalid member keys");
+        check(team.rank > 0 || team.solved === 0, path, "scoring team requires positive rank");
+      }
       lastRank = team.rank;
     }
     check(station.effectiveCount === station.teams.filter(t => t.solved > 0).length, path, "effective count mismatch");
@@ -49,14 +60,26 @@ export function validateQualification(data) {
   return data;
 }
 
-export async function loadQualification(entry, indexUrl) {
-  const data = validateQualification(await fetchJson(resolveDataUrl(entry.qualificationPath, indexUrl)));
+export async function loadQualification(entry, indexUrl, mode = "wf") {
+  const path = mode === "ccpcf" ? entry.ccpcfQualificationPath : entry.qualificationPath;
+  const data = validateQualification(await fetchJson(resolveDataUrl(path, indexUrl)));
   check(data.seriesId === entry.id, "qualification.seriesId", "series mismatch");
+  check((data.kind === "ccpcf") === (mode === "ccpcf"), "qualification.kind", "mode mismatch");
   return data;
 }
 
 export function stationSize(station) {
   return station.status === "finished" ? station.effectiveCount : station.estimatedCount;
+}
+
+// A skipped roster never contributes its other members to later comparisons.
+// This is a direct overlap check against retained teams, not a union of rosters.
+function sameIcpcTeam(a, b) {
+  if (a.schoolKey !== b.schoolKey) return false;
+  if (a.key === b.key) return true;
+  const names = team => team.members.map(name => name.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""));
+  const members = new Set(names(a));
+  return names(b).some(member => member && members.has(member));
 }
 
 export function orderedStations(data, mode) {
@@ -100,11 +123,14 @@ export function scanQualification(stations, mode, quota, cap, reservePending = f
       const team = station.entries[row];
       if (!team) continue;
       const key = mode === "wf" ? team.schoolKey : team.key;
-      const reason = selected.has(key) ? "duplicate" : (schools.get(team.schoolKey) ?? 0) >= cap ? "cap" : "selected";
-      visited.set(position, { reason, pendingBefore });
+      const duplicate = mode === "ecf"
+        ? [...selected.values()].find(entry => sameIcpcTeam(entry.team, team)) : selected.get(key);
+      const reason = duplicate ? "duplicate" : (schools.get(team.schoolKey) ?? 0) >= cap ? "cap" : "selected";
+      visited.set(position, { reason, pendingBefore, duplicateOf: duplicate?.team.key ?? null });
       if (reason !== "selected") continue;
       used++;
-      selected.set(key, { team, position, row, column, order: used, pendingBefore });
+      selected.set(key, { team, position, row, column, order: used, pendingBefore,
+        schoolRank: (schools.get(team.schoolKey) ?? 0) + 1 });
       schools.set(team.schoolKey, (schools.get(team.schoolKey) ?? 0) + 1);
     }
   }
@@ -138,13 +164,14 @@ export function buildQualification(data, mode) {
       const team = station.entries[row];
       if (!team) continue;
       const key = mode === "wf" ? team.schoolKey : team.key;
-      const selected = current.selected.get(key);
+      const visit = current.visited.get(position);
+      const selected = current.selected.get(mode === "ecf" && visit?.duplicateOf ? visit.duplicateOf : key);
       const hostStations = mode === "wf" ? stations.filter(s => s.hostSchool === team.schoolKey) : [];
       // Record only the ordinary regional performance threshold, not C-slot eligibility.
       // A school's own host station cannot supply the qualifying performance.
       const hosting = row < 10 && hostStations.length && !hostStations.some(s => s.id === station.id)
         ? { schoolRank: row + 1, stations: hostStations.map(s => s.title) } : null;
-      const schoolTeams = earlierSchoolTeams.get(team.schoolKey) ?? new Set();
+      const schoolTeams = earlierSchoolTeams.get(team.schoolKey) ?? [];
       const atOwnPosition = selected?.position === position;
       let role = "outside";
       let reason = "当前成绩尚未进入此渠道的出线区域，后续比赛仍可能改变结果。";
@@ -154,39 +181,44 @@ export function buildQualification(data, mode) {
         if (atOwnPosition) {
           role = "selected";
           const quotaSafe = conservative.selected.has(key);
-          const capSafe = mode === "wf" || schoolTeams.size + unknownBefore < cap;
+          const capSafe = mode === "wf" || schoolTeams.length + unknownBefore < cap;
           const identitySafe = mode === "wf" || team.identityComplete;
-          certainty = quotaSafe && capSafe && identitySafe ? "safe" : "risk";
+          // An earlier future roster could overlap this team and take its place,
+          // even when both the overall quota and the school cap have room.
+          const overlapSafe = mode === "wf" || unknownBefore === 0;
+          certainty = quotaSafe && capSafe && identitySafe && overlapSafe ? "safe" : "risk";
           pressure = {
             level: quota - selected.order >= selected.pendingBefore ? "low"
               : (quota - selected.order + 1) / selected.pendingBefore > 0.5 ? "medium" : "high",
             slotTolerance: quota - selected.order,
             pendingBefore: selected.pendingBefore,
-            schoolTolerance: mode === "ecf" ? Math.max(0, cap - 1 - schoolTeams.size) : null,
+            schoolTolerance: mode === "ecf" ? Math.max(0, cap - 1 - schoolTeams.length) : null,
             schoolRisk: !capSafe,
+            overlapRisk: !overlapSafe,
           };
           if (certainty === "safe") safe.add(key);
           reason = certainty === "safe"
             ? mode === "wf" ? "按当前规模估计，即使未赛站逐行新增高校占位，本校仍获区域赛名额；参赛队由学校从候选队中选择。" : "按当前规模估计，未赛站新增占位和同校队伍上限均不会挤掉该队。"
             : !identitySafe ? "成员资料不完整，跨站身份需核实，暂不标记确定。"
               : !capSafe ? "当前处于出线区域，但后续同校其他队伍可能先达到每校上限，具体队伍尚未锁定。"
+                : !overlapSafe ? "前方未赛位置可能出现同校成员重叠的队伍并先获名额，当前具体队伍尚未锁定。"
                 : "当前处于出线区域；未赛站新增名额占位后可能跌出。";
-        } else if (mode === "wf" && position <= current.frontier && team.key !== selected.team.key) {
+        } else if (mode === "wf" && position <= current.frontier && !schoolTeams.some(previous => sameIcpcTeam(previous, team))) {
           role = "candidate";
           certainty = safe.has(key) ? "safe" : "risk";
           reason = "本校在当前出线区域内的另一支候选队，学校只能选一队；候选范围随后续结果变化。";
         } else if (position <= current.frontier) {
           role = "duplicate";
-          reason = mode === "wf" ? "本校已在更早位置计入；该行未新增高校名额。" : "相同学校及三名成员的队伍已在更早赛站计入，不重复占名额。";
+          reason = "与前方已保留队伍有同校成员重复，按暂定口径视为同队；跳过当前记录，不合并其他成员或成绩。";
         }
       } else if (current.visited.get(position)?.reason === "cap") {
         role = "duplicate";
         reason = "本校在当前成绩推演中已达到 3 支队伍的成绩渠道上限。";
       }
-      // ECF school order: teams of one school ranked by first appearance in the traversal.
-      const schoolRank = mode === "ecf" ? [...schoolTeams, team.key].indexOf(team.key) + 1 : null;
+      // Skipped overlapping rosters neither occupy school slots nor extend identity.
+      const schoolRank = mode === "ecf" && role === "selected" ? selected.schoolRank : null;
       cells.set(position, { team, role, certainty, reason, pressure, hosting, schoolRank, row, column, position, order: atOwnPosition ? selected.order : null });
-      schoolTeams.add(team.key);
+      if (role === "selected" || role === "candidate") schoolTeams.push(team);
       earlierSchoolTeams.set(team.schoolKey, schoolTeams);
     }
   }
@@ -226,5 +258,5 @@ export function cellPresentation(cell) {
     : { className: `pressure-${cell.pressure?.level ?? "low"}`, label: "待定出线", detail: "具体名额尚未锁定" };
   return cell.role === "duplicate"
     ? { className: "duplicate", label: "重复 / 达上限", detail: "不新增名额" }
-    : { className: "outside", label: "当前未出线", detail: "" };
+    : { className: "outside", label: "未出线", detail: "" };
 }

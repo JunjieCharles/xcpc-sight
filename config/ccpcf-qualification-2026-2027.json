@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "ccpcf",
+  "seriesId": "2026-2027",
+  "asOf": "2026-11-17",
+  "disclaimer": "民间数据，仅供参考，不代表官方结果",
+  "firstQuota": 100,
+  "secondQuota": 20,
+  "ruleSeason": "2025-2026",
+  "ruleNotice": "暂按官方 2025–2026 赛季规则盘点本赛季；名额归学校，表中队伍仅为成绩依据，非最终参赛队。",
+  "rules": [
+    {"title": "CCPC 名额分配规则（2025–2026 赛季，2025-07-30 发布）", "url": "https://ccpc.io/rules/369"}
+  ],
+  "stations": [
+    {"id": "ccpc2026changchun", "title": "长春", "region": "mainland", "status": "finished"},
+    {"id": "ccpc2026leshan", "title": "乐山", "region": "mainland", "status": "finished"},
+    {"id": "ccpc2026jingzhou", "title": "荆州", "region": "mainland", "status": "finished"},
+    {"id": "ccpc2026xiamen", "title": "厦门", "region": "mainland", "status": "pending", "date": "2026-11-22", "source": {"title": "2026 CCPC 各场比赛安排", "url": "https://ccpc.io/event/387"}}
+  ]
+}

@@ -252,14 +252,15 @@ def generate_static_data(output_dir: Path) -> None:
         write_json_atomic(output_dir / path, document)
     qualification_root = Path(__file__).resolve().parents[1] / "static/data/qualification"
     for entry in index["series"]:
-        source = qualification_root / f"{entry['id']}.json"
-        if source.is_file():
-            document = json.loads(source.read_text(encoding="utf-8"))
-            if document["seriesId"] != entry["id"]:
-                raise ValueError(f"{source}: inconsistent series ID")
-            path = f"qualification/{source.name}"
-            entry["qualificationPath"] = path
-            write_json_atomic(output_dir / path, document)
+        for prefix, field in [("", "qualificationPath"), ("ccpcf-", "ccpcfQualificationPath")]:
+            source = qualification_root / f"{prefix}{entry['id']}.json"
+            if source.is_file():
+                document = json.loads(source.read_text(encoding="utf-8"))
+                if document["seriesId"] != entry["id"]:
+                    raise ValueError(f"{source}: inconsistent series ID")
+                path = f"qualification/{source.name}"
+                entry[field] = path
+                write_json_atomic(output_dir / path, document)
     for document, path in preview_publications:
         write_json_atomic(output_dir / path, document)
     for document, path in roster_publications:

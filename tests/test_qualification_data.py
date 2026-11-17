@@ -55,6 +55,10 @@ def test_pinned_source_hash_failure_and_offline_build(tmp_path):
     doc = build_document(config, [tmp_path], review, {})
     assert doc["stations"][0]["officialCount"] == 1
     assert doc == build_document(config, [tmp_path], review, {})
+    ccpc_config = {**config, "kind": "ccpcf"}
+    ccpc = build_document(ccpc_config, [tmp_path], review, {})
+    assert ccpc["stations"][0]["teams"][0]["memberKeys"]
+    assert ccpc == build_document(ccpc_config, [tmp_path], review, {})
     source["sha256"] = "0" * 64
     with pytest.raises(ValueError, match="SHA-256"):
         build_document(config, [tmp_path], review, {})
@@ -75,3 +79,43 @@ def test_host_metadata_matches_config_and_survives_projection():
     projected = project_station(spec, raw(), DefaultNormalizer())
     assert projected["hostSchool"] == spec["hostSchool"]
     assert projected["hostSource"] == spec["hostSource"]
+
+
+def test_ccpcf_projection_preserves_duplicate_unranked_records_for_member_merging():
+    payload = raw()
+    original = payload["rows"][0]
+    duplicate = copy.deepcopy(original)
+    duplicate["user"]["id"] = "inactive-duplicate"
+    duplicate["score"] = {"value": 0, "time": [0, "s"]}
+    duplicate["statuses"] = []
+    payload["rows"].append(duplicate)
+    result = project_station({"id": "ccpc-test"}, payload, DefaultNormalizer(), ccpcf=True)
+    assert result["officialCount"] == 2
+    assert result["effectiveCount"] == 1
+    first, second = result["teams"]
+    assert first["rank"] == 0
+    assert first["key"] != second["key"]
+    assert first["memberKeys"] == second["memberKeys"]
+    assert first["memberKeys"] == sorted(first["memberKeys"])
+
+
+def test_ccpcf_snapshot_matches_config_and_review_sources():
+    root = Path(__file__).resolve().parents[1]
+    config = json.loads(
+        (root / "config/ccpcf-qualification-2026-2027.json").read_text(encoding="utf-8")
+    )
+    published = json.loads(
+        (root / "static/data/qualification/ccpcf-2026-2027.json").read_text(encoding="utf-8")
+    )
+    review = json.loads((root / "static/data/reviews/2026-2027.json").read_text(encoding="utf-8"))
+    sources = {c["id"]: c["source"] for c in review["contests"]}
+    for key, value in config.items():
+        if key != "stations":
+            assert published[key] == value
+    for spec, station in zip(config["stations"], published["stations"], strict=True):
+        assert station["id"] == spec["id"]
+        if spec["status"] == "finished":
+            assert station["source"] == sources[spec["id"]]
+            assert all(t["memberKeys"] for t in station["teams"])
+        else:
+            assert station == {**spec, "teams": []}

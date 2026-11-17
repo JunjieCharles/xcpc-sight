@@ -218,6 +218,10 @@ def test_published_index_matches_published_series_documents() -> None:
         if qualification.is_file():
             assert json.loads(qualification.read_text(encoding="utf-8"))["seriesId"] == entry["id"]
             entry["qualificationPath"] = f"qualification/{qualification.name}"
+        ccpcf = data_dir / "qualification" / f"ccpcf-{entry['id']}.json"
+        if ccpcf.is_file():
+            assert json.loads(ccpcf.read_text(encoding="utf-8"))["seriesId"] == entry["id"]
+            entry["ccpcfQualificationPath"] = f"qualification/{ccpcf.name}"
     assert index == projected
 
 
@@ -625,6 +629,7 @@ def test_generator_copies_qualification_snapshot_without_refreshing(monkeypatch,
     monkeypatch.setattr(generate_static_data, "calculate_series_ratings", lambda contests: result)
     generate_static_data.generate_static_data(tmp_path)
     index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
-    path = index["series"][0]["qualificationPath"]
-    source = Path(__file__).parents[1] / "static/data" / path
-    assert (tmp_path / path).read_bytes() == source.read_bytes()
+    for field in ["qualificationPath", "ccpcfQualificationPath"]:
+        path = index["series"][0][field]
+        source = Path(__file__).parents[1] / "static/data" / path
+        assert (tmp_path / path).read_bytes() == source.read_bytes()

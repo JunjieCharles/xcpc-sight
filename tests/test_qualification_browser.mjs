@@ -67,7 +67,7 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
       };
       await checkLayout("rating");
       let safeStyle;
-      for (const mode of ["wf", "ecf"]) {
+      for (const mode of ["wf", "ecf", "ccpcf"]) {
         await send("Page.navigate", { url: `${siteUrl}?series=2026-2027&view=${mode}` });
         await waitFor(`!document.querySelector('#qualification-view').hidden && document.querySelector('#${mode}-tab').getAttribute('aria-selected') === 'true'`);
         await checkLayout(mode);
@@ -80,12 +80,43 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         assert.equal(await evaluate("document.querySelectorAll('.qualification-method, .qualification-station-nav, #qualification-view input[type=number]').length"), 0);
         assert.equal(await evaluate("document.querySelectorAll('.qualification-stats, .qualification-explanation, .qualification-assumption').length"), 0);
         assert.equal(await evaluate("document.querySelector('.qualification-disclaimer').nextElementSibling.className"), "qualification-legend");
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-rule-notice, .section-heading .qualification-rule-link').length"), 0);
         const pressureTitles = await evaluate("['low', 'medium', 'high'].map(level => document.querySelector('.qualification-legend .qualification-pressure-' + level).title)");
         assert.deepEqual(pressureTitles, [
-          "低：前方未赛位置全部新增占位，仍有足够的总名额；具体资格还受同校竞争等因素影响。",
-          "中：前方超过一半的未赛位置新增占位，才会触及总名额限制。",
-          "高：前方一半或更少的未赛位置新增占位，就会触及总名额限制。",
+          "低：潜在竞争位置全部新增占位，仍有足够名额。",
+          "中：潜在竞争位置中，超过一半新增占位，才会触及名额限制。",
+          "高：潜在竞争位置中，一半或更少新增占位，就会触及名额限制。",
         ]);
+        assert.equal(await evaluate("document.querySelector('.qualification-rule-link').href"), {
+          wf: "https://icpc.pku.edu.cn/tzgg/38783e6dda71402abbd1f6c28e6b6779.htm",
+          ecf: "https://icpc.pku.edu.cn/tzgg/109d767bb4464b24a5aa18563b65238e.htm",
+          ccpcf: "https://ccpc.io/rules/369",
+        }[mode]);
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-channel-heading .qualification-rule-link').length"), 1);
+        assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-quota-list strong')].filter(e => e.textContent.includes('（本页不包含）')).map(e => e.textContent.split('（')[0])"), {
+          wf: [], ecf: ["贡献奖励", "激励"], ccpcf: ["女生专场", "高职高专", "承办奖励", "港澳台及海外学校"],
+        }[mode]);
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-quota-list li').length"), mode === "ccpcf" ? 6 : 4);
+        assert.equal(await evaluate("(() => { const rows = [...document.querySelectorAll('.qualification-quota-list li')]; return rows.every((row, i) => row.querySelector('strong').textContent && row.querySelector('span').textContent && (!i || row.getBoundingClientRect().top >= rows[i - 1].getBoundingClientRect().bottom)); })()"), true, "quota categories occupy separate rows with counts and descriptions");
+        assert.equal(await evaluate("document.querySelectorAll('.qualification-channels p').length"), 0);
+        assert.doesNotMatch(await evaluate("document.querySelector('.qualification-channels').textContent"), /当前|最佳站内名次|未纳入本表|待核验|不模拟|本页面不含/);
+        if (mode === "ccpcf") {
+          assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-station-title')].map(e => e.textContent)"), ["长春", "乐山", "荆州", "厦门"]);
+          assert.match(await evaluate("document.querySelector('.qualification-toolbar [aria-live]').textContent"), /^显示 \d+ 行$/);
+          assert.equal(await evaluate("document.querySelectorAll('td[data-role=selected]').length"), 121);
+          assert.equal(await evaluate("document.querySelectorAll('.qualification-host-mark, .qualification-final, .qualification-region-key').length"), 0);
+          assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-channel-1-key, .qualification-channel-2-key')].map(e => e.textContent)"), ["实线框：第一名额出线区域", "虚线框：第二名额出线区域"]);
+          for (const [channel, lastRow, pseudo, style] of [[1, 92, "::before", "solid"], [2, 33, "::after", "dashed"]]) {
+            assert.equal(await evaluate(`document.querySelectorAll('td.qualification-channel-${channel}-top').length`), 4);
+            assert.equal(await evaluate(`document.querySelectorAll('td.qualification-channel-${channel}-bottom').length`), 4);
+            assert.equal(await evaluate(`document.querySelectorAll('.qualification-table tbody tr:nth-child(${lastRow}) > td.qualification-channel-${channel}-bottom').length`), 4);
+            assert.deepEqual(await evaluate(`(() => { const s = getComputedStyle(document.querySelector('td.qualification-channel-${channel}-bottom'), '${pseudo}'); return [s.borderBottomWidth, s.borderBottomStyle, s.pointerEvents]; })()`), ["3px", style, "none"]);
+            assert.deepEqual(await evaluate(`(() => { const s = getComputedStyle(document.querySelector('td.qualification-channel-${channel}-top'), '${pseudo}'); return [s.top, s.left, s.right]; })()`), ["0px", "0px", "0px"]);
+          }
+          assert.match(await evaluate("document.querySelector('.qualification-channels').textContent"), /女生专场.*仅限女队参赛.*高职高专/);
+          await send("Page.reload", { ignoreCache: true });
+          await waitFor("!document.querySelector('#qualification-view').hidden && document.querySelector('#ccpcf-tab').getAttribute('aria-selected') === 'true'");
+        }
         assert.equal(await evaluate("document.querySelectorAll('.qualification-boundary, .qualification-risk').length"), 0);
         assert.equal(await evaluate("document.querySelectorAll('.qualification-host-mark').length"), mode === "wf" ? 1 : 0);
         if (mode === "wf") {
@@ -97,14 +128,23 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '待定出线')"), true);
         assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-high').length > 0"));
         if (mode === "ecf") assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-low').length > 0"));
-        assert.equal(await evaluate("document.querySelectorAll('td.qualification-region-top').length"), mode === "wf" ? 8 : 7);
-        assert.equal(await evaluate("document.querySelectorAll('td.qualification-region-bottom').length"), mode === "wf" ? 8 : 7);
+        if (mode === "ecf") {
+          const zhejiang = await evaluate(`Array.from(document.querySelectorAll('.qualification-team'))
+            .filter(card => card.querySelector('.qualification-school').textContent === '浙江理工大学')
+            .map(card => ({name: card.querySelector('.qualification-team-name').textContent,
+              role: card.closest('td').dataset.role, rank: card.querySelector('.qualification-school-rank')?.textContent ?? null}))`);
+          assert.deepEqual(zhejiang.find(t => t.name === "happy baby"), { name: "happy baby", role: "duplicate", rank: null });
+          assert.deepEqual(zhejiang.find(t => t.name === "是啊，吃什么"), { name: "是啊，吃什么", role: "selected", rank: "校内 1" });
+          assert.deepEqual(zhejiang.find(t => t.name === "Orz"), { name: "Orz", role: "selected", rank: "校内 2" });
+        }
+        assert.equal(await evaluate("document.querySelectorAll('td.qualification-region-top').length"), mode === "ccpcf" ? 0 : mode === "wf" ? 8 : 7);
+        assert.equal(await evaluate("document.querySelectorAll('td.qualification-region-bottom').length"), mode === "ccpcf" ? 0 : mode === "wf" ? 8 : 7);
         assert.equal(await evaluate("document.querySelectorAll('td.qualification-final.qualification-region-edge').length"), 0);
         assert.equal(await evaluate("[...document.querySelectorAll('td.qualification-region-bottom')].every(cell => getComputedStyle(cell).borderBottomWidth === '3px')"), true);
         assert.equal(await evaluate("(() => { const card = document.querySelector('.qualification-team').getBoundingClientRect(); const badge = document.querySelector('.qualification-badge').getBoundingClientRect(); const school = document.querySelector('.qualification-school').getBoundingClientRect(); return Math.abs(card.right - badge.right) < 1 && Math.abs(card.top - badge.top) < 1 && (school.top >= badge.bottom - 1 || school.right <= badge.left + 1); })()"), true, "tag is pinned top-right without overlapping school");
         if (width === 2560) assert.equal(await evaluate("Math.max(...[...document.querySelectorAll('.qualification-table tbody tr')].map(row => row.getBoundingClientRect().height)) < 70"), true, "wide closed cards stay compact");
         assert.equal(await evaluate("document.querySelectorAll('.qualification-search-navigation button:disabled').length"), 2);
-        if (mode === "wf") assert.match(await evaluate("document.querySelector('.qualification-channels').textContent"), /总名额 16 个/);
+        if (mode === "wf") assert.match(await evaluate("document.querySelector('.qualification-channels').textContent"), /区域赛 · 8 个.*EC Final · 5–8 个/);
         assert.equal(await evaluate("(() => { const widths = Array.from(document.querySelectorAll('.qualification-table thead th')).slice(1).map(cell => cell.getBoundingClientRect().width); return Math.max(...widths) - Math.min(...widths) < 1; })()"), true, "all station columns have equal width, including pending and EC Final");
         if (width >= 740) {
           assert.equal(await evaluate("document.querySelector('.qualification-scroll').scrollWidth <= document.querySelector('.qualification-scroll').clientWidth + 1"), true, `${mode} at ${width}: table fits`);
@@ -118,10 +158,20 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         await new Promise(resolve => setTimeout(resolve, 150));
         const screenshot = await send("Page.captureScreenshot", { format: "png" });
         await writeFile(`outputs/qualification/${mode}-${width}.png`, Buffer.from(screenshot.data, "base64"));
+        await evaluate("document.querySelector('.qualification-channels').scrollIntoView({block: 'start'})");
+        const channelsScreenshot = await send("Page.captureScreenshot", { format: "png" });
+        await writeFile(`outputs/qualification/${mode}-${width}-channels.png`, Buffer.from(channelsScreenshot.data, "base64"));
         await evaluate("document.querySelector('.qualification-toolbar').scrollIntoView({block: 'start'})");
         await new Promise(resolve => setTimeout(resolve, 100));
         const tableScreenshot = await send("Page.captureScreenshot", { format: "png" });
         await writeFile(`outputs/qualification/${mode}-${width}-table.png`, Buffer.from(tableScreenshot.data, "base64"));
+        if (mode === "ccpcf" && [1440, 390].includes(width)) {
+          for (const channel of [1, 2]) {
+            await evaluate(`document.querySelector('.qualification-channel-${channel}-bottom').scrollIntoView({block: 'center'})`);
+            const borderScreenshot = await send("Page.captureScreenshot", { format: "png" });
+            await writeFile(`outputs/qualification/ccpcf-${width}-border-${channel}.png`, Buffer.from(borderScreenshot.data, "base64"));
+          }
+        }
         if (mode === "ecf" && width === 2560) {
           await evaluate("const shell = document.querySelector('.qualification-scroll'); const end = [...document.querySelectorAll('td.qualification-region-bottom')].at(-1); shell.scrollTop = end.offsetTop - shell.clientHeight / 2;");
           const boundaryShot = await send("Page.captureScreenshot", { format: "png" });
@@ -161,7 +211,7 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
       await waitFor("document.querySelector('#wf-tab').getAttribute('aria-selected') === 'true' && !document.querySelector('#qualification-view').hidden");
       assert.equal(await evaluate("new URL(location.href).searchParams.get('view')"), "wf");
       await evaluate("history.back()");
-      await waitFor("document.querySelector('#ecf-tab').getAttribute('aria-selected') === 'true' && !document.querySelector('#qualification-view').hidden");
+      await waitFor("document.querySelector('#ccpcf-tab').getAttribute('aria-selected') === 'true' && !document.querySelector('#qualification-view').hidden");
       await evaluate("document.querySelector('#review-tab').click()");
       await waitFor("!document.querySelector('#review-view').hidden");
       assert.equal(await evaluate("document.querySelector('#qualification-view').hidden"), true);
@@ -189,7 +239,7 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
       await waitFor("!document.querySelector('#series-view').hidden");
       await evaluate("document.querySelector('[data-series-id=\"2025-2026\"]').click()");
       await waitFor("document.querySelector('[data-series-id=\"2025-2026\"]').getAttribute('aria-current') === 'page' && !document.querySelector('#series-view').hidden");
-      assert.equal(await evaluate("document.querySelector('#wf-tab').hidden && document.querySelector('#ecf-tab').hidden"), true);
+      assert.equal(await evaluate("document.querySelector('#wf-tab').hidden && document.querySelector('#ecf-tab').hidden && document.querySelector('#ccpcf-tab').hidden"), true);
       await evaluate("document.querySelector('#problem-rating-tab').click()");
       await waitFor("!document.querySelector('#problem-rating-view').hidden");
       await checkLayout("problem-rating");

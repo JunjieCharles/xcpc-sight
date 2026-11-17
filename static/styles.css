@@ -53,7 +53,7 @@
 .qualification-tags { position: absolute; top: 0; right: 0; display: flex; align-items: baseline; justify-content: flex-end; gap: .25rem; max-width: 100%; }
 .qualification-badge { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 .2rem; font-size: .6rem; line-height: 1.25; font-weight: 600; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
 .qualification-school { display: block; min-width: 0; color: inherit; font-weight: 700; line-height: 1.25; }
-.qualification-host-mark { flex: 0 0 auto; padding: 0 .2rem; border: 1px solid #9775b0; border-radius: 2px; background: #f0e7f7; color: #663a85; font-size: .6rem; line-height: 1.25; white-space: nowrap; }
+.qualification-host-mark { flex: 0 1 auto; padding: 0 .2rem; border: 1px solid #9775b0; border-radius: 2px; background: #f0e7f7; color: #663a85; font-size: .6rem; line-height: 1.25; white-space: nowrap; }
 .qualification-host-key, td.qualification-host-performance { background: #e9dcf3; color: #563375; }
 .qualification-team-name { color: var(--ink); line-height: 1.25; }
 .qualification-members { line-height: 1.25; font-size: .69rem; opacity: .9; }
@@ -68,12 +68,26 @@
 .school-rank-3 { background: #fbe1da; color: #b03422; }
 .qualification-rank-key .qualification-school-rank { margin-left: .1rem; }
 .qualification-rank-key::before { display: none; }
-.qualification-quota-list { display: flex; flex-wrap: wrap; gap: .4rem .8rem; margin: 0; padding: 0; list-style: none; font-size: .82rem; }
-.qualification-quota-list li { display: inline-flex; gap: .4rem; align-items: baseline; }
-.qualification-quota-list strong { font-variant-numeric: tabular-nums; }
+.qualification-quota-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; font-size: .82rem; }
+.qualification-quota-list li { line-height: 1.7; }
+.qualification-quota-list strong { margin-right: .65rem; font-variant-numeric: tabular-nums; }
 .qualification-pending > small { display: block; margin-top: .4rem; font-size: .75rem; }
 .qualification-placeholder { display: block; text-align: center; opacity: .4; }
 .qualification-region-key { border: 3px solid #24576b; }
+.qualification-channel-1-key { border: 3px solid #24576b; }
+.qualification-channel-2-key { border: 3px dashed #874b99; }
+.qualification-table td.qualification-channel-1, .qualification-table td.qualification-channel-2 { position: relative; }
+.qualification-channel-1::before, .qualification-channel-2::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.qualification-channel-1::before { border: 0 solid #24576b; }
+.qualification-channel-2::after { border: 0 dashed #874b99; }
+.qualification-channel-1-top::before { border-top-width: 3px; }
+.qualification-channel-1-bottom::before { border-bottom-width: 3px; }
+.qualification-channel-1-left::before { border-left-width: 3px; }
+.qualification-channel-1-right::before { border-right-width: 3px; }
+.qualification-channel-2-top::after { border-top-width: 3px; }
+.qualification-channel-2-bottom::after { border-bottom-width: 3px; }
+.qualification-channel-2-left::after { border-left-width: 3px; }
+.qualification-channel-2-right::after { border-right-width: 3px; }
 .qualification-table td.qualification-region-top { border-top: 3px solid #24576b; }
 .qualification-table td.qualification-region-bottom { border-bottom: 3px solid #24576b; }
 .qualification-table td.qualification-region-left { border-left: 3px solid #24576b; }
@@ -82,8 +96,10 @@
 .qualification-match-active { outline: 3px solid var(--accent); outline-offset: -3px; }
 .qualification-dim > .qualification-team { opacity: .4; }
 .qualification-channels { margin-top: 1.2rem; }
+.qualification-channel-heading { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .6rem; }
+.qualification-channel-heading a { font-size: .82rem; }
 .qualification-channel { padding: 1rem; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
-.qualification-channel h3 { font-size: .95rem; margin-bottom: .6rem; }
+.qualification-channel h3 { font-size: .95rem; margin-bottom: 0; }
 .qualification-channel p { font-size: .82rem; margin-bottom: .4rem; }
 @media (max-width: 600px) {
   #qualification-view .section-heading { display: block; }

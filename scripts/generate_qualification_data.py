@@ -1,4 +1,4 @@
-"""Explicit, offline publication of ICPC qualification standings from pinned SRK files."""
+"""Explicit, offline publication of qualification standings from pinned SRK files."""
 from __future__ import annotations
 
 import argparse
@@ -14,9 +14,13 @@ from scripts.generate_static_data import write_json_atomic
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def project_station(spec: dict, payload: dict, normalizer: DefaultNormalizer) -> dict:
+def project_station(
+    spec: dict, payload: dict, normalizer: DefaultNormalizer, *, ccpcf: bool = False,
+) -> dict:
     """Project official results without ratings or submission/account details."""
-    contest = normalize_srk_contest(payload, contest_uk=spec["id"], series="icpc2026")
+    contest = normalize_srk_contest(
+        payload, contest_uk=spec["id"], series="ccpc2026" if ccpcf else "icpc2026",
+    )
     official = [team for team in contest.teams if team.official]
     teams = []
     for team in sorted(official, key=lambda t: (t.rank, t.team_id)):
@@ -25,7 +29,9 @@ def project_station(spec: dict, payload: dict, normalizer: DefaultNormalizer) ->
         if not members or len(members) > 3 or len(set(members)) != len(members):
             raise ValueError(f"{spec['id']}/{team.team_id}: invalid contestant list")
         complete = len(members) == 3
-        identity_parts = [school_key, members] if complete else [spec["id"], team.team_id]
+        identity_parts = (
+            [school_key, members] if complete and not ccpcf else [spec["id"], team.team_id]
+        )
         identity = json.dumps(identity_parts, ensure_ascii=False, separators=(",", ":"))
         teams.append({
             "key": hashlib.sha256(identity.encode()).hexdigest(),
@@ -37,6 +43,8 @@ def project_station(spec: dict, payload: dict, normalizer: DefaultNormalizer) ->
             "rank": team.rank,
             "solved": team.solved,
         })
+        if ccpcf:
+            teams[-1]["memberKeys"] = members
     if len({team["key"] for team in teams}) != len(teams):
         raise ValueError(f"{spec['id']}: duplicate team identity within station")
     return {
@@ -55,6 +63,8 @@ def build_document(config: dict, input_dirs: list[Path], review: dict, aliases: 
         if spec["status"] == "pending":
             stations.append({**spec, "teams": []})
             continue
+        if spec["id"] not in sources:
+            raise ValueError(f"{spec['id']}: no pinned source in published review")
         source = sources[spec["id"]]
         files = [directory / f"{spec['id']}.srk.json" for directory in input_dirs]
         path = next((path for path in files if path.is_file()), None)
@@ -63,7 +73,9 @@ def build_document(config: dict, input_dirs: list[Path], review: dict, aliases: 
         data = path.read_bytes()
         if hashlib.sha256(data).hexdigest() != source["sha256"]:
             raise ValueError(f"{path}: SHA-256 does not match published review")
-        station = project_station(spec, json.loads(data), normalizer)
+        station = project_station(
+            spec, json.loads(data), normalizer, ccpcf=config.get("kind") == "ccpcf",
+        )
         station["source"] = source
         stations.append(station)
     return {**config, "stations": stations}
@@ -80,12 +92,13 @@ def main() -> None:
     document = build_document(
         config, args.input_dir, review, load_school_aliases(ROOT / "config/school-aliases.json"),
     )
-    path = f"qualification/{document['seriesId']}.json"
+    ccpcf = document.get("kind") == "ccpcf"
+    path = f"qualification/{'ccpcf-' if ccpcf else ''}{document['seriesId']}.json"
     index_path = args.output_dir / "index.json"
     index = json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else None
     if index:
         entry = next(entry for entry in index["series"] if entry["id"] == document["seriesId"])
-        entry["qualificationPath"] = path
+        entry["ccpcfQualificationPath" if ccpcf else "qualificationPath"] = path
     write_json_atomic(args.output_dir / path, document)
     if index:
         write_json_atomic(index_path, index)

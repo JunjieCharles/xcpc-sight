@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261116-96";
+} from "./data.mjs?v=20261117-104";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261116-96";
+} from "./problem-rating.mjs?v=20261117-104";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -40,14 +40,14 @@ import {
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261116-96";
+} from "./preview.mjs?v=20261117-104";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261116-96";
+} from "./review.mjs?v=20261117-104";
 
-import { loadQualification } from "./qualification.mjs?v=20261116-96";
-import { renderQualification } from "./qualification-view.mjs?v=20261116-96";
+import { loadQualification } from "./qualification.mjs?v=20261117-104";
+import { renderQualification } from "./qualification-view.mjs?v=20261117-104";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -66,6 +66,7 @@ const elements = {
   reviewTab: document.querySelector("#review-tab"),
   wfTab: document.querySelector("#wf-tab"),
   ecfTab: document.querySelector("#ecf-tab"),
+  ccpcfTab: document.querySelector("#ccpcf-tab"),
   qualificationView: document.querySelector("#qualification-view"),
   reviewView: document.querySelector("#review-view"),
   reviewTitle: document.querySelector("#review-title"),
@@ -137,6 +138,7 @@ const state = {
   index: null,
   siteIndex: null,
   qualification: null,
+  ccpcfQualification: null,
   filtered: [],
   renderFrame: 0,
   problemAvailableSeries: new Set(),
@@ -243,7 +245,7 @@ function setUrl(mode = "replace") {
     view: state.view, contest: state.reviewContest?.id, metric: state.reviewMetric,
     sort: state.reviewSort, order: state.reviewOrder,
   });
-  if (["wf", "ecf"].includes(state.view)) url.searchParams.set("view", state.view);
+  if (["wf", "ecf", "ccpcf"].includes(state.view)) url.searchParams.set("view", state.view);
   history[mode === "push" ? "pushState" : "replaceState"](null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -501,9 +503,11 @@ function updateSeriesMode() {
   const qualificationSupported = Boolean(state.seriesEntry?.qualificationPath);
   elements.wfTab.hidden = !qualificationSupported;
   elements.ecfTab.hidden = !qualificationSupported;
+  elements.ccpcfTab.hidden = !state.seriesEntry?.ccpcfQualificationPath;
+  elements.ccpcfTab.setAttribute("aria-selected", String(state.view === "ccpcf"));
   elements.wfTab.setAttribute("aria-selected", String(state.view === "wf"));
   elements.ecfTab.setAttribute("aria-selected", String(state.view === "ecf"));
-  if (!["wf", "ecf"].includes(state.view)) elements.qualificationView.hidden = true;
+  if (!["wf", "ecf", "ccpcf"].includes(state.view)) elements.qualificationView.hidden = true;
   const participantsSupported = Boolean(state.seriesEntry?.path);
   const problemSupported = participantsSupported && state.problemAvailableSeries.has(state.seriesId);
   const previewSupported = Boolean(state.previews.length);
@@ -1977,6 +1981,7 @@ async function loadSeries(seriesId, queryState = {}) {
   state.view = "loading";
   elements.qualificationView.hidden = true;
   state.qualification = null;
+  state.ccpcfQualification = null;
   elements.status.hidden = false;
   elements.status.textContent = "正在加载数据…";
   elements.seriesView.hidden = true;
@@ -2035,7 +2040,7 @@ async function loadSeries(seriesId, queryState = {}) {
   elements.searchInput.value = state.query;
   renderSchoolControls();
   updateSeriesMode();
-  if (["wf", "ecf"].includes(queryState.view) && entry.qualificationPath) {
+  if (["wf", "ecf", "ccpcf"].includes(queryState.view) && (queryState.view === "ccpcf" ? entry.ccpcfQualificationPath : entry.qualificationPath)) {
     await showQualification(queryState.view);
   } else if (queryState.view === "review" && entry.reviewPath) {
     await showReview(queryState);
@@ -2074,7 +2079,7 @@ async function initialize() {
     ...readPreviewQuery(location.href),
     ...readReviewQuery(location.href),
   };
-  if (["preview", "review", "wf", "ecf"].includes(new URL(location.href).searchParams.get("view"))) query.view = new URL(location.href).searchParams.get("view");
+  if (["preview", "review", "wf", "ecf", "ccpcf"].includes(new URL(location.href).searchParams.get("view"))) query.view = new URL(location.href).searchParams.get("view");
   for (const entry of index.series) {
     const button = node("button", {
       type: "button",
@@ -2102,7 +2107,7 @@ async function initialize() {
 
 async function showQualification(mode, updateUrl = false) {
   const entry = state.seriesEntry;
-  if (!entry?.qualificationPath) return showSeries();
+  if (!(mode === "ccpcf" ? entry?.ccpcfQualificationPath : entry?.qualificationPath)) return showSeries();
   state.view = mode;
   state.contestId = "";
   state.competitorId = "";
@@ -2112,9 +2117,10 @@ async function showQualification(mode, updateUrl = false) {
   elements.status.hidden = false;
   elements.status.textContent = "正在加载名额盘点…";
   if (updateUrl) setUrl("push");
-  const data = state.qualification ?? await loadQualification(entry, INDEX_URL);
+  const cacheKey = mode === "ccpcf" ? "ccpcfQualification" : "qualification";
+  const data = state[cacheKey] ?? await loadQualification(entry, INDEX_URL, mode);
   if (state.seriesEntry !== entry || state.view !== mode) return;
-  state.qualification = data;
+  state[cacheKey] = data;
   renderQualification(elements.qualificationView, data, mode);
   elements.status.hidden = true;
   elements.qualificationView.hidden = false;
@@ -2122,6 +2128,7 @@ async function showQualification(mode, updateUrl = false) {
 
 elements.wfTab.addEventListener("click", () => showQualification("wf", true).catch(showError));
 elements.ecfTab.addEventListener("click", () => showQualification("ecf", true).catch(showError));
+elements.ccpcfTab.addEventListener("click", () => showQualification("ccpcf", true).catch(showError));
 
 elements.searchInput.addEventListener("input", () => applySearch());
 document.querySelector('#preview-team-filter').addEventListener('click', event => {
@@ -2197,7 +2204,7 @@ window.addEventListener("popstate", () => {
     ...readPreviewQuery(location.href), ...readReviewQuery(location.href),
   };
   const view = new URL(location.href).searchParams.get("view");
-  if (["preview", "review", "wf", "ecf"].includes(view)) query.view = view;
+  if (["preview", "review", "wf", "ecf", "ccpcf"].includes(view)) query.view = view;
   const seriesId = state.siteIndex.series.some(entry => entry.id === query.series)
     ? query.series : state.siteIndex.defaultSeriesId;
   loadSeries(seriesId, query).catch(showError);

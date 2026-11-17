@@ -112,7 +112,7 @@ test("outside takes priority over duplicate beyond the frontier and ECF shows sc
   assert.equal(ecf.current.frontier, 1);
   assert.equal(ecf.cells.get(3).role, "outside");
   assert.equal(ecf.cells.get(2).role, "outside");
-  assert.deepEqual([0, 1, 2, 3].map(p => ecf.cells.get(p).schoolRank), [1, 1, 2, 1]);
+  assert.deepEqual([0, 1, 2, 3].map(p => ecf.cells.get(p).schoolRank), [1, 1, null, null]);
   assert.ok([...buildQualification(d, "wf").cells.values()].every(c => c.schoolRank === null));
   const hk = { ...pending("hk", 115), region: "hongkong" };
   assert.equal(buildQualification(data([...d.stations, hk], { ecfMainlandQuota: 2 }), "ecf").hongkong.id, "hk");
@@ -131,12 +131,86 @@ test("ECF school-cap risk is separate from competition for the overall quota", (
   const d = data([station("known", [team("A"), team("A", 2, 2), team("A", 3, 3), team("B", 1, 4)]), pending("future", 3)], { ecfMainlandQuota: 20 });
   const m = buildQualification(d, "ecf");
   assert.ok(m.safe.has("A-1"));
-  assert.ok(m.safe.has("A-2"));
+  assert.ok(!m.safe.has("A-2"), "earlier future roster may overlap the second team");
   assert.ok(!m.safe.has("A-3"));
   assert.match(m.cells.get(4).reason, /同校/);
   assert.equal(m.cells.get(4).pressure.level, "low");
   assert.equal(m.cells.get(4).pressure.schoolTolerance, 0);
   assert.equal(m.cells.get(4).pressure.schoolRisk, true);
+});
+
+test("ECF skips direct member overlap without transitive merging or spending school slots", () => {
+  const roster = (number, members, rank) => ({ ...team("A", number, rank), members });
+  const a = roster(1, ["a", "b", "c"], 1);
+  const b = roster(2, ["c", "d", "e"], 2);
+  const c = roster(3, ["e", "f", "g"], 3);
+  const d = data([station("one", [a, b, c, roster(4, ["h", "i", "j"], 4), team("B", 1, 5)])], { ecfMainlandQuota: 4 });
+  const before = structuredClone(d);
+  const m = buildQualification(d, "ecf");
+  assert.deepEqual([...m.current.selected.keys()], ["A-1", "A-3", "A-4", "B-1"]);
+  assert.equal(m.cells.get(1).role, "duplicate");
+  assert.equal(m.current.visited.get(1).duplicateOf, "A-1");
+  assert.equal(m.cells.get(2).schoolRank, 2);
+  assert.equal(m.cells.get(3).schoolRank, 3);
+  assert.equal(m.cells.get(2).pressure.schoolTolerance, 1);
+  assert.deepEqual(d, before);
+  assert.deepEqual([...m.conservative.selected.keys()], [...m.current.selected.keys()]);
+});
+
+test("ICPC overlap is scoped to school, normalizes visible names and preserves retained roster", () => {
+  const a = { ...team("A"), members: ["Ａｌｉｃｅ", "b", "c"] };
+  const b = { ...team("A", 2, 2), members: [" alice ", "d", "e"] };
+  const foreign = { ...team("B", 1, 3), members: ["Alice", "d", "e"] };
+  const m = buildQualification(data([station("one", [a, b, foreign])]), "ecf");
+  assert.deepEqual([...m.current.selected.keys()], ["A-1", "B-1"]);
+  assert.deepEqual(m.current.selected.get("A-1").team.members, a.members);
+  assert.equal(m.current.selected.get("A-1").team.rank, 1);
+  const partial = { ...b, members: ["Alice"], identityComplete: false };
+  assert.equal(buildQualification(data([station("one", [a, partial])]), "ecf").cells.get(1).role, "duplicate");
+});
+
+test("WF overlap suppresses duplicate candidates without changing school allocation", () => {
+  const a = { ...team("A"), members: ["a", "b", "c"] };
+  const b = { ...team("A", 2), members: ["c", "d", "e"] };
+  const c = { ...team("A", 3), members: ["e", "f", "g"] };
+  const d = data([station("a", [a, team("B", 1, 2)]), station("b", [b, team("C", 1, 2)]),
+    station("c", [c, team("D", 1, 2)])]);
+  const m = buildQualification(d, "wf");
+  assert.deepEqual([...m.current.selected.keys()], ["A", "B", "C"]);
+  assert.equal(m.cells.get(1).role, "duplicate");
+  assert.equal(m.cells.get(2).role, "candidate", "discarded B does not connect A to C");
+});
+
+test("future overlapping roster can replace an ECF team even with ample quotas", () => {
+  const a = team("A");
+  const d = data([pending("first", 2), station("known", [a])], { ecfMainlandQuota: 20 });
+  const m = buildQualification(d, "ecf");
+  const cell = [...m.cells.values()][0];
+  assert.equal(cell.certainty, "risk");
+  assert.equal(cell.pressure.level, "low");
+  assert.equal(cell.pressure.schoolRisk, false);
+  assert.equal(cell.pressure.overlapRisk, true);
+  const future = { ...team("A", 2), members: [a.members[0], "new1", "new2"] };
+  const completed = [{ ...m.stations[0], status: "finished", entries: [future] }, m.stations[1]];
+  assert.equal(scanQualification(completed, "ecf", 20, 3).selected.has(a.key), false);
+});
+
+test("Zhejiang Sci-Tech keeps Wuhan and skips overlapping Chengdu without consuming a second slot", () => {
+  const snapshot = JSON.parse(fs.readFileSync(new URL("../static/data/qualification/2026-2027.json", import.meta.url)));
+  const m = buildQualification(snapshot, "ecf");
+  const cells = [...m.cells.values()].filter(c => c.team.school === "浙江理工大学");
+  const wuhan = cells.find(c => c.team.name === "是啊，吃什么");
+  const chengdu = cells.find(c => c.team.name === "happy baby");
+  assert.equal(wuhan.role, "selected");
+  assert.equal(wuhan.schoolRank, 1);
+  assert.equal(chengdu.role, "duplicate");
+  assert.equal(chengdu.schoolRank, null);
+  assert.equal(m.current.visited.get(chengdu.position).duplicateOf, wuhan.team.key);
+  assert.equal(m.current.selected.size, 230);
+  const chosen = [...m.current.selected.values()].map(e => e.team);
+  for (let i = 0; i < chosen.length; i++) for (let j = 0; j < i; j++) {
+    if (chosen[i].schoolKey === chosen[j].schoolKey) assert.ok(!chosen[i].members.some(name => chosen[j].members.includes(name)));
+  }
 });
 
 test("slot pressure distinguishes robust, majority-insertion and half-or-less insertion cases", () => {
@@ -154,7 +228,8 @@ test("every claimed safe ECF team survives exhaustive small future outcomes", ()
   const known = station("known", [team("A"), team("B", 1, 2), team("A", 2, 3), team("C", 1, 4)]);
   const d = data([known, pending("future", 2)], { ecfMainlandQuota: 5 });
   const m = buildQualification(d, "ecf");
-  const choices = [team("A"), team("A", 2), team("A", 3), team("B"), team("C"), team("X")];
+  const choices = [team("A"), team("A", 2), team("A", 3), team("B"), team("C"), team("X"),
+    { ...team("A", 4), members: ["A1a", "A2a", "bridge"] }];
   for (const first of choices) for (const second of choices) {
     if (first.key === second.key) continue;
     const completed = [m.stations[0], { ...m.stations[1], status: "finished", entries: [first, second] }];
@@ -185,8 +260,8 @@ test("published November snapshot is deterministic, excludes stars, and preserve
   assert.deepEqual([...wf.safe], ["北京大学", "清华大学", "同济大学"]);
   assert.equal(wf.current.selected.size, 8);
   assert.equal(ecf.current.selected.size, 230);
-  assert.equal(ecf.boundaryRow, 89);
-  assert.equal(ecf.safe.size, 3);
+  assert.equal(ecf.boundaryRow, 90);
+  assert.equal(ecf.safe.size, 2);
   assert.equal(JSON.stringify(d), before);
   assert.deepEqual(buildQualification(d, "wf").safe, wf.safe);
 });
