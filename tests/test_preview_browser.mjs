@@ -110,16 +110,16 @@ test('preview navigation: desktop/mobile, dates, hosts, public rows, switching a
       await evaluate('window.scrollTo(0, 0)');
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('tr[data-preview-id="ccpc-2026-changchun"] .preview-cutoff-value'), el => el.textContent)`), ['10', '84', '252', '576']);
       assert.equal(await evaluate(`document.querySelectorAll('#preview-online-navigation button').length`), 3);
-      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '369', '332', '300', '401', '300']);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-official-count'), el => el.textContent)`), ['403', '300', '319', '369', '332', '300', '401', '300', '300']);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-cutoff-table thead th').length`), 8);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr[data-preview-id]'), el => el.dataset.previewId)`),
         ['icpc-2026-xian', 'ccpc-2026-changchun', 'icpc-2026-chengdu', 'icpc-2026-wuhan',
-          'icpc-2026-nanjing', 'ccpc-2026-leshan', 'icpc-2026-shenyang', 'ccpc-2026-jingzhou']);
+          'icpc-2026-nanjing', 'ccpc-2026-leshan', 'icpc-2026-shenyang', 'ccpc-2026-jingzhou', 'ccpc-2026-xiamen']);
       assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.preview-cutoff-table tbody tr'), el => [el.cells[1].textContent, el.cells[2].textContent])`),
         [['2026-10-18', '西北工业大学'], ['2026-10-18', '东北师范大学'],
           ['2026-10-25', '电子科技大学'], ['2026-11-01', '武汉大学'],
           ['2026-11-08', '南京航空航天大学'], ['2026-11-08', '乐山师范学院'],
-          ['2026-11-15', '东北大学'], ['2026-11-15', '长江大学']]);
+          ['2026-11-15', '东北大学'], ['2026-11-15', '长江大学'], ['2026-11-22', '厦门大学']]);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-summary-only button, .preview-summary-only a, .preview-summary-only[data-preview-id]').length`), 0);
       assert.equal(await evaluate(`document.querySelectorAll('.preview-summary-only').length`), 0);
       assert.equal(await evaluate(current('ccpc-2026-changchun')), true);

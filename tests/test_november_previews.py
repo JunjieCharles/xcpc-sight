@@ -1,4 +1,4 @@
-"""Published November 15 previews: identities, fresh sources and season matching."""
+"""Published November previews: identities, fresh sources and season matching."""
 import hashlib
 import json
 from datetime import datetime
@@ -15,6 +15,40 @@ DATA = ROOT / "static/data"
 
 def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_xiamen_manual_and_precontest_sources():
+    roster = read(DATA / "rosters/ccpc-2026-xiamen.json")
+    preview = read(DATA / "previews/ccpc-2026-xiamen.json")
+    source = roster["source"]
+    assert preview["teamSource"]["url"] == source["url"] == "./sources/ccpc-2026-xiamen-manual.pdf"
+    pdf_hash = hashlib.sha256((ROOT / "static" / source["url"]).read_bytes()).hexdigest()
+    assert pdf_hash == source["sha256"] == (
+        "93fc62514bf66aa68987a65d66799290e85822079e818dc459614660ec4cb9c1")
+    teams = roster["teams"]
+    digest = hashlib.sha256(json.dumps(teams, ensure_ascii=False, separators=(",", ":"))
+                            .encode()).hexdigest()
+    assert digest == source["identitySha256"] == (
+        "5fa561ee719c5ce17075a0844baa95375718669fd165b55c7cbbc1219979fabe")
+    assert teams[-2]["members"] == ["刘诗奇", "杨子鉴"]
+    assert teams[-1]["members"] == ["可成豪", "孔维飒", "韩子睿"]
+    assert teams == [
+        dict(name=t["name"], school=t["school"], excluded=t["excluded"],
+             members=[m["name"] for m in t["members"]])
+        for t in preview["teams"]
+    ]
+    assert preview["matchingSummary"] == dict(members=977, xcpcrating=908, xcpcElo=924,
+                                             previousSeason=614, currentSeason=889, cpcfinder=867)
+    assert preview["sourceSnapshots"]["xcpcrating"] == "2026-11-17T08:19:20.234059+00:00"
+    assert preview["sourceSnapshots"]["xcpcElo"] == "2026-11-15T12:48:54.626Z"
+    assert preview["sourcesFetchedAt"] == preview["sourceSnapshots"]["cpcfinder"]
+    assert preview["medalSources"]["addedContestIds"] == []
+    covered = set(preview["medalSources"]["cpcfinderCoveredContestIds"])
+    assert len(covered) == 8 and {"icpc2026shenyang", "ccpc2026jingzhou"} <= covered
+    history = [h for t in preview["teams"] for h in t["currentSeasonHistory"]]
+    assert {h["contestId"] for h in history} == covered
+    assert all(datetime.fromisoformat(h["startAt"]) < datetime.fromisoformat(preview["sortAt"])
+               for h in history)
 
 
 def test_added_teams_use_frozen_ratings_and_preserve_all_original_teams():

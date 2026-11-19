@@ -38,6 +38,20 @@ test('Shenyang publishes a complete preview with the PDF source and 401 official
   }
 });
 
+test('Xiamen uses the November 22 schedule and official teams for online cutoffs', async () => {
+  const p = validatePreview(JSON.parse(await readFile(
+    new URL('../static/data/previews/ccpc-2026-xiamen.json', import.meta.url), 'utf8')));
+  assert.equal(p.hostSchool, '厦门大学');
+  assert.equal(p.sortAt, '2026-11-22T09:00:00+08:00');
+  assert.equal(p.endAt, '2026-11-22T14:00:00+08:00');
+  const official = p.teams.filter(t => !t.excluded);
+  assert.equal(official.length, 300);
+  assert.equal(p.teams.length - official.length, 26);
+  assert.equal(official.filter(t => t.onlineRanks.some(r => r !== null)).length, 294);
+  assert.deepEqual(previewPowerMetricIds(p), ['xcpcrating', 'xcpcElo', 'currentSeason', 'onlineRanks']);
+  assert.deepEqual(buildPreviewCutoffs(p), { cup: 5, gold: 44, silver: 142, bronze: 350 });
+});
+
 test('Jingzhou publishes four-dimensional preview, temporary roster, cutoffs and same-day navigation', async () => {
   const read = async id => validatePreview(JSON.parse(await readFile(
     new URL(`../static/data/previews/${id}.json`, import.meta.url), 'utf8')));
