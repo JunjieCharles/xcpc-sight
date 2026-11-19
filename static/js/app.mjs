@@ -8,7 +8,7 @@ import {
   readQueryState,
   searchCompetitors,
   writeQueryState,
-} from "./data.mjs?v=20261119-105";
+} from "./data.mjs?v=20261119-112";
 import {
   buildDifficultyCurves,
   createProblemRatingStore,
@@ -19,7 +19,7 @@ import {
   readProblemRatingQuery,
   sortProblemRows,
   writeProblemRatingQuery,
-} from "./problem-rating.mjs?v=20261119-105";
+} from "./problem-rating.mjs?v=20261119-112";
 import {
   achievementDisplayParts,
   buildPreviewCutoffs,
@@ -36,18 +36,19 @@ import {
   listPreviewSchools,
   previewHistoryTitle,
   previewPowerMetricIds,
+  previewPowerDimensions,
   readPreviewQuery,
   searchPreviewTeams,
   sortPreviewTeams,
   writePreviewQuery,
-} from "./preview.mjs?v=20261119-105";
+} from "./preview.mjs?v=20261119-112";
 
 import {
   createReviewStore, buildReviewAnalysis, reviewMetrics, sortReviewContests, selectReviewRows, readReviewQuery, writeReviewQuery,
-} from "./review.mjs?v=20261119-105";
+} from "./review.mjs?v=20261119-112";
 
-import { loadQualification } from "./qualification.mjs?v=20261119-105";
-import { renderQualification } from "./qualification-view.mjs?v=20261119-105";
+import { loadQualification } from "./qualification.mjs?v=20261119-112";
+import { renderQualification } from "./qualification-view.mjs?v=20261119-112";
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 8;
@@ -759,8 +760,7 @@ function radarPoints(counts, maximum, radius, centerX, centerY) {
 }
 
 function previewPowerRadar(power) {
-  const labels = previewPowerMetricIds(state.preview).map(id => id === "onlineRanks" ? "网络赛排名"
-    : id === "medals" ? "奖牌" : state.preview.metricSources.find(source => source.id === id).title);
+  const labels = previewPowerDimensions(state.preview).map(source => source.title);
   const maximum = Math.max(1, state.preview.teams.filter(team => !team.excluded).length - 1);
   const width = labels.length > 5 ? 340 : 300;
   const centerX = width / 2;
@@ -2121,7 +2121,7 @@ async function showQualification(mode, updateUrl = false) {
   const data = state[cacheKey] ?? await loadQualification(entry, INDEX_URL, mode);
   if (state.seriesEntry !== entry || state.view !== mode) return;
   state[cacheKey] = data;
-  renderQualification(elements.qualificationView, data, mode);
+  renderQualification(elements.qualificationView, data, mode, state.previews);
   elements.status.hidden = true;
   elements.qualificationView.hidden = false;
 }

@@ -55,13 +55,28 @@ def project_station(
     }
 
 
-def build_document(config: dict, input_dirs: list[Path], review: dict, aliases: dict) -> dict:
+def build_document(config: dict, input_dirs: list[Path], review: dict, aliases: dict,
+                   *, previews: dict | None = None) -> dict:
     sources = {contest["id"]: contest["source"] for contest in review["contests"]}
     normalizer = DefaultNormalizer(school_aliases=aliases)
     stations = []
     for spec in config["stations"]:
         if spec["status"] == "pending":
-            stations.append({**spec, "teams": []})
+            station = {**spec, "teams": []}
+            if preview_id := spec.get("previewId"):
+                preview = (previews or {}).get(preview_id)
+                if not preview or (preview["id"], preview["seriesId"]) != (
+                    preview_id, config["seriesId"]
+                ):
+                    raise ValueError(f"{spec['id']}: missing or mismatched preview {preview_id}")
+                station["previewIdentities"] = {
+                    t["id"]: {
+                        "schoolKey": normalizer.school(t["school"]),
+                        "memberKeys": sorted(normalizer.member(m["name"]) for m in t["members"]),
+                    }
+                    for t in preview["teams"] if not t["excluded"]
+                }
+            stations.append(station)
             continue
         if spec["id"] not in sources:
             raise ValueError(f"{spec['id']}: no pinned source in published review")
@@ -89,8 +104,13 @@ def main() -> None:
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
     review = json.loads((ROOT / "static/data/reviews/2026-2027.json").read_text(encoding="utf-8"))
+    previews = {
+        pid: json.loads((ROOT / f"static/data/previews/{pid}.json").read_text(encoding="utf-8"))
+        for s in config["stations"] if s["status"] == "pending" and (pid := s.get("previewId"))
+    }
     document = build_document(
         config, args.input_dir, review, load_school_aliases(ROOT / "config/school-aliases.json"),
+        previews=previews,
     )
     ccpcf = document.get("kind") == "ccpcf"
     path = f"qualification/{'ccpcf-' if ccpcf else ''}{document['seriesId']}.json"

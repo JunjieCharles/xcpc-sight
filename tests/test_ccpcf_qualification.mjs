@@ -149,3 +149,127 @@ test("loader selects the CCPCF path and rejects mismatched kinds", async () => {
     await assert.rejects(loadQualification({ id: "test", qualificationPath: "wf.json" }, "https://example.org/data/index.json"), /mode mismatch/);
   } finally { globalThis.fetch = previous; }
 });
+
+test("Xiamen shows the published ranking and detects displacement of an individual school team", () => {
+  const read = path => JSON.parse(fs.readFileSync(new URL(`../static/data/${path}.json`, import.meta.url)));
+  const snapshot = read("qualification/ccpcf-2026-2027");
+  const preview = read("previews/ccpc-2026-xiamen");
+  const m = buildCcpcfQualification(snapshot, [preview]);
+  const rows = m.stations.at(-1).entries;
+  assert.equal(m.pendingCount, 1);
+  assert.equal(rows.length, 300);
+  assert.deepEqual(new Set(rows.map(t => t.key)), new Set(preview.teams.filter(t => !t.excluded).map(t => t.id)));
+  assert.deepEqual(rows.slice(0, 2).map(t => [t.name, t.rank]), [["柚子超玩会", 1], ["Oblivion", 2]]);
+  assert.deepEqual(m.channels.map(c => ["safe", "uncertain", "displaced"].map(
+    status => c.selected.filter(g => g.outlook === status).length)), [[14, 80, 7], [2, 8, 10]]);
+  assert.equal(m.safe.size, 16);
+  const zju = [...m.cells.values()].find(c => c.role === "selected" && c.team.name === "猫没有通过图灵测试");
+  assert.equal(zju.schoolRank, 2);
+  assert.equal(zju.outlook, "displaced");
+  assert.equal(m.current.selected.size, 121);
+  const forecast = [...m.cells.values()].filter(cell => cell.role === "forecast");
+  assert.deepEqual([1, 2, null].map(slot => forecast.filter(cell => cell.forecastSlot === slot).length),
+    [13, 10, 277]);
+});
+
+test("Xiamen projects both qualification channels from the chosen power dimension", () => {
+  const read = path => JSON.parse(fs.readFileSync(new URL(`../static/data/${path}.json`, import.meta.url)));
+  const snapshot = read("qualification/ccpcf-2026-2027");
+  const preview = read("previews/ccpc-2026-xiamen");
+  for (const [metric, secondTeam, unranked, qualifying, displaced] of [
+    ["power", "Oblivion", 0, 23, 17],
+    ["xcpcrating", "呆呆鸡", 0, 23, 15],
+    ["xcpcElo", "Oblivion", 0, 19, 15],
+    ["currentSeason", "队线大冲浪", 4, 22, 14],
+    ["onlineRanks", "中山大学-眉毛", 6, 21, 15],
+  ]) {
+    const model = buildCcpcfQualification(snapshot, [preview], metric);
+    assert.deepEqual(model.forecastMetrics.map(option => option.id), ["power", ...preview.powerMetrics]);
+    const rows = model.stations.at(-1).entries;
+    assert.equal(rows[1].name, secondTeam);
+    assert.equal(rows.filter(team => team.rank === null).length, unranked);
+    assert.ok(rows.slice(rows.length - unranked).every(team => team.rank === null));
+    assert.equal([...model.cells.values()].filter(cell => cell.forecastSlot).length, qualifying);
+    assert.equal([...model.current.selected.values()].filter(group => group.outlook === "displaced").length, displaced);
+  }
+  assert.throws(() => buildCcpcfQualification(snapshot, [preview], "previousSeason"), RangeError);
+});
+
+test("one shared metric ranks each forecast station independently", () => {
+  const previews = [];
+  const stations = [2, 3].map(n => {
+    const dimensions = n === 2 ? ["currentSeason", "xcpcElo", "previousSeason"] : ["xcpcElo", "currentSeason"];
+    const teams = ["A", "B"].map((name, i) => ({
+      id: name, name, school: name + n, members: [{ name }], sourceIndex: i,
+      medals: { gold: 0, silver: 0, bronze: 0 }, ratings: { currentSeason: i, xcpcElo: 1 - i, previousSeason: i },
+    }));
+    const previewId = "p" + n;
+    previews.push({ id: previewId, teams, powerMetrics: dimensions, metricSources: dimensions.map(id => ({ id, title: id })) });
+    return { ...station(n, [], true), previewId, previewIdentities: Object.fromEntries(
+      teams.map(t => [t.id, { schoolKey: t.school, memberKeys: [t.name] }])) };
+  });
+  for (const [metric, leader] of [["currentSeason", "B"], ["xcpcElo", "A"]]) {
+    const model = buildCcpcfQualification(data(stations, 1, 1), previews, metric);
+    assert.deepEqual(model.forecastMetrics.map(option => option.id), ["power", "currentSeason", "xcpcElo"]);
+    for (const col of [0, 1]) {
+      assert.equal(model.cells.get(col).team.name, leader);
+      assert.equal(model.cells.get(col).forecastSlot, 1);
+      assert.equal(model.cells.get(2 + col).forecastSlot, null);
+    }
+  }
+  const partial = buildCcpcfQualification(data([...stations, station(4, [], true)]), previews, "xcpcElo");
+  assert.equal(partial.cells.get(1).team.name, "A");
+  assert.equal(partial.cells.get(1).forecastSlot, null);
+});
+
+function verifyTeamOutlooks(past, entrants, quotas) {
+  const pending = { ...station(2, [], true), previewId: "p",
+    previewIdentities: Object.fromEntries(entrants.map(t => [t.key, { schoolKey: t.schoolKey, memberKeys: t.memberKeys }])) };
+  const preview = { id: "p", metricSources: [{ id: "currentSeason" }], powerMetrics: ["currentSeason"],
+    teams: entrants.map((t, i) => ({ id: t.key, sourceIndex: i, name: t.name, school: t.school,
+      members: t.members.map(name => ({ name })), ratings: { currentSeason: t.rank ? 100 - t.rank : null } })) };
+  const m = buildCcpcfQualification(data([past, pending], ...quotas), [preview]);
+  const finish = teams => buildCcpcfQualification(data([past, station(2, teams)], ...quotas));
+  const ranks = new Map(m.stations[1].entries.map(t => [t.key, t.rank ?? 0]));
+  const predicted = finish(entrants.map(t => ({ ...t, rank: ranks.get(t.key) })));
+  const entrantKeys = new Set(entrants.map(t => t.key));
+  const actualSlots = new Map([...predicted.cells.values()]
+    .filter(c => entrantKeys.has(c.team.key) && c.role === "selected")
+    .map(c => [c.team.key, c.schoolRank]));
+  for (const cell of m.cells.values()) {
+    if (cell.role === "forecast") assert.equal(cell.forecastSlot, actualSlots.get(cell.team.key) ?? null);
+  }
+  const possible = [];
+  function enumerate(order, rest) {
+    possible.push(finish([...order.map((t, i) => ({ ...t, rank: i + 1 })),
+      ...rest.map(t => ({ ...t, rank: 0, solved: 0 }))]));
+    for (const t of rest) enumerate([...order, t], rest.filter(other => other !== t));
+  }
+  enumerate([], entrants);
+  for (const channel of m.channels) {
+    for (const g of channel.selected) {
+      const retained = result => result.channels.some(c => c.selected.some(winner =>
+        winner.appearances.find(a => a.column === 0 && a.team.rank)?.team.key === g.representative.team.key));
+      const expected = !retained(predicted) ? "displaced" : possible.every(retained) ? "safe" : "uncertain";
+      assert.equal(g.outlook, expected, `${g.schoolKey}, team ${g.representative.team.key}`);
+    }
+  }
+  return m;
+}
+
+test("both team channels agree with exhaustive finishes, including bridges, ties and unranked entrants", () => {
+  const past = station(1, [team("A", "a1", 1), team("A", "a2", 4), team("B", "b1", 2),
+    team("B", "b2", 5), team("C", "c1", 3), team("C", "c2", 6)]);
+  const entrants = [team("D", "d1", 1), team("D", "d2", 2), team("C", "c3", 2),
+    team("B", "bridge", 4, ["b1a", "b2a", "new"]), team("E", "e", 0)];
+  const m = verifyTeamOutlooks(past, entrants, [2, 2]);
+  assert.deepEqual(m.stations[1].entries.map(t => t.rank), [1, 2, 2, 4, null]);
+});
+
+test("same-school overtakes can change channels or eliminate a team while its school retains slots", () => {
+  const past = station(1, [team("A", "a1", 2), team("A", "a2", 4), team("B", "b1", 1),
+    team("B", "b2", 3), team("C", "c1", 2)]);
+  const entrants = [team("A", "a3", 1), team("A", "a4", 2), team("A", "again", 3, ["a2a"]),
+    team("B", "b3", 4), team("D", "d1", 5)];
+  for (const quotas of [[1, 1], [2, 1], [3, 2]]) verifyTeamOutlooks(past, entrants, quotas);
+});

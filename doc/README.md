@@ -4,7 +4,7 @@
 | --- | --- |
 | ICPC EC Final 名额分配与 WF 晋级规则原件、版本和统计口径归档 | [icpc-advancement-rules.md](icpc-advancement-rules.md) |
 | WF 与 ECF 名额盘点页签、赛站规模估计、成员部分重叠按顺序跳过及保守风险判断 | [qualification-tracker.md](qualification-tracker.md) |
-| CCPCF 名额盘点、成员重叠合并、两条学校名额渠道与出线区域边框 | [ccpcf-qualification-tracker.md](ccpcf-qualification-tracker.md) |
+| CCPCF 名额盘点、成员重叠合并、两条学校名额渠道、各站前瞻排名指标切换与名额危险度、出线区域边框 | [ccpcf-qualification-tracker.md](ccpcf-qualification-tracker.md) |
 | 本地学校别名、更名维护与加载 | [school-aliases.md](school-aliases.md) |
 | 个人与报名实体 rating 规则、系列计算及队伍归一化 LSE 聚合 | [rating-rules.md](rating-rules.md) |
 | 题目难度 rating 的特征、训练、验证、XCPC 预测与静态展示 | [problem-rating.md](problem-rating.md) |

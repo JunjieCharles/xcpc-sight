@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from core.normalization import DefaultNormalizer
+from core.school_aliases import load_school_aliases
 from scripts.generate_qualification_data import build_document, project_station
 
 FIXTURE = Path(__file__).parent / "fixtures/review/contest.srk.json"
@@ -118,4 +119,15 @@ def test_ccpcf_snapshot_matches_config_and_review_sources():
             assert station["source"] == sources[spec["id"]]
             assert all(t["memberKeys"] for t in station["teams"])
         else:
-            assert station == {**spec, "teams": []}
+            assert station["teams"] == []
+            preview_id = spec["previewId"]
+            assert station["previewId"] == preview_id
+            path = root / f"static/data/previews/{preview_id}.json"
+            preview = json.loads(path.read_text(encoding="utf-8"))
+            normalizer = DefaultNormalizer(school_aliases=load_school_aliases(
+                root / "config/school-aliases.json"))
+            assert station["previewIdentities"] == {
+                t["id"]: {"schoolKey": normalizer.school(t["school"]),
+                          "memberKeys": sorted(normalizer.member(m["name"]) for m in t["members"])}
+                for t in preview["teams"] if not t["excluded"]
+            }

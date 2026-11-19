@@ -81,12 +81,14 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
         assert.equal(await evaluate("document.querySelectorAll('.qualification-stats, .qualification-explanation, .qualification-assumption').length"), 0);
         assert.equal(await evaluate("document.querySelector('.qualification-disclaimer').nextElementSibling.className"), "qualification-legend");
         assert.equal(await evaluate("document.querySelectorAll('.qualification-rule-notice, .section-heading .qualification-rule-link').length"), 0);
-        const pressureTitles = await evaluate("['low', 'medium', 'high'].map(level => document.querySelector('.qualification-legend .qualification-pressure-' + level).title)");
-        assert.deepEqual(pressureTitles, [
+        if (mode !== "ccpcf") {
+          const pressureTitles = await evaluate("['low', 'medium', 'high'].map(level => document.querySelector('.qualification-legend .qualification-pressure-' + level).title)");
+          assert.deepEqual(pressureTitles, [
           "低：潜在竞争位置全部新增占位，仍有足够名额。",
           "中：潜在竞争位置中，超过一半新增占位，才会触及名额限制。",
           "高：潜在竞争位置中，一半或更少新增占位，就会触及名额限制。",
-        ]);
+          ]);
+        }
         assert.equal(await evaluate("document.querySelector('.qualification-rule-link').href"), {
           wf: "https://icpc.pku.edu.cn/tzgg/38783e6dda71402abbd1f6c28e6b6779.htm",
           ecf: "https://icpc.pku.edu.cn/tzgg/109d767bb4464b24a5aa18563b65238e.htm",
@@ -104,6 +106,18 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
           assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-station-title')].map(e => e.textContent)"), ["长春", "乐山", "荆州", "厦门"]);
           assert.match(await evaluate("document.querySelector('.qualification-toolbar [aria-live]').textContent"), /^显示 \d+ 行$/);
           assert.equal(await evaluate("document.querySelectorAll('td[data-role=selected]').length"), 121);
+          assert.equal(await evaluate("document.querySelectorAll('td.qualification-forecast-qualified').length"), 23);
+          assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-legend .qualification-forecast, .qualification-legend .qualification-forecast-qualified')].map(key => key.textContent)"), ["前瞻排名", "预计出线"]);
+          for (const [selector, labels, color] of [
+            ["td.qualification-forecast-qualified", ["预计出线", "前瞻排名"], "rgb(236, 229, 250)"],
+            ["td.qualification-forecast:not(.qualification-forecast-qualified)", ["前瞻排名"], "rgb(248, 245, 252)"],
+          ]) {
+            assert.deepEqual(await evaluate(`[...document.querySelector('${selector}').querySelectorAll('.qualification-tags > span')].map(tag => tag.textContent)`), labels);
+            assert.equal(await evaluate(`getComputedStyle(document.querySelector('${selector}')).backgroundColor`), color);
+          }
+          assert.equal(await evaluate("document.querySelector('td.qualification-forecast .qualification-tags > :last-child').title"), "厦门站前瞻第 1 名");
+          assert.deepEqual(await evaluate("['safe','uncertain','displaced'].map(s => document.querySelectorAll('td.qualification-' + s).length)"), [16, 88, 17]);
+          assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected]')].every(td => td.querySelector('.qualification-badge').textContent === (td.classList.contains('qualification-safe') ? '确定出线' : '待定出线'))"), true);
           assert.equal(await evaluate("document.querySelectorAll('.qualification-host-mark, .qualification-final, .qualification-region-key').length"), 0);
           assert.deepEqual(await evaluate("[...document.querySelectorAll('.qualification-channel-1-key, .qualification-channel-2-key')].map(e => e.textContent)"), ["实线框：第一名额出线区域", "虚线框：第二名额出线区域"]);
           for (const [channel, lastRow, pseudo, style] of [[1, 92, "::before", "solid"], [2, 33, "::after", "dashed"]]) {
@@ -114,6 +128,36 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
             assert.deepEqual(await evaluate(`(() => { const s = getComputedStyle(document.querySelector('td.qualification-channel-${channel}-top'), '${pseudo}'); return [s.top, s.left, s.right]; })()`), ["0px", "0px", "0px"]);
           }
           assert.match(await evaluate("document.querySelector('.qualification-channels').textContent"), /女生专场.*仅限女队参赛.*高职高专/);
+          const metrics = "document.querySelector('.qualification-forecast-metrics')";
+          assert.equal(await evaluate(`document.getElementById(${metrics}.getAttribute('aria-labelledby')).textContent`), "前瞻排名指标");
+          assert.deepEqual(await evaluate(`[...${metrics}.querySelectorAll('button')].map(b => b.textContent)`),
+            ["综合战力", "XCPC Rating", "XCPC Elo", "本赛季 Rating", "网络赛排名"]);
+          const activeMetric = `${metrics}.querySelectorAll('button[aria-pressed="true"]')`;
+          assert.deepEqual(await evaluate(`[...${activeMetric}].map(b => b.textContent)`), ["综合战力"]);
+          const shell = "document.querySelector('.qualification-scroll')";
+          const offsets = `[${shell}.scrollLeft, ${shell}.scrollTop]`;
+          await evaluate(`${shell}.scrollTo(130, 1250)`);
+          const beforeMetric = await evaluate(offsets);
+          assert.ok(beforeMetric[1] > 0);
+          if (width === 390) assert.ok(beforeMetric[0] > 0);
+          await evaluate(`[...${metrics}.querySelectorAll('button')].find(b => b.textContent === 'XCPC Elo').click()`);
+          assert.deepEqual(await evaluate(offsets), beforeMetric);
+          assert.deepEqual(await evaluate(`[...${activeMetric}].map(b => b.textContent)`), ["XCPC Elo"]);
+          assert.equal(await evaluate("document.querySelectorAll('td.qualification-forecast-qualified').length"), 19);
+          assert.equal(await evaluate("document.querySelectorAll('td.qualification-displaced').length"), 15);
+          if (width === 1440 || width === 390) {
+            await evaluate(`(() => {
+              const search = document.querySelector('.qualification-toolbar input');
+              search.value = '同济大学';
+              search.dispatchEvent(new Event('input'));
+              document.querySelector('[aria-label="下一个搜索结果"]').click();
+              ${shell}.scrollTo(180, 2800);
+            })()`);
+            const currentMatch = "document.querySelector('.qualification-match-active').dataset.matchKey";
+            const beforeSearchSwitch = await evaluate(`[${offsets}, ${currentMatch}]`);
+            await evaluate(`[...${metrics}.querySelectorAll('button')].find(b => b.textContent === '网络赛排名').click()`);
+            assert.deepEqual(await evaluate(`new Promise(resolve => requestAnimationFrame(() => resolve([${offsets}, ${currentMatch}])))`), beforeSearchSwitch);
+          }
           await send("Page.reload", { ignoreCache: true });
           await waitFor("!document.querySelector('#qualification-view').hidden && document.querySelector('#ccpcf-tab').getAttribute('aria-selected') === 'true'");
         }
@@ -125,8 +169,10 @@ test("qualification tabs, deep links, filters and shared responsive layout", { s
           assert.equal(await evaluate("getComputedStyle(document.querySelector('td.qualification-host-performance')).backgroundColor"), "rgb(233, 220, 243)");
           assert.equal(await evaluate("(() => { const tag = document.querySelector('.qualification-host-mark'); const a = tag.getBoundingClientRect(); const cell = tag.closest('td').getBoundingClientRect(); return a.left >= cell.left && a.right <= cell.right && a.width > 0; })()"), true, "host marker fits inside its cell");
         }
-        assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '待定出线')"), true);
-        assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-high').length > 0"));
+        if (mode !== "ccpcf") {
+          assert.equal(await evaluate("[...document.querySelectorAll('td[data-role=selected][data-certainty=risk] .qualification-badge')].every(b => b.textContent === '待定出线')"), true);
+          assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-high').length > 0"));
+        }
         if (mode === "ecf") assert.ok(await evaluate("document.querySelectorAll('td.qualification-pressure-low').length > 0"));
         if (mode === "ecf") {
           const zhejiang = await evaluate(`Array.from(document.querySelectorAll('.qualification-team'))

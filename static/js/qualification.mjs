@@ -1,5 +1,5 @@
 // Pure qualification calculations. Unknown results are never filled with predicted teams.
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261119-105";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261119-112";
 
 const check = (condition, path, message) => {
   if (!condition) throw new TypeError(`${path}: ${message}`);

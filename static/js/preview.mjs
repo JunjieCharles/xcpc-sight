@@ -1,4 +1,4 @@
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261119-105";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261119-112";
 
 const SCHEMA_VERSION = 1;
 const validatedPreviews = new WeakSet();
@@ -416,6 +416,12 @@ function onlineRankValue(team) {
 
 export function previewPowerMetricIds(preview) {
   return preview.powerMetrics ?? [...preview.metricSources.map(source => source.id), "medals"];
+}
+
+export function previewPowerDimensions(preview) {
+  return previewPowerMetricIds(preview).map(id => ({
+    id, title: id === "onlineRanks" ? "网络赛排名" : id === "medals" ? "奖牌" : preview.metricSources.find(s => s.id === id).title,
+  }));
 }
 
 function compareMedals(left, right) {

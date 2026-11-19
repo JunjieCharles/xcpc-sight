@@ -1,5 +1,5 @@
-import { buildQualification, cellPresentation, qualificationDuplicateLabel, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261119-105";
-import { buildCcpcfQualification, ccpcfRegionEdges } from "./ccpcf-qualification.mjs?v=20261119-105";
+import { buildQualification, cellPresentation, qualificationDuplicateLabel, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261119-112";
+import { buildCcpcfQualification, ccpcfOutlooks, ccpcfRegionEdges } from "./ccpcf-qualification.mjs?v=20261119-112";
 
 function el(tag, className = "", text = "") {
   const element = document.createElement(tag);
@@ -8,9 +8,9 @@ function el(tag, className = "", text = "") {
   return element;
 }
 
-export function renderQualification(container, data, mode) {
+export function renderQualification(container, data, mode, previews = []) {
   const ccpcf = mode === "ccpcf";
-  const model = ccpcf ? buildCcpcfQualification(data) : buildQualification(data, mode);
+  let model = ccpcf ? buildCcpcfQualification(data, previews) : buildQualification(data, mode);
   container.replaceChildren();
   container.classList.toggle("qualification-ecf", mode === "ecf");
   const heading = el("div", "section-heading");
@@ -34,7 +34,12 @@ export function renderQualification(container, data, mode) {
     "pressure-medium": "中：潜在竞争位置中，超过一半新增占位，才会触及名额限制。",
     "pressure-high": "高：潜在竞争位置中，一半或更少新增占位，就会触及名额限制。",
   };
-  for (const [kind, label] of [["safe", "确定出线"], ["pressure-low", "待定出线 · 占位压力低"], ["pressure-medium", "待定出线 · 占位压力中"], ["pressure-high", "待定出线 · 占位压力高"], ["candidate", "出线区域可选队伍"], ["outside", "未出线"], ["duplicate", qualificationDuplicateLabel(mode)], ["pending", "待赛"]]) {
+  const statusKeys = model.hasForecast && model.pendingCount === 1 ? Object.entries(ccpcfOutlooks).map(([kind, value]) => [kind, value.legend]) :
+    [["safe", "确定出线"], ["pressure-low", "待定出线 · 占位压力低"], ["pressure-medium", "待定出线 · 占位压力中"], ["pressure-high", "待定出线 · 占位压力高"]];
+  const stationKeys = [];
+  if (model.forecastMetrics?.length) stationKeys.push(["forecast", "前瞻排名"]);
+  if (!model.hasForecast) stationKeys.push(["pending", "待赛"]);
+  for (const [kind, label] of [...statusKeys, ["candidate", "出线区域可选队伍"], ["outside", "未出线"], ["duplicate", qualificationDuplicateLabel(mode)], ...stationKeys]) {
     if (mode !== "wf" && kind === "candidate") continue;
     const key = el("span", `qualification-key qualification-${kind}`, label);
     if (pressureDefinitions[kind]) {
@@ -42,6 +47,7 @@ export function renderQualification(container, data, mode) {
     }
     legend.append(key);
   }
+  if (model.hasForecast) legend.append(el("span", "qualification-key qualification-forecast-qualified", "预计出线"));
   const regionKey = el("span", "qualification-key qualification-region-key", "粗框：当前出线区域");
   regionKey.title = "按已知成绩逐行遍历至当前截止位置；框内包含重复队伍与待赛空位，不表示每格都获名额。";
   if (!ccpcf) legend.append(regionKey);
@@ -156,7 +162,7 @@ export function renderQualification(container, data, mode) {
     th.scope = "col";
     th.append(el("span", "qualification-station-title", station.title),
       el("span", `qualification-size ${station.status === "pending" ? "is-estimate" : ""}`, ccpcf
-        ? station.status === "pending" ? "待赛" : `${station.officialCount} 支正式队`
+        ? station.status === "pending" ? station.entries.length ? `前瞻 · ${station.entries.length} 支正式队` : "待赛" : `${station.officialCount} 支正式队`
         : `${station.status === "pending" ? "估计 " : ""}${stationSize(station)} 队`),
       el("small", "", station.date.slice(5)));
     header.append(th);
@@ -182,20 +188,24 @@ export function renderQualification(container, data, mode) {
   shell.append(table);
   let matches = [];
   let activeMatch = -1;
-  const navigate = step => {
+  const navigate = (step, reveal = true) => {
     if (!matches.length) return;
     matches[activeMatch]?.classList.remove("qualification-match-active");
     activeMatch = (activeMatch + step + matches.length) % matches.length;
     const cell = matches[activeMatch];
     cell.classList.add("qualification-match-active");
     // Scroll only the table so the search controls remain in place.
-    const top = cell.offsetTop - head.offsetHeight;
-    if (top < shell.scrollTop || cell.offsetTop + cell.offsetHeight > shell.scrollTop + shell.clientHeight) shell.scrollTop = top;
-    const left = cell.offsetLeft - rankHeader.offsetWidth;
-    if (left < shell.scrollLeft || cell.offsetLeft + cell.offsetWidth > shell.scrollLeft + shell.clientWidth) shell.scrollLeft = left;
+    if (reveal) {
+      const top = cell.offsetTop - head.offsetHeight;
+      if (top < shell.scrollTop || cell.offsetTop + cell.offsetHeight > shell.scrollTop + shell.clientHeight) shell.scrollTop = top;
+      const left = cell.offsetLeft - rankHeader.offsetWidth;
+      if (left < shell.scrollLeft || cell.offsetLeft + cell.offsetWidth > shell.scrollLeft + shell.clientWidth) shell.scrollLeft = left;
+    }
     result.textContent = `${activeMatch + 1} / ${matches.length} 个匹配位置`;
   };
-  const draw = () => {
+  const draw = (keepPosition = false) => {
+    const position = keepPosition ? { top: shell.scrollTop, left: shell.scrollLeft } : null;
+    const selectedKey = keepPosition ? matches[activeMatch]?.dataset.matchKey : null;
     const query = search.value.trim().toLocaleLowerCase();
     const count = query || scope.value === "all" ? model.maxRows : Math.min(model.maxRows, Math.max(mode === "wf" ? 10 : 5, model.boundaryRow + 3));
     matches = [];
@@ -210,28 +220,42 @@ export function renderQualification(container, data, mode) {
         const position = row * model.stations.length + column;
         const cell = model.cells.get(position);
         const td = el("td");
-        if (station.status === "pending") {
+        if (station.status === "pending" && !station.entries.length) {
           td.className = "qualification-pending";
           if (row === 0) td.append(el("span", "", "待结果"));
           else td.append(el("span", "qualification-placeholder", "—"));
         } else if (cell) {
-          const presentation = cellPresentation(cell, mode);
+          const forecast = cell.role === "forecast";
+          const presentation = forecast ? { className: "forecast", label: "前瞻排名" }
+            : cell.outlook ? { className: cell.outlook, label: ccpcfOutlooks[cell.outlook].badge }
+            : cellPresentation(cell, mode);
           td.className = `qualification-${presentation.className}`;
+          if (cell.forecastSlot) td.classList.add("qualification-forecast-qualified");
           td.dataset.role = cell.role;
           td.dataset.certainty = cell.certainty ?? "";
           td.dataset.pressure = cell.pressure?.level ?? "";
           const matchesQuery = query && [cell.team.school, cell.team.name, ...cell.team.members, cell.searchText ?? ""].some(s => s.toLocaleLowerCase().includes(query));
-          if (matchesQuery) { td.classList.add("qualification-match"); matches.push(td); }
+          if (matchesQuery) {
+            td.classList.add("qualification-match");
+            td.dataset.matchKey = JSON.stringify([station.id, cell.team.key]);
+            matches.push(td);
+          }
           else if (query) td.classList.add("qualification-dim");
           const card = el("div", "qualification-team");
           const badge = el("span", "qualification-badge", presentation.label);
-          if (ccpcf) badge.title = cell.reason;
+          if (forecast) badge.title = cell.team.rank ? `${station.title}站前瞻第 ${cell.team.rank} 名` : "前瞻无排名";
+          else if (ccpcf) badge.title = cell.reason;
           const identity = el("div", "qualification-team-heading");
           const school = el("strong", "qualification-school", cell.team.school);
           const name = el("span", "qualification-team-name", cell.team.name);
           const members = el("small", "qualification-members", cell.team.members.join(" · "));
           for (const item of [school, name, members]) item.title = item.textContent;
           const tags = el("div", "qualification-tags");
+          if (cell.forecastSlot) {
+            const slotTag = el("span", "qualification-badge", "预计出线");
+            slotTag.title = `预计获得学校第 ${cell.forecastSlot} 名额`;
+            tags.append(slotTag);
+          }
           if (cell.schoolRank && cell.role === "selected") {
             const rankTag = el("span", `qualification-school-rank school-rank-${Math.min(cell.schoolRank, 3)}`, ccpcf ? `第 ${cell.schoolRank} 名额` : `校内 ${cell.schoolRank}`);
             rankTag.title = ccpcf ? `本渠道第 ${cell.channelRank} 名；名额归学校` : `校内顺位：${cell.team.school}第 ${cell.schoolRank} 支队伍`;
@@ -246,7 +270,7 @@ export function renderQualification(container, data, mode) {
           tags.append(badge);
           identity.append(school, tags);
           card.append(identity, name, members);
-          if (ccpcf) card.append(el("small", "qualification-members", `本站 #${cell.team.rank} · 合并后最佳 #${cell.bestRank}`));
+          if (ccpcf && !forecast) card.append(el("small", "qualification-members", `本站 #${cell.team.rank} · 合并后最佳 #${cell.bestRank}`));
           td.append(card);
         } else td.append(el("span", "qualification-placeholder", "—"));
         for (const edge of qualificationRegionEdges(position, model.stations.length, model.current.frontier)) {
@@ -271,7 +295,11 @@ export function renderQualification(container, data, mode) {
     body.replaceChildren(fragment);
     previous.disabled = next.disabled = matches.length === 0;
     result.textContent = query ? "0 个匹配位置" : ccpcf ? `显示 ${count} 行` : `显示 ${count} 行 · 出线区域至第 ${model.boundaryRow} 行`;
-    if (matches.length) navigate(1);
+    if (matches.length) {
+      const index = selectedKey ? matches.findIndex(cell => cell.dataset.matchKey === selectedKey) : 0;
+      navigate(Math.max(0, index) + 1, !keepPosition);
+    }
+    if (position) shell.scrollTo(position);
   };
   previous.addEventListener("click", () => navigate(-1));
   next.addEventListener("click", () => navigate(1));
@@ -280,9 +308,32 @@ export function renderQualification(container, data, mode) {
     event.preventDefault();
     navigate(event.shiftKey ? -1 : 1);
   });
-  search.addEventListener("input", draw);
-  scope.addEventListener("change", draw);
-  container.append(heading, disclaimer, legend, toolbar, shell, channels);
+  search.addEventListener("input", () => draw());
+  scope.addEventListener("change", () => draw());
+  container.append(heading, disclaimer, legend);
+  if (model.forecastMetrics?.length) {
+    const controls = el("div", "qualification-forecast-metrics");
+    const label = el("span", "review-metric-title", "前瞻排名指标");
+    label.id = "qualification-forecast-metrics-title";
+    controls.setAttribute("role", "group");
+    controls.setAttribute("aria-labelledby", label.id);
+    controls.append(label);
+    for (const { id, title } of model.forecastMetrics) {
+      const button = el("button", "review-metric-card review-metric-title", title);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(id === "power"));
+      button.addEventListener("click", () => {
+        if (button.getAttribute("aria-pressed") === "true") return;
+        model = buildCcpcfQualification(data, previews, id);
+        controls.querySelector('[aria-pressed="true"]').setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-pressed", "true");
+        draw(true);
+      });
+      controls.append(button);
+    }
+    container.append(controls);
+  }
+  container.append(toolbar, shell, channels);
   draw();
   return model;
 }

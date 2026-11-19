@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "ccpcf",
   "seriesId": "2026-2027",
-  "asOf": "2026-11-17",
+  "asOf": "2026-11-19",
   "disclaimer": "民间数据，仅供参考，不代表官方结果",
   "firstQuota": 100,
   "secondQuota": 20,
@@ -15,6 +15,6 @@
     {"id": "ccpc2026changchun", "title": "长春", "region": "mainland", "status": "finished"},
     {"id": "ccpc2026leshan", "title": "乐山", "region": "mainland", "status": "finished"},
     {"id": "ccpc2026jingzhou", "title": "荆州", "region": "mainland", "status": "finished"},
-    {"id": "ccpc2026xiamen", "title": "厦门", "region": "mainland", "status": "pending", "date": "2026-11-22", "source": {"title": "2026 CCPC 各场比赛安排", "url": "https://ccpc.io/event/387"}}
+    {"id": "ccpc2026xiamen", "title": "厦门", "region": "mainland", "status": "pending", "date": "2026-11-22", "previewId": "ccpc-2026-xiamen", "source": {"title": "2026 CCPC 各场比赛安排", "url": "https://ccpc.io/event/387"}}
   ]
 }
