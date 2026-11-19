@@ -1,5 +1,5 @@
-import { buildQualification, cellPresentation, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261117-104";
-import { buildCcpcfQualification, ccpcfRegionEdges } from "./ccpcf-qualification.mjs?v=20261117-104";
+import { buildQualification, cellPresentation, qualificationDuplicateLabel, qualificationRegionEdges, stationSize } from "./qualification.mjs?v=20261119-105";
+import { buildCcpcfQualification, ccpcfRegionEdges } from "./ccpcf-qualification.mjs?v=20261119-105";
 
 function el(tag, className = "", text = "") {
   const element = document.createElement(tag);
@@ -34,10 +34,9 @@ export function renderQualification(container, data, mode) {
     "pressure-medium": "中：潜在竞争位置中，超过一半新增占位，才会触及名额限制。",
     "pressure-high": "高：潜在竞争位置中，一半或更少新增占位，就会触及名额限制。",
   };
-  for (const [kind, label] of [["safe", "确定出线"], ["pressure-low", "待定出线 · 占位压力低"], ["pressure-medium", "待定出线 · 占位压力中"], ["pressure-high", "待定出线 · 占位压力高"], ["candidate", "出线区域可选队伍"], ["outside", "未出线"], ["duplicate", "重复 / 达上限"], ["pending", "待赛"]]) {
+  for (const [kind, label] of [["safe", "确定出线"], ["pressure-low", "待定出线 · 占位压力低"], ["pressure-medium", "待定出线 · 占位压力中"], ["pressure-high", "待定出线 · 占位压力高"], ["candidate", "出线区域可选队伍"], ["outside", "未出线"], ["duplicate", qualificationDuplicateLabel(mode)], ["pending", "待赛"]]) {
     if (mode !== "wf" && kind === "candidate") continue;
     const key = el("span", `qualification-key qualification-${kind}`, label);
-    if (ccpcf && kind === "duplicate") key.textContent = "重复";
     if (pressureDefinitions[kind]) {
       key.title = pressureDefinitions[kind];
     }
@@ -216,7 +215,7 @@ export function renderQualification(container, data, mode) {
           if (row === 0) td.append(el("span", "", "待结果"));
           else td.append(el("span", "qualification-placeholder", "—"));
         } else if (cell) {
-          const presentation = cellPresentation(cell);
+          const presentation = cellPresentation(cell, mode);
           td.className = `qualification-${presentation.className}`;
           td.dataset.role = cell.role;
           td.dataset.certainty = cell.certainty ?? "";
@@ -226,7 +225,6 @@ export function renderQualification(container, data, mode) {
           else if (query) td.classList.add("qualification-dim");
           const card = el("div", "qualification-team");
           const badge = el("span", "qualification-badge", presentation.label);
-          if (ccpcf && cell.role === "duplicate") badge.textContent = "重复";
           if (ccpcf) badge.title = cell.reason;
           const identity = el("div", "qualification-team-heading");
           const school = el("strong", "qualification-school", cell.team.school);

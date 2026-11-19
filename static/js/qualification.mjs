@@ -1,5 +1,5 @@
 // Pure qualification calculations. Unknown results are never filled with predicted teams.
-import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261117-104";
+import { fetchJson, resolveDataUrl } from "./data.mjs?v=20261119-105";
 
 const check = (condition, path, message) => {
   if (!condition) throw new TypeError(`${path}: ${message}`);
@@ -251,12 +251,16 @@ export function qualificationRegionEdges(position, columns, frontier) {
   return edges;
 }
 
-export function cellPresentation(cell) {
+export function qualificationDuplicateLabel(mode) {
+  return mode === "ecf" ? "重复 / 达上限" : "重复";
+}
+
+export function cellPresentation(cell, mode = "ecf") {
   if (cell.role === "candidate") return { className: "candidate", label: "可选队伍", detail: cell.certainty === "safe" ? "本校确定有名额" : "本校名额仍待定" };
   if (cell.role === "selected") return cell.certainty === "safe"
     ? { className: "safe", label: "确定出线", detail: "当前出线位置" }
     : { className: `pressure-${cell.pressure?.level ?? "low"}`, label: "待定出线", detail: "具体名额尚未锁定" };
   return cell.role === "duplicate"
-    ? { className: "duplicate", label: "重复 / 达上限", detail: "不新增名额" }
+    ? { className: "duplicate", label: qualificationDuplicateLabel(mode), detail: "不新增名额" }
     : { className: "outside", label: "未出线", detail: "" };
 }

@@ -17,6 +17,13 @@ test("both boards use one pending label with pressure colors and distinct guaran
 });
 import { buildQualification, scanQualification, orderedStations, validateQualification, cellPresentation, qualificationRegionEdges } from "../static/js/qualification.mjs";
 
+test("only ECF duplicate badges mention the school cap", () => {
+  const cell = { role: "duplicate" };
+  assert.equal(cellPresentation(cell, "wf").label, "重复");
+  assert.equal(cellPresentation(cell, "ecf").label, "重复 / 达上限");
+  assert.equal(cellPresentation(cell, "ccpcf").label, "重复");
+});
+
 test("qualification outline follows the prefix perimeter including a stepped last row", () => {
   assert.deepEqual(qualificationRegionEdges(0, 4, 0), ["top", "left", "right", "bottom"]);
   assert.deepEqual(qualificationRegionEdges(0, 4, 5), ["top", "left"]);

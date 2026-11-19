@@ -1,5 +1,5 @@
 // CCPCF awards school slots by best regional rank, independently of ICPC traversal.
-import { validateQualification } from "./qualification.mjs?v=20261117-104";
+import { validateQualification } from "./qualification.mjs?v=20261119-105";
 
 const compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const compareGroup = (a, b) => a.bestRank - b.bestRank || compareText(a.key, b.key);
