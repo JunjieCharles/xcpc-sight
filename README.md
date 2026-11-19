@@ -80,6 +80,8 @@ python scripts/generate_problem_rating_static_data.py
 
 ### 赛前前瞻与赛后复盘
 
+厦门站正式赛定于 11 月 22 日 09:00–14:00。前瞻收录 300 支正式队和 26 支打星队，可从赛站表点击“CCPC 厦门”，查看队员评分、网络赛排名、奖牌及两季战绩。[厦门站前瞻](https://junjiecharles.github.io/xcpc-sight/?series=2026-2027&view=preview&previewContest=ccpc-2026-xiamen) · [名单与来源核查](doc/season-2026-2027-preview.md#2026-11-19-厦门站前瞻)
+
 沈阳前瞻包含 415 队（400 正式、15 打星），暂时仅展示三场网络赛排名指标，保留成员 NOI／IOI 标记与两季历史战绩，名单来源只提供 PDF 手册。直达参数为 `?series=2026-2027&view=preview&previewContest=icpc-2026-shenyang`，名单与数据契约见[沈阳前瞻说明](doc/season-2026-2027-preview.md#2026-11-04-沈阳网络赛排名前瞻)。
 
 乐山完整前瞻包含 348 队（正式 300、打星 48），使用检验版名单及 11 月 2 日核查的赛前指标。可点击赛站表中的乐山行，或通过 `?series=2026-2027&view=preview&previewContest=ccpc-2026-leshan` 直达；来源、核查限制与重建见[乐山前瞻说明](doc/season-2026-2027-preview.md#2026-11-02-乐山完整前瞻发布)。

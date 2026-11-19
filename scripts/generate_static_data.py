@@ -193,6 +193,10 @@ def preview_specs() -> tuple[PreviewSpec, ...]:
             repository_root / "static/data/previews/ccpc-2026-jingzhou.json",
             "previews/ccpc-2026-jingzhou.json",
         ),
+        PreviewSpec(
+            repository_root / "static/data/previews/ccpc-2026-xiamen.json",
+            "previews/ccpc-2026-xiamen.json",
+        ),
     )
 
 
